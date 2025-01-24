@@ -5,6 +5,7 @@ export default {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./node_modules/@heroui/theme/dist/components/(table|checkbox|form|spacer).js"
   ],
   theme: {
     extend: {
@@ -13,6 +14,5 @@ export default {
         foreground: "var(--foreground)",
       },
     },
-  },
-  plugins: [],
+  }
 } satisfies Config;
