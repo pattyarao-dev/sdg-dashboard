@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model md_goal {
+  goal_id            Int                  @id @default(autoincrement())
+  name               String               @unique @db.VarChar(100)
+  description        String?
+  ref_goal_indicator ref_goal_indicator[]
+}
+
+model md_indicator {
+  indicator_id          Int                     @id @default(autoincrement())
+  name                  String                  @unique @db.VarChar(100)
+  description           String?
+  status                status
+  md_sub_indicator      md_sub_indicator[]
+  ref_goal_indicator    ref_goal_indicator[]
+  ref_project_indicator ref_project_indicator[]
+  td_indicator_value    td_indicator_value[]
+}
+
+model md_sub_indicator {
+  sub_indicator_id          Int                         @id @default(autoincrement())
+  parent_indicator_id       Int
+  name                      String                      @unique @db.VarChar(100)
+  description               String?
+  status                    status
+  md_indicator              md_indicator                @relation(fields: [parent_indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  ref_project_sub_indicator ref_project_sub_indicator[]
+  td_sub_indicator_value    td_sub_indicator_value[]
+}
+
+model md_user {
+  user_id      Int            @id @default(autoincrement())
+  first_name   String?        @db.VarChar(45)
+  last_name    String?        @db.VarChar(45)
+  email        String         @unique @db.VarChar(45)
+  password     String         @db.VarChar(45)
+  md_user_role md_user_role[]
+}
+
+model md_user_role {
+  user_id       Int
+  user_type_id  Int
+  md_user       md_user       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  ref_user_type ref_user_type @relation(fields: [user_type_id], references: [user_type_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, user_type_id])
+}
+
+model ref_goal_indicator {
+  goal_id      Int
+  indicator_id Int
+  md_goal      md_goal      @relation(fields: [goal_id], references: [goal_id], onDelete: Cascade, onUpdate: NoAction)
+  md_indicator md_indicator @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([goal_id, indicator_id])
+}
+
+model ref_project_indicator {
+  project_id   Int
+  indicator_id Int
+  md_indicator md_indicator @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  td_project   td_project   @relation(fields: [project_id], references: [project_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([project_id, indicator_id])
+}
+
+model ref_project_sub_indicator {
+  project_id       Int
+  sub_indicator_id Int
+  td_project       td_project       @relation(fields: [project_id], references: [project_id], onDelete: Cascade, onUpdate: NoAction)
+  md_sub_indicator md_sub_indicator @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([project_id, sub_indicator_id])
+}
+
+model ref_user_type {
+  user_type_id Int            @id @default(autoincrement())
+  name         String         @unique @db.VarChar(45)
+  md_user_role md_user_role[]
+}
+
+model td_indicator_value {
+  value_id       Int          @id @default(autoincrement())
+  indicator_id   Int
+  project_id     Int?
+  target_type    target_type
+  target_value   Float?
+  baseline_value Float?
+  current_value  Float?
+  recorded_date  DateTime     @default(now()) @db.Timestamp(6)
+  md_indicator   md_indicator @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  td_project     td_project?  @relation(fields: [project_id], references: [project_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model td_project {
+  project_id                Int                         @id @default(autoincrement())
+  name                      String                      @db.VarChar(100)
+  description               String?
+  project_status            project_status
+  start_date                DateTime                    @db.Timestamp(6)
+  end_date                  DateTime                    @db.Timestamp(6)
+  ref_project_indicator     ref_project_indicator[]
+  ref_project_sub_indicator ref_project_sub_indicator[]
+  td_indicator_value        td_indicator_value[]
+  td_sub_indicator_value    td_sub_indicator_value[]
+}
+
+model td_sub_indicator_value {
+  value_id         Int              @id @default(autoincrement())
+  sub_indicator_id Int
+  project_id       Int?
+  target_type      target_type
+  target_value     Float?
+  baseline_value   Float?
+  current_value    Float?
+  recorded_date    DateTime         @default(now()) @db.Timestamp(6)
+  td_project       td_project?      @relation(fields: [project_id], references: [project_id], onDelete: Cascade, onUpdate: NoAction)
+  md_sub_indicator md_sub_indicator @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+enum project_status {
+  ongoing
+  complete
+}
+
+enum status {
+  active
+  disabled
+}
+
+enum target_type {
+  global
+  project
+}
