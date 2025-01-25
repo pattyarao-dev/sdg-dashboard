@@ -3,32 +3,35 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import { useIndicators } from "@/context/IndicatorContext";
+import { IndicatorStatus } from "@/context/IndicatorContext";
 
 const AddIndicator = () => {
+  const { addIndicator } = useIndicators();
   const [name, setName] = useState("");
-  const [baseline, setBaseline] = useState<number | string>(""); 
-  const [target, setTarget] = useState<number | string>(""); 
-  const [current, setCurrent] = useState<number | string>(""); 
+  const [baseline, setBaseline] = useState<number | string>("");
+  const [target, setTarget] = useState<number | string>("");
+  const [current, setCurrent] = useState<number | string>("");
   const [description, setDescription] = useState("");
   const router = useRouter();
 
   const handleAddIndicator = () => {
-    if (!name || !description || baseline === "" || target === "" || current === "") {
+    if (!name || baseline === "" || target === "" || current === "") {
       alert("Please fill out all fields.");
       return;
     }
-
+    
     const newIndicator = {
       id: Date.now(),
       name,
       baseline: parseFloat(baseline as string),
-      target: parseFloat(target as string), 
-      current: parseFloat(current as string), 
+      target: parseFloat(target as string),
+      current: parseFloat(current as string),
       description,
+      status: IndicatorStatus.Active,
     };
 
-    console.log("Added Indicator:", newIndicator);
-
+    addIndicator(newIndicator);
     router.push("/indicator-management");
   };
 

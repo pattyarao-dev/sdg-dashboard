@@ -1,4 +1,7 @@
+"use client";
+
 import React from "react";
+import { useIndicators } from "@/context/IndicatorContext";
 
 type Indicator = {
   id: number;
@@ -10,11 +13,19 @@ type Indicator = {
 
 type IndicatorListProps = {
   indicators: Indicator[]; 
-  onAction?: (id: number) => void; 
-  actionText?: string; 
+  onAction: (id: number) => void;
+  actionText: string; 
 };
 
 const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, onAction, actionText }) => {
+  if (indicators.length === 0) {
+    return (
+      <div className="text-gray-500 text-center py-4">
+        No indicators have been created.
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
       <h2 className="text-xl font-semibold text-black mb-4">Indicators</h2>
