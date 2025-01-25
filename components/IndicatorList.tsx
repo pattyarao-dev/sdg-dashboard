@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { useIndicators } from "@/context/IndicatorContext";
+import { IndicatorStatus, useIndicators } from "@/context/IndicatorContext";
+import { useRouter } from "next/navigation";
 
 type Indicator = {
   id: number;
@@ -9,6 +10,8 @@ type Indicator = {
   baseline: number; 
   target: number;   
   current: number; 
+  description: string;
+  status: IndicatorStatus
 };
 
 type IndicatorListProps = {
@@ -18,10 +21,12 @@ type IndicatorListProps = {
 };
 
 const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, onAction, actionText }) => {
+  const router = useRouter();
+
   if (indicators.length === 0) {
     return (
       <div className="text-gray-500 text-center py-4">
-        No indicators have been created.
+        No indicators available.
       </div>
     );
   }
@@ -31,7 +36,9 @@ const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, onAction, act
       <h2 className="text-xl font-semibold text-black mb-4">Indicators</h2>
       <ul className="space-y-4">
         {indicators.map((indicator) => (
-          <li key={indicator.id} className="p-4 border rounded-md flex justify-between items-center">
+          <li key={indicator.id} className="p-4 border rounded-md flex justify-between items-center"
+          onClick={() => router.push(`/Indicators/${indicator.id}`)}>
+            
             <div>
               <h3 className="font-semibold text-black">{indicator.name}</h3>
               <p className="text-gray-600">
@@ -42,7 +49,10 @@ const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, onAction, act
             </div>
             {onAction && actionText && (
               <button
-                onClick={() => onAction(indicator.id)}
+                onClick={(e) => {
+                  e.stopPropagation(); 
+                  onAction(indicator.id);
+                }}
                 className="text-sm px-3 py-1 bg-yellow-500 text-white rounded-md"
               >
                 {actionText}

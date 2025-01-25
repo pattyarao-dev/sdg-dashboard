@@ -20,7 +20,7 @@ type Indicator = {
 interface IndicatorContextProps {
   indicators: Indicator[];
   addIndicator: (indicator: Indicator) => void;
-  updateIndicatorStatus: (id: number, status: "active" | "disabled") => void;
+  updateIndicatorStatus: (id: number, status: ndicatorStatus.Active | IndicatorStatus.Disabled) => void;
 }
 
 const IndicatorContext = createContext<IndicatorContextProps | undefined>(undefined);
@@ -32,7 +32,7 @@ export const IndicatorProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIndicators((prev) => [...prev, indicator]);
   };
 
-  const updateIndicatorStatus = (id: number, status: "active" | "disabled") => {
+  const updateIndicatorStatus = (id: number, status: IndicatorStatus.Active | IndicatorStatus.Disabled) => {
     setIndicators((prev) =>
       prev.map((ind) => (ind.id === id ? { ...ind, status } : ind))
     );
