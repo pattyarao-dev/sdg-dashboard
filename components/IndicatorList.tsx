@@ -37,7 +37,7 @@ const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, onAction, act
       <ul className="space-y-4">
         {indicators.map((indicator) => (
           <li key={indicator.id} className="p-4 border rounded-md flex justify-between items-center"
-          onClick={() => router.push(`/Indicators/${indicator.id}`)}>
+          onClick={() => router.push(`/indicators/${indicator.id}`)}>
             
             <div>
               <h3 className="font-semibold text-black">{indicator.name}</h3>

@@ -1,5 +1,7 @@
 "use client";
+
 import { useState } from 'react';
+import Link from 'next/link'; 
 
 const Sidebar = () => {
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
@@ -18,7 +20,6 @@ const Sidebar = () => {
             onClick={() => setIsDashboardOpen(!isDashboardOpen)}
           >
             <span>Dashboard</span>
-            {/* <span>{isDashboardOpen ? '-' : '+'}</span> */}
           </div>
         </li>
 
@@ -34,14 +35,15 @@ const Sidebar = () => {
           {isIndicatorsOpen && (
             <ul className="ml-4 mt-2 space-y-2">
               <li>
-                <a href="indicator-management" className="hover:text-yellow-500">
+                {/* Use next/link for client-side routing */}
+                <Link href="/indicator-management" className="hover:text-yellow-500">
                   Manage Indicators
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="add-indicator" className="hover:text-yellow-500">
+                <Link href="/add-indicator" className="hover:text-yellow-500">
                   Add Indicator
-                </a>
+                </Link>
               </li>
             </ul>
           )}
@@ -59,9 +61,9 @@ const Sidebar = () => {
           {isProjectsOpen && (
             <ul className="ml-4 mt-2 space-y-2">
               <li>
-                <a href="/projects/active" className="hover:text-yellow-500">
+                <Link href="/projects/active" className="hover:text-yellow-500">
                   Add Projects
-                </a>
+                </Link>
               </li>
             </ul>
           )}
@@ -79,9 +81,9 @@ const Sidebar = () => {
           {isDataConsolidationOpen && (
             <ul className="ml-4 mt-2 space-y-2">
               <li>
-                <a href="/data-consolidation/import" className="hover:text-yellow-500">
+                <Link href="/data-consolidation/import" className="hover:text-yellow-500">
                   Import Data
-                </a>
+                </Link>
               </li>
             </ul>
           )}
