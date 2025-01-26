@@ -8,20 +8,12 @@ import { useState } from "react";
 type Indicator = {
   id: number;
   name: string;
-  sdg: number;
-  baseline: {
-    value: number;
-    year: number;
-  };
-  target: {
-    value: number;
-    year: number; 
-  };
-  current: {
-    value: number;
-    year: number; 
-  };
+  baseline: { value: number; year: number };
+  target: { value: number; year: number };
+  current: { value: number; year: number };
+  description: string;
   status: IndicatorStatus;
+  sdgs: number[];
 };
 
 type SDG = {
@@ -38,19 +30,14 @@ type IndicatorListProps = {
 
 const groupIndicatorsBySDG = (indicators: Indicator[], sdgs: SDG[]) => {
   const groupedIndicators = sdgs.map((sdg) => {
-    const indicatorsForSDG = indicators.filter((indicator) => indicator.sdg === sdg.id);
-    return {
-      sdg,
-      indicators: indicatorsForSDG,
-    };
+    const indicatorsForSDG = indicators.filter((indicator) => indicator.sdgs.includes(sdg.id));
+    return { sdg, indicators: indicatorsForSDG };
   });
-
   return groupedIndicators;
 };
 
 const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, sdgs, onAction, actionText }) => {
   const router = useRouter();
-  
   const [expandedSDGs, setExpandedSDGs] = useState<Record<number, boolean>>({});
 
   const groupedIndicators = groupIndicatorsBySDG(indicators, sdgs);

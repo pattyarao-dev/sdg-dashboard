@@ -32,7 +32,7 @@ const AddIndicator = () => {
   const handleAddIndicator = () => {
     if (
       !name ||
-      sdg === "" ||
+      sdg.length === "0" ||
       baseline === "" ||
       target === "" ||
       current === "" ||
@@ -43,10 +43,12 @@ const AddIndicator = () => {
       alert("Please fill out all fields.");
       return;
     }
-  
+    
+    const selectedSdgs = Array.isArray(sdg) ? sdg.map(Number) : [Number(sdg)];
+
     const newIndicator = {
       name,
-      sdg: parseInt(sdg as string),
+      sdgs: selectedSdgs,  
       description,
       baseline: { value: parseFloat(baseline as string), year: parseInt(baselineYear as string) },
       target: { value: parseFloat(target as string), year: parseInt(targetYear as string) },

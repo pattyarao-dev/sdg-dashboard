@@ -8,23 +8,15 @@ export enum IndicatorStatus {
   }
 
 export type Indicator = {
-  id: number;
-  name: string;
-  baseline: {
-    value: number;
-    year: number;
-  };
-  target: {
-    value: number;
-    year: number; 
-  };
-  current: {
-    value: number;
-    year: number; 
-  };
-  description: string;
-  status: IndicatorStatus;
-  sdg: number
+    id: number;
+    name: string;
+    baseline: { value: number; year: number };
+    target: { value: number; year: number };
+    current: { value: number; year: number };
+    description: string;
+    status: IndicatorStatus;
+    sdgs: number[];
+
 };
 
 interface IndicatorContextProps {

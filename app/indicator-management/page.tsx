@@ -11,8 +11,8 @@ const IndicatorManagement = () => {
   const router = useRouter();
   const [activeList, setActiveList] = useState(true);
 
-  const activeIndicators = indicators.filter((ind) => ind.status === "active");
-  const disabledIndicators = indicators.filter((ind) => ind.status === "disabled");
+  const activeIndicators = indicators.filter((ind) => ind.status === IndicatorStatus.Active);
+  const disabledIndicators = indicators.filter((ind) => ind.status === IndicatorStatus.Disabled);
 
   const handleAction = (id: number, newStatus: IndicatorStatus.Active | IndicatorStatus.Disabled) => {
     updateIndicatorStatus(id, newStatus);
