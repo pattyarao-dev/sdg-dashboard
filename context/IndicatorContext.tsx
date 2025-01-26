@@ -7,7 +7,7 @@ export enum IndicatorStatus {
     Disabled = "disabled",
   }
 
-type Indicator = {
+export type Indicator = {
   id: number;
   name: string;
   baseline: number;

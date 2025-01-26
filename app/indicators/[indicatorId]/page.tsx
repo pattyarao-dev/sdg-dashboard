@@ -3,53 +3,23 @@
 import { useParams } from "next/navigation"; 
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
-
-type Indicator = {
-  id: number;
-  name: string;
-  description: string;
-  baseline: number;
-  target: number;
-  current: number;
-  createdAt: number;
-};
+import { useIndicators } from "@/context/IndicatorContext";
+import { Indicator } from "@/context/IndicatorContext";
 
 const IndicatorDetails = () => {
   const { id } = useParams(); 
+  const { indicators } = useIndicators();
   const [indicator, setIndicator] = useState<Indicator | null>(null);
 
   useEffect(() => {
     if (id) {
-    
       const fetchedIndicator = getIndicatorById(Number(id));
       setIndicator(fetchedIndicator);
     }
-  }, [id]);
+  }, [id, indicators]);
 
   const getIndicatorById = (id: number): Indicator | null => {
-    
-    const indicatorData = [
-      {
-        id: 1,
-        name: "Indicator 1",
-        description: "Description of Indicator 1",
-        baseline: 10.5,
-        target: 15.0,
-        current: 12.3,
-        createdAt: Date.now(),
-      },
-      {
-        id: 2,
-        name: "Indicator 2",
-        description: "Description of Indicator 2",
-        baseline: 20.5,
-        target: 30.0,
-        current: 25.4,
-        createdAt: Date.now(),
-      },
-    ];
-
-    return indicatorData.find((indicator) => indicator.id === id) || null;
+    return indicators.find((indicator) => indicator.id === id) || null;
   };
 
   if (!indicator) {
@@ -75,6 +45,7 @@ const IndicatorDetails = () => {
             <p><strong>Baseline:</strong> {indicator.baseline}</p>
             <p><strong>Target:</strong> {indicator.target}</p>
             <p><strong>Current:</strong> {indicator.current}</p>
+            <p><strong>Status:</strong> {indicator.status}</p>
           </div>
         </div>
       </div>
