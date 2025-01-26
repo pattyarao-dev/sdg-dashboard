@@ -35,7 +35,7 @@ export const IndicatorProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIdCounter(id + 1);
   };
   
-  const updateIndicatorStatus = (id: number, status: IndicatorStatus.Active | IndicatorStatus.Disabled) => {
+  const updateIndicatorStatus = (id: number, status: IndicatorStatus) => {
     setIndicators((prev) =>
       prev.map((ind) => (ind.id === id ? { ...ind, status } : ind))
     );

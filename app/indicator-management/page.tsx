@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import IndicatorList from "@/components/IndicatorList";
-import { useIndicators } from "@/context/IndicatorContext";
-import { IndicatorStatus } from "@/context/IndicatorContext";
+import { useIndicators, IndicatorStatus } from "@/context/IndicatorContext";
 
 const IndicatorManagement = () => {
   const { indicators, updateIndicatorStatus } = useIndicators();

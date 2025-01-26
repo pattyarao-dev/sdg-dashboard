@@ -35,7 +35,6 @@ const Sidebar = () => {
           {isIndicatorsOpen && (
             <ul className="ml-4 mt-2 space-y-2">
               <li>
-                {/* Use next/link for client-side routing */}
                 <Link href="/indicator-management" className="hover:text-yellow-500">
                   Manage Indicators
                 </Link>
@@ -61,7 +60,12 @@ const Sidebar = () => {
           {isProjectsOpen && (
             <ul className="ml-4 mt-2 space-y-2">
               <li>
-                <Link href="/projects/active" className="hover:text-yellow-500">
+                <Link href="/project-management" className="hover:text-yellow-500">
+                  Manage Projects
+                </Link>
+              </li>
+              <li>
+                <Link href="/add-project" className="hover:text-yellow-500">
                   Add Projects
                 </Link>
               </li>
