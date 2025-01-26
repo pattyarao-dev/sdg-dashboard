@@ -9,24 +9,48 @@ import { IndicatorStatus } from "@/context/IndicatorContext";
 const AddIndicator = () => {
   const { addIndicator } = useIndicators();
   const [name, setName] = useState("");
+  const [sdg, setSdg] = useState<number | string>("");
+  const [description, setDescription] = useState("");
+  
   const [baseline, setBaseline] = useState<number | string>("");
   const [target, setTarget] = useState<number | string>("");
   const [current, setCurrent] = useState<number | string>("");
-  const [description, setDescription] = useState("");
+  
+  const [baselineYear, setBaselineYear] = useState<number | string>("");
+  const [targetYear, setTargetYear] = useState<number | string>("");
+  const [currentYear, setCurrentYear] = useState<number | string>("");
+  
   const router = useRouter();
 
+  // dummy sdgs
+  const sdgs = [
+    { id: 1, name: "No Poverty" },
+    { id: 2, name: "Zero Hunger" },
+    { id: 3, name: "Good Health and Well-being" },
+  ];
+
   const handleAddIndicator = () => {
-    if (!name || baseline === "" || target === "" || current === "") {
+    if (
+      !name ||
+      sdg === "" ||
+      baseline === "" ||
+      target === "" ||
+      current === "" ||
+      baselineYear === "" ||
+      targetYear === "" ||
+      currentYear === ""
+    ) {
       alert("Please fill out all fields.");
       return;
     }
   
     const newIndicator = {
       name,
-      baseline: parseFloat(baseline as string),
-      target: parseFloat(target as string),
-      current: parseFloat(current as string),
+      sdg: parseInt(sdg as string),
       description,
+      baseline: { value: parseFloat(baseline as string), year: parseInt(baselineYear as string) },
+      target: { value: parseFloat(target as string), year: parseInt(targetYear as string) },
+      current: { value: parseFloat(current as string), year: parseInt(currentYear as string) },
       status: IndicatorStatus.Active,
     };
   
@@ -64,6 +88,25 @@ const AddIndicator = () => {
             </div>
 
             <div>
+              <label htmlFor="indicator-sdg" className="block text-sm font-medium text-gray-700">
+                Sustainable Development Goal
+              </label>
+              <select
+                id="indicator-sdg"
+                className="w-full p-3 border border-gray-300 rounded-md text-black"
+                value={sdg}
+                onChange={(e) => setSdg(e.target.value)}
+              >
+                <option value="">Select SDG</option>
+                {sdgs.map((sdg) => (
+                  <option key={sdg.id} value={sdg.id}>
+                    {sdg.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label htmlFor="indicator-baseline" className="block text-sm font-medium text-gray-700">
                 Baseline Value
               </label>
@@ -74,6 +117,20 @@ const AddIndicator = () => {
                 placeholder="Enter the baseline value"
                 value={baseline}
                 onChange={(e) => setBaseline(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="indicator-baseline-year" className="block text-sm font-medium text-gray-700">
+                Baseline Year
+              </label>
+              <input
+                type="number"
+                id="indicator-baseline-year"
+                className="w-full p-3 border border-gray-300 rounded-md text-black"
+                placeholder="Enter the baseline year"
+                value={baselineYear}
+                onChange={(e) => setBaselineYear(e.target.value)}
               />
             </div>
 
@@ -92,6 +149,20 @@ const AddIndicator = () => {
             </div>
 
             <div>
+              <label htmlFor="indicator-target-year" className="block text-sm font-medium text-gray-700">
+                Target Year
+              </label>
+              <input
+                type="number"
+                id="indicator-target-year"
+                className="w-full p-3 border border-gray-300 rounded-md text-black"
+                placeholder="Enter the target year"
+                value={targetYear}
+                onChange={(e) => setTargetYear(e.target.value)}
+              />
+            </div>
+
+            <div>
               <label htmlFor="indicator-current" className="block text-sm font-medium text-gray-700">
                 Current Value
               </label>
@@ -102,6 +173,20 @@ const AddIndicator = () => {
                 placeholder="Enter the current value"
                 value={current}
                 onChange={(e) => setCurrent(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="indicator-current-year" className="block text-sm font-medium text-gray-700">
+                Current Year
+              </label>
+              <input
+                type="number"
+                id="indicator-current-year"
+                className="w-full p-3 border border-gray-300 rounded-md text-black"
+                placeholder="Enter the current year"
+                value={currentYear}
+                onChange={(e) => setCurrentYear(e.target.value)}
               />
             </div>
 

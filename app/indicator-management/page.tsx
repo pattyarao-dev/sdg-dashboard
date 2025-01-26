@@ -18,6 +18,13 @@ const IndicatorManagement = () => {
     updateIndicatorStatus(id, newStatus);
   };
 
+  // dummy SDGs
+  const sdgs = [
+    { id: 1, name: "No Poverty" },
+    { id: 2, name: "Zero Hunger" },
+    { id: 3, name: "Good Health and Well-being" },
+  ];
+
   return (
     <div className="flex">
       {/* Sidebar */}
@@ -55,17 +62,19 @@ const IndicatorManagement = () => {
             Disabled ({disabledIndicators.length})
           </span>
         </div>
-
+          
         {/* Indicator List */}
         {activeList ? (
           <IndicatorList
             indicators={activeIndicators}
+            sdgs={sdgs}
             onAction={(id) => handleAction(id, IndicatorStatus.Disabled)}
             actionText="Disable"
           />
         ) : (
           <IndicatorList
             indicators={disabledIndicators}
+            sdgs={sdgs}
             onAction={(id) => handleAction(id, IndicatorStatus.Active)}
             actionText="Enable"
           />

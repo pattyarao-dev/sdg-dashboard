@@ -67,9 +67,19 @@ const IndicatorDetails = () => {
 
           <div className="mt-4 text-black">
             <h3 className="text-lg font-semibold">Values</h3>
-            <p><strong>Baseline:</strong> {indicator.baseline}</p>
-            <p><strong>Target:</strong> {indicator.target}</p>
-            <p><strong>Current:</strong> {indicator.current}</p>
+            <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-700">
+                Baseline: {indicator.baseline.value.toFixed(2)} ({indicator.baseline.year})
+              </p>
+              <p className="text-sm text-gray-700">
+                Target: {indicator.target.value.toFixed(2)} ({indicator.target.year})
+              </p>
+              <p className="text-sm text-gray-700">
+                Current: {indicator.current.value.toFixed(2)} ({indicator.current.year})
+              </p>
+            </div>
+          </div>
           </div>
         </div>
       </div>
