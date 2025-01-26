@@ -1,0 +1,19 @@
+/* globals.css */
+
+:root {
+    --background: #f0f0f0; /* Example background color */
+    --foreground: #333333; /* Example foreground color */
+  }
+  
+  /* Tailwind CSS imports */
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+  
+  /* Additional custom global styles */
+  body {
+    font-family: sans-serif;
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+  

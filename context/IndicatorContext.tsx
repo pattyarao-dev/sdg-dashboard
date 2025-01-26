@@ -19,19 +19,22 @@ type Indicator = {
 
 interface IndicatorContextProps {
   indicators: Indicator[];
-  addIndicator: (indicator: Indicator) => void;
-  updateIndicatorStatus: (id: number, status: ndicatorStatus.Active | IndicatorStatus.Disabled) => void;
+  addIndicator: (indicator: Omit<Indicator, "id">) => void;
+  updateIndicatorStatus: (id: number, status: IndicatorStatus.Active | IndicatorStatus.Disabled) => void;
 }
 
 const IndicatorContext = createContext<IndicatorContextProps | undefined>(undefined);
 
 export const IndicatorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [indicators, setIndicators] = useState<Indicator[]>([]);
+  const [idCounter, setIdCounter] = useState(1);
 
-  const addIndicator = (indicator: Indicator) => {
-    setIndicators((prev) => [...prev, indicator]);
+  const addIndicator = (newIndicator: Omit<Indicator, "id">) => {
+    const id = idCounter; 
+    setIndicators([...indicators, { ...newIndicator, id }]);
+    setIdCounter(id + 1);
   };
-
+  
   const updateIndicatorStatus = (id: number, status: IndicatorStatus.Active | IndicatorStatus.Disabled) => {
     setIndicators((prev) =>
       prev.map((ind) => (ind.id === id ? { ...ind, status } : ind))

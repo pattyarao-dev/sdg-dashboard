@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import IndicatorList from "@/components/IndicatorList";
 import { useIndicators } from "@/context/IndicatorContext";
+import { IndicatorStatus } from "@/context/IndicatorContext";
 
 const IndicatorManagement = () => {
   const { indicators, updateIndicatorStatus } = useIndicators();
@@ -14,7 +15,7 @@ const IndicatorManagement = () => {
   const activeIndicators = indicators.filter((ind) => ind.status === "active");
   const disabledIndicators = indicators.filter((ind) => ind.status === "disabled");
 
-  const handleAction = (id: number, newStatus: "active" | "disabled") => {
+  const handleAction = (id: number, newStatus: IndicatorStatus.Active | IndicatorStatus.Disabled) => {
     updateIndicatorStatus(id, newStatus);
   };
 
@@ -60,13 +61,13 @@ const IndicatorManagement = () => {
         {activeList ? (
           <IndicatorList
             indicators={activeIndicators}
-            onAction={(id) => handleAction(id, "disabled")}
+            onAction={(id) => handleAction(id, IndicatorStatus.Disabled)}
             actionText="Disable"
           />
         ) : (
           <IndicatorList
             indicators={disabledIndicators}
-            onAction={(id) => handleAction(id, "active")}
+            onAction={(id) => handleAction(id, IndicatorStatus.Active)}
             actionText="Enable"
           />
         )}

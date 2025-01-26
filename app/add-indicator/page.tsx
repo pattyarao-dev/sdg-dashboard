@@ -20,9 +20,8 @@ const AddIndicator = () => {
       alert("Please fill out all fields.");
       return;
     }
-    
+  
     const newIndicator = {
-      id: Date.now(),
       name,
       baseline: parseFloat(baseline as string),
       target: parseFloat(target as string),
@@ -30,7 +29,7 @@ const AddIndicator = () => {
       description,
       status: IndicatorStatus.Active,
     };
-
+  
     addIndicator(newIndicator);
     router.push("/indicator-management");
   };
