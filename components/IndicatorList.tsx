@@ -7,17 +7,16 @@ import { useRouter } from "next/navigation";
 type Indicator = {
   id: number;
   name: string;
-  baseline: number; 
-  target: number;   
-  current: number; 
-  description: string;
-  status: IndicatorStatus
+  baseline: number;
+  target: number;
+  current: number;
+  status: IndicatorStatus;
 };
 
 type IndicatorListProps = {
-  indicators: Indicator[]; 
+  indicators: Indicator[];
   onAction: (id: number) => void;
-  actionText: string; 
+  actionText: string;
 };
 
 const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, onAction, actionText }) => {
@@ -33,34 +32,49 @@ const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, onAction, act
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-      <h2 className="text-xl font-semibold text-black mb-4">Indicators</h2>
-      <ul className="space-y-4">
-        {indicators.map((indicator) => (
-          <li key={indicator.id} className="p-4 border rounded-md flex justify-between items-center"
-          onClick={() => router.push(`/indicators/${indicator.id}`)}>
-            
-            <div>
-              <h3 className="font-semibold text-black">{indicator.name}</h3>
-              <p className="text-gray-600">
-                Baseline: {indicator.baseline.toFixed(2)}, 
-                Target: {indicator.target.toFixed(2)}, 
-                Current: {indicator.current.toFixed(2)}
-              </p>
-            </div>
-            {onAction && actionText && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation(); 
-                  onAction(indicator.id);
-                }}
-                className="text-sm px-3 py-1 bg-yellow-500 text-white rounded-md"
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white shadow-md rounded-lg">
+          <thead>
+            <tr>
+            <th className="py-2 px-4 border-b text-left text-gray-600 font-semibold">#</th>
+              <th className="py-2 px-4 border-b text-left text-gray-600 font-semibold">Name</th>
+              <th className="py-2 px-4 border-b text-center text-gray-600 font-semibold">Baseline</th>
+              <th className="py-2 px-4 border-b text-center text-gray-600 font-semibold">Target</th>
+              <th className="py-2 px-4 border-b text-center text-gray-600 font-semibold">Current</th>
+              <th className="py-2 px-4 border-b text-center text-gray-600 font-semibold">Actions</th>
+            </tr>
+            </thead>
+          <tbody>
+            {indicators.map((indicator) => (
+              <tr
+                key={indicator.id}
+                className="cursor-pointer hover:bg-gray-300"
+                onClick={() => router.push(`/indicators/${indicator.id}`)}
               >
-                {actionText}
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
+                <td className="py-2 px-4 text-black border-b">{indicator.id}</td>
+                <td className="py-2 px-4 text-black border-b">{indicator.name}</td>
+                <td className="py-2 px-4 text-black border-b text-center">{indicator.baseline.toFixed(2)}</td>
+                <td className="py-2 px-4 text-black border-b text-center">{indicator.target.toFixed(2)}</td>
+                <td className="py-2 px-4 text-black border-b text-center">{indicator.current.toFixed(2)}</td>
+                <td className="py-2 px-4 border-b text-center">
+                  {/* Toggle Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); 
+                      onAction(indicator.id);
+                    }}
+                    className={`px-3 py-1 rounded-md text-white 
+                      ${indicator.status === IndicatorStatus.Active ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
+                  >
+                    {indicator.status === IndicatorStatus.Active ? "Disable" : "Activate"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
