@@ -9,30 +9,39 @@ import { IndicatorStatus } from "@/context/IndicatorContext";
 const AddIndicator = () => {
   const { addIndicator } = useIndicators();
   const [name, setName] = useState("");
-  const [sdg, setSdg] = useState<number | string>("");
+  const [selectedSdgs, setSelectedSdgs] = useState<number[]>([]);
   const [description, setDescription] = useState("");
   
   const [baseline, setBaseline] = useState<number | string>("");
   const [target, setTarget] = useState<number | string>("");
   const [current, setCurrent] = useState<number | string>("");
-  
+
   const [baselineYear, setBaselineYear] = useState<number | string>("");
   const [targetYear, setTargetYear] = useState<number | string>("");
   const [currentYear, setCurrentYear] = useState<number | string>("");
-  
+
   const router = useRouter();
 
-  // dummy sdgs
+  // Dummy SDGs list
   const sdgs = [
     { id: 1, name: "No Poverty" },
     { id: 2, name: "Zero Hunger" },
     { id: 3, name: "Good Health and Well-being" },
   ];
 
+  // Handle checkbox change
+  const handleCheckboxChange = (sdgId: number) => {
+    setSelectedSdgs((prev) =>
+      prev.includes(sdgId)
+        ? prev.filter((id) => id !== sdgId) 
+        : [...prev, sdgId] 
+    );
+  };
+
   const handleAddIndicator = () => {
     if (
       !name ||
-      sdg.length === "0" ||
+      selectedSdgs.length === 0 || 
       baseline === "" ||
       target === "" ||
       current === "" ||
@@ -43,19 +52,17 @@ const AddIndicator = () => {
       alert("Please fill out all fields.");
       return;
     }
-    
-    const selectedSdgs = Array.isArray(sdg) ? sdg.map(Number) : [Number(sdg)];
 
     const newIndicator = {
       name,
-      sdgs: selectedSdgs,  
+      sdgs: selectedSdgs, 
       description,
       baseline: { value: parseFloat(baseline as string), year: parseInt(baselineYear as string) },
       target: { value: parseFloat(target as string), year: parseInt(targetYear as string) },
       current: { value: parseFloat(current as string), year: parseInt(currentYear as string) },
       status: IndicatorStatus.Active,
     };
-  
+
     addIndicator(newIndicator);
     router.push("/indicator-management");
   };
@@ -89,23 +96,21 @@ const AddIndicator = () => {
               />
             </div>
 
-            <div>
-              <label htmlFor="indicator-sdg" className="block text-sm font-medium text-gray-700">
-                Sustainable Development Goal
-              </label>
-              <select
-                id="indicator-sdg"
-                className="w-full p-3 border border-gray-300 rounded-md text-black"
-                value={sdg}
-                onChange={(e) => setSdg(e.target.value)}
-              >
-                <option value="">Select SDG</option>
-                {sdgs.map((sdg) => (
-                  <option key={sdg.id} value={sdg.id}>
-                    {sdg.name}
-                  </option>
-                ))}
-              </select>
+            <div className="my-4 text-black">
+              <h3>Sustainable Development Goal/s</h3>
+              {sdgs.map((sdgOption) => (
+                <div key={sdgOption.id}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      value={sdgOption.id}
+                      checked={selectedSdgs.includes(sdgOption.id)}
+                      onChange={() => handleCheckboxChange(sdgOption.id)}
+                    />
+                    {sdgOption.name}
+                  </label>
+                </div>
+              ))}
             </div>
 
             <div>

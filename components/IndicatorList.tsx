@@ -126,16 +126,16 @@ const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, sdgs, onActio
                           {indicator.target.value.toFixed(2)} ({indicator.target.year})
                         </td>
                         <td className="py-2 px-4 border-b text-center">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAction(indicator.id);
-                            }}
-                            className={`px-3 py-1 rounded-md text-white 
-                              ${indicator.status === IndicatorStatus.Active ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
-                          >
-                            {indicator.status === IndicatorStatus.Active ? IndicatorStatus.Disabled : IndicatorStatus.Active}
-                          </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAction(indicator.id);
+                          }}
+                          className={`px-3 py-1 rounded-md text-white 
+                            ${indicator.status === IndicatorStatus.Active ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
+                        >
+                          {indicator.status === IndicatorStatus.Active ? "Disable" : "Enable"}
+                        </button>
                         </td>
                       </tr>
                     ))}
