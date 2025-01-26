@@ -1,8 +1,10 @@
 import { addIndicator } from "../actions/actions";
 import { getProjects } from "../actions/actions";
+// import ProjectSelector from "@/components/ProjectSelector";
 
 export default async function AddIndicator() {
-  const projectsList = await getProjects();
+  const projectsList = await getProjects(); // Fetch projects
+
   return (
     <div>
       Create an indicator here
