@@ -57,28 +57,27 @@ const IndicatorForm: React.FC<IndicatorFormProps> = ({
     );
   };
 
-  const [showSubIndicatorForm, setShowSubIndicatorForm] = useState(false); // State to show/hide SubIndicatorForm
+  const [showSubIndicatorForm, setShowSubIndicatorForm] = useState(false); 
 
   const handleAddSubIndicatorForm = () => {
-    setShowSubIndicatorForm(true); // Show the SubIndicatorForm when the "Add Sub-Indicator" button is clicked
+    setShowSubIndicatorForm(true);
   };
 
   const handleSubIndicatorAdded = (subIndicator: Indicator) => {
-    // Ensure there are no duplicates by checking if a sub-indicator with the same name already exists
     const isDuplicate = subIndicators.some(
       (existingSubIndicator) => existingSubIndicator.name === subIndicator.name
     );
 
     if (!isDuplicate) {
-      setSubIndicators((prev) => [...prev, subIndicator]); // Add the new sub-indicator if no duplicates
-      setShowSubIndicatorForm(false); // Hide the form after adding the sub-indicator
+      setSubIndicators((prev) => [...prev, subIndicator]); 
+      setShowSubIndicatorForm(false);
     } else {
       alert("Sub-indicator with the same name already exists.");
     }
   };
 
   const handleCancel = () => {
-    setShowSubIndicatorForm(false); // Cancel and hide the form
+    setShowSubIndicatorForm(false); 
   };
 
   const handleAddIndicator = () => {
@@ -88,7 +87,6 @@ const IndicatorForm: React.FC<IndicatorFormProps> = ({
       return;
     }
 
-    // Prepare the new indicator object (for example, to send it to the parent or backend)
     const newIndicator = {
       name,
       sdgs: selectedSdgs,
@@ -96,12 +94,11 @@ const IndicatorForm: React.FC<IndicatorFormProps> = ({
       baseline: { value: parseFloat(baseline as string), year: parseInt(baselineYear as string) },
       target: { value: parseFloat(target as string), year: parseInt(targetYear as string) },
       current: { value: parseFloat(current as string), year: parseInt(currentYear as string) },
-      status: "Active", // assuming you have a status field
-      subIndicators, // Attach sub-indicators to the main indicator
+      status: "Active", 
+      subIndicators, 
     };
 
     console.log("Main Indicator added:", newIndicator);
-    // You can call a parent function or API to save the indicator here
   };
 
   return (
@@ -251,8 +248,8 @@ const IndicatorForm: React.FC<IndicatorFormProps> = ({
           </button>
           {showSubIndicatorForm && (
             <SubIndicatorForm
-              onAddSubIndicator={handleSubIndicatorAdded} // Pass the function to add sub-indicator
-              onCancel={handleCancel} // Pass the function to hide the form
+              onAddSubIndicator={handleSubIndicatorAdded} 
+              onCancel={handleCancel} 
             />
           )}
 

@@ -24,21 +24,9 @@ const AddIndicator = () => {
   const [subIndicators, setSubIndicators] = useState<Indicator[]>([]);
   const [isSubIndicatorFormVisible, setIsSubIndicatorFormVisible] = useState(false);
 
-  const handleAddSubIndicator = () => {
-    const newSubIndicator: Indicator = {
-      id: Math.random(), // temp id
-      name: "Sub-indicator",
-      description: "",
-      baseline: { value: 0, year: 2020 },
-      target: { value: 0, year: 2030 },
-      current: { value: 0, year: 2025 },
-      status: IndicatorStatus.Active,
-      sdgs: [],
-      subIndicators: [],
-    };
-
+  const handleAddSubIndicator = (newSubIndicator: Indicator) => {
     setSubIndicators([...subIndicators, newSubIndicator]);
-    setIsSubIndicatorFormVisible(false);
+    setIsSubIndicatorFormVisible(false); // Close the sub-indicator form after adding
   };
 
   const sdgsList = [
@@ -66,7 +54,7 @@ const AddIndicator = () => {
       target: { value: parseFloat(target as string), year: parseInt(targetYear as string) },
       current: { value: parseFloat(current as string), year: parseInt(currentYear as string) },
       status: IndicatorStatus.Active,
-      subIndicators,
+      subIndicators, // Include sub-indicators only if any are added
     };
 
     addIndicator(newIndicator);
@@ -112,7 +100,7 @@ const AddIndicator = () => {
           setDescription={setDescription}
           subIndicators={subIndicators}
           setSubIndicators={setSubIndicators}
-          handleAddSubIndicator={() => setIsSubIndicatorFormVisible(true)}
+          handleAddSubIndicator={() => setIsSubIndicatorFormVisible(true)} // Show sub-indicator form
           sdgs={selectedSdgsWithNames}
         />
 
@@ -120,10 +108,11 @@ const AddIndicator = () => {
         {isSubIndicatorFormVisible && (
           <SubIndicatorForm
             onAddSubIndicator={handleAddSubIndicator}
-            onCancel={() => setIsSubIndicatorFormVisible(false)} // Hide the form when cancelled
+            onCancel={() => setIsSubIndicatorFormVisible(false)} // Hide form on cancel
           />
         )}
 
+        {/* Button to Add Indicator */}
         <button
           onClick={handleAddIndicator}
           className="mt-6 px-4 py-2 bg-yellow-500 text-white rounded-md"
