@@ -3,20 +3,20 @@
 import React, { createContext, useContext, useState } from "react";
 
 export enum IndicatorStatus {
-    Active = "active",
-    Disabled = "disabled",
-  }
+  Active = "active",
+  Disabled = "disabled",
+}
 
 export type Indicator = {
-    id: number;
-    name: string;
-    baseline: { value: number; year: number };
-    target: { value: number; year: number };
-    current: { value: number; year: number };
-    description: string;
-    status: IndicatorStatus;
-    sdgs: number[];
-
+  id: number;
+  name: string;
+  baseline: { value: number; year: number };
+  target: { value: number; year: number };
+  current: { value: number; year: number };
+  description: string;
+  status: IndicatorStatus;
+  sdgs: number[];
+  subIndicators?: Indicator[];
 };
 
 interface IndicatorContextProps {
@@ -33,9 +33,9 @@ export const IndicatorProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [idCounter, setIdCounter] = useState(1);
 
   const addIndicator = (newIndicator: Omit<Indicator, "id">) => {
-    const id = idCounter; 
+    const id = idCounter;
     setIndicators([...indicators, { ...newIndicator, id }]);
-    setIdCounter(id + 1);
+    setIdCounter(id + 1); 
   };
 
   const updateIndicatorStatus = (id: number, status: IndicatorStatus) => {
