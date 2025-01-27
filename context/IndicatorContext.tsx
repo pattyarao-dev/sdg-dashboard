@@ -23,6 +23,7 @@ interface IndicatorContextProps {
   indicators: Indicator[];
   addIndicator: (indicator: Omit<Indicator, "id">) => void;
   updateIndicatorStatus: (id: number, status: IndicatorStatus.Active | IndicatorStatus.Disabled) => void;
+  updateIndicator: (updatedIndicator: Indicator) => void;
 }
 
 const IndicatorContext = createContext<IndicatorContextProps | undefined>(undefined);
@@ -36,15 +37,25 @@ export const IndicatorProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIndicators([...indicators, { ...newIndicator, id }]);
     setIdCounter(id + 1);
   };
-  
+
   const updateIndicatorStatus = (id: number, status: IndicatorStatus) => {
     setIndicators((prev) =>
       prev.map((ind) => (ind.id === id ? { ...ind, status } : ind))
     );
   };
 
+  const updateIndicator = (updatedIndicator: Indicator) => {
+    setIndicators((prevIndicators) =>
+      prevIndicators.map((indicator) =>
+        indicator.id === updatedIndicator.id ? updatedIndicator : indicator
+      )
+    );
+  };
+
   return (
-    <IndicatorContext.Provider value={{ indicators, addIndicator, updateIndicatorStatus }}>
+    <IndicatorContext.Provider
+      value={{ indicators, addIndicator, updateIndicatorStatus, updateIndicator }}
+    >
       {children}
     </IndicatorContext.Provider>
   );
