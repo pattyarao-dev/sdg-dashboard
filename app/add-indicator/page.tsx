@@ -29,7 +29,6 @@ const AddIndicator = () => {
     { id: 3, name: "Good Health and Well-being" },
   ];
 
-  // Handle checkbox change
   const handleCheckboxChange = (sdgId: number) => {
     setSelectedSdgs((prev) =>
       prev.includes(sdgId)
