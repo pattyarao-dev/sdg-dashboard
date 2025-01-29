@@ -15,7 +15,6 @@ export type Indicator = {
   current: { value: number; year: number };
   description: string;
   status: IndicatorStatus;
-  sdgs: number[];
   subIndicators?: Indicator[];
 };
 
