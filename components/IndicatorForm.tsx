@@ -98,64 +98,46 @@ const IndicatorForm: React.FC<IndicatorFormProps> = ({
         </div>
 
         {/* Baseline, Target, Current Values and Years */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Baseline Value</label>
-          <input
-            type="number"
-            className="w-full p-3 border border-gray-300 rounded-md text-black"
-            value={baseline}
-            onChange={(e) => setBaseline(e.target.value)}
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Baseline Value</label>
+            <input
+              type="number"
+              className="w-full p-3 border border-gray-300 rounded-md text-black"
+              value={baseline}
+              onChange={(e) => setBaseline(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Baseline Year</label>
+            <input
+              type="number"
+              className="w-full p-3 border border-gray-300 rounded-md text-black"
+              value={baselineYear}
+              onChange={(e) => setBaselineYear(e.target.value)}
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Baseline Year</label>
-          <input
-            type="number"
-            className="w-full p-3 border border-gray-300 rounded-md text-black"
-            value={baselineYear}
-            onChange={(e) => setBaselineYear(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Target Value</label>
-          <input
-            type="number"
-            className="w-full p-3 border border-gray-300 rounded-md text-black"
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Target Year</label>
-          <input
-            type="number"
-            className="w-full p-3 border border-gray-300 rounded-md text-black"
-            value={targetYear}
-            onChange={(e) => setTargetYear(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Current Value</label>
-          <input
-            type="number"
-            className="w-full p-3 border border-gray-300 rounded-md text-black"
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Current Year</label>
-          <input
-            type="number"
-            className="w-full p-3 border border-gray-300 rounded-md text-black"
-            value={currentYear}
-            onChange={(e) => setCurrentYear(e.target.value)}
-          />
+          <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Baseline Value</label>
+            <input
+              type="number"
+              className="w-full p-3 border border-gray-300 rounded-md text-black"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Target Year</label>
+            <input
+              type="number"
+              className="w-full p-3 border border-gray-300 rounded-md text-black"
+              value={targetYear}
+              onChange={(e) => setTargetYear(e.target.value)}
+            />
+          </div>
         </div>
 
         <div>

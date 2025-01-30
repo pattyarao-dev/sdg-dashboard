@@ -54,46 +54,46 @@ const SubIndicatorForm: React.FC<SubIndicatorFormProps> = ({ onAddSubIndicator, 
           />
         </div>
 
-        {/* Baseline Value */}
-        <div>
-          <label htmlFor="sub-indicator-baseline" className="block text-sm font-medium text-gray-700">
-            Baseline Value
-          </label>
-          <input
-            type="number"
-            id="sub-indicator-baseline"
-            className="w-full p-3 border border-gray-300 rounded-md text-black"
-            value={subIndicatorBaseline}
-            onChange={(e) => setSubIndicatorBaseline(e.target.value)}
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Baseline Value</label>
+            <input
+              type="number"
+              className="w-full p-3 border border-gray-300 rounded-md text-black"
+              value={subIndicatorBaseline}
+              onChange={(e) => setSubIndicatorBaseline(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Baseline Year</label>
+            <input
+              type="number"
+              className="w-full p-3 border border-gray-300 rounded-md text-black"
+              value={subIndicatorTarget}
+              onChange={(e) => setSubIndicatorTarget(e.target.value)}
+            />
+          </div>
         </div>
 
-        {/* Target Value */}
-        <div>
-          <label htmlFor="sub-indicator-target" className="block text-sm font-medium text-gray-700">
-            Target Value
-          </label>
-          <input
-            type="number"
-            id="sub-indicator-target"
-            className="w-full p-3 border border-gray-300 rounded-md text-black"
-            value={subIndicatorTarget}
-            onChange={(e) => setSubIndicatorTarget(e.target.value)}
-          />
-        </div>
-
-        {/* Current Value */}
-        <div>
-          <label htmlFor="sub-indicator-current" className="block text-sm font-medium text-gray-700">
-            Current Value
-          </label>
-          <input
-            type="number"
-            id="sub-indicator-current"
-            className="w-full p-3 border border-gray-300 rounded-md text-black"
-            value={subIndicatorCurrent}
-            onChange={(e) => setSubIndicatorCurrent(e.target.value)}
-          />
+          <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Target Value</label>
+            <input
+              type="number"
+              className="w-full p-3 border border-gray-300 rounded-md text-black"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Target Year</label>
+            <input
+              type="number"
+              className="w-full p-3 border border-gray-300 rounded-md text-black"
+              value={targetYear}
+              onChange={(e) => setTargetYear(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* Description */}

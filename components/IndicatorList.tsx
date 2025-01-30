@@ -53,7 +53,7 @@ const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, sdgs, onActio
         const isExpanded = expandedSDGs[sdg.id] ?? true;
 
         return (
-          <div key={sdg.id} className="min-w-full bg-yellow-500 shadow-md rounded-lg mb-4">
+          <div key={sdg.id} className="min-w-full bg-white shadow-md rounded-lg mb-4">
             {/* SDG Header */}
             <div className="flex items-center justify-between p-4">
               <h2 className="text-xl font-bold text-black">
@@ -135,7 +135,7 @@ const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, sdgs, onActio
             {/* Add Indicator Button */}
             <button
               onClick={() => router.push(`/add-indicator?sdg=${sdg.id}`)}
-              className="m-4 px-4 py-2 bg-blue-500 text-white rounded-md"
+              className="m-4 px-4 py-2 bg-yellow-500 text-white rounded-md"
             >
               + Add Indicator
             </button>

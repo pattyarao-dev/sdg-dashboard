@@ -41,10 +41,6 @@ const AddIndicator = () => {
   });
 
   const handleAddIndicator = () => {
-    if (!name || selectedSdgs.length === 0 || baseline === "" || target === "" || current === "") {
-      alert("Please fill out all fields.");
-      return;
-    }
 
     const newIndicator = {
       name,
@@ -54,7 +50,7 @@ const AddIndicator = () => {
       target: { value: parseFloat(target as string), year: parseInt(targetYear as string) },
       current: { value: parseFloat(current as string), year: parseInt(currentYear as string) },
       status: IndicatorStatus.Active,
-      subIndicators, // Include sub-indicators only if any are added
+      subIndicators,
     };
 
     addIndicator(newIndicator);
@@ -81,7 +77,6 @@ const AddIndicator = () => {
         {/* Main Indicator Form */}
         <IndicatorForm
           name={name}
-          selectedSdgs={selectedSdgs}
           baseline={baseline}
           target={target}
           current={current}
@@ -90,7 +85,6 @@ const AddIndicator = () => {
           currentYear={currentYear}
           description={description}
           setName={setName}
-          setSelectedSdgs={setSelectedSdgs}
           setBaseline={setBaseline}
           setTarget={setTarget}
           setCurrent={setCurrent}
@@ -100,8 +94,7 @@ const AddIndicator = () => {
           setDescription={setDescription}
           subIndicators={subIndicators}
           setSubIndicators={setSubIndicators}
-          handleAddSubIndicator={() => setIsSubIndicatorFormVisible(true)} // Show sub-indicator form
-          sdgs={selectedSdgsWithNames}
+          handleAddSubIndicator={() => setIsSubIndicatorFormVisible(true)}
         />
 
         {/* Sub-Indicator Form */}
