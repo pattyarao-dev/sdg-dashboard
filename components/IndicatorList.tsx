@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { IndicatorStatus } from "@/context/IndicatorContext";
+import { IndicatorStatus, useIndicators } from "@/context/IndicatorContext";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -47,6 +47,12 @@ const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, sdgs, onActio
     }));
   };
 
+  console.log("Grouped Indicators:", groupIndicatorsBySDG(indicators, sdgs));
+  console.log("Indicators received in IndicatorList:", indicators);
+  console.log("SDGs received in IndicatorList:", sdgs);
+
+
+
   return (
     <div>
       {groupedIndicators.map(({ sdg, indicators: sdgIndicators }) => {
@@ -80,7 +86,7 @@ const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, sdgs, onActio
             {/* Indicators Table */}
             {isExpanded && (
               <div className="overflow-x-auto">
-                {sdgIndicators.length > 0 ? (
+                {sdgIndicators && sdgIndicators.length > 0 ? (
                   <table className="min-w-full bg-white shadow-md rounded-lg">
                     <thead>
                       <tr>
@@ -114,10 +120,13 @@ const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, sdgs, onActio
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onAction(indicator.id, indicator.status === IndicatorStatus.Active ? IndicatorStatus.Disabled : IndicatorStatus.Active);
+                                onAction(
+                                  indicator.id,
+                                  indicator.status === IndicatorStatus.Active ? IndicatorStatus.Disabled : IndicatorStatus.Active
+                                );
                               }}
                               className={`px-3 py-1 rounded-md text-white 
-                                ${indicator.status === IndicatorStatus.Active ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
+                                ${indicator.status === IndicatorStatus.Active ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"}`}
                             >
                               {indicator.status === IndicatorStatus.Active ? "Disable" : "Enable"}
                             </button>

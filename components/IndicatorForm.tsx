@@ -21,7 +21,7 @@ interface IndicatorFormProps {
   setDescription: React.Dispatch<React.SetStateAction<string>>;
   subIndicators: Indicator[];
   setSubIndicators: React.Dispatch<React.SetStateAction<Indicator[]>>;
-  handleAddSubIndicator: () => void;
+  // handleAddSubIndicator: () => void;
 }
 
 const IndicatorForm: React.FC<IndicatorFormProps> = ({
@@ -43,7 +43,7 @@ const IndicatorForm: React.FC<IndicatorFormProps> = ({
   setDescription,
   subIndicators,
   setSubIndicators,
-  handleAddSubIndicator,
+  // handleAddSubIndicator,
 }) => {
   const [showSubIndicatorForm, setShowSubIndicatorForm] = useState(false);
 
@@ -63,10 +63,6 @@ const IndicatorForm: React.FC<IndicatorFormProps> = ({
   const handleCancel = () => setShowSubIndicatorForm(false);
 
   const handleAddIndicator = () => {
-    if (!name || baseline === "" || target === "" || current === "") {
-      alert("Please fill out all required fields.");
-      return;
-    }
 
     const newIndicator = {
       name,

@@ -47,8 +47,8 @@ const IndicatorDetails = () => {
     setBaselineYear(indicator.baseline.year);
     setTarget(indicator.target.value);
     setTargetYear(indicator.target.year);
-    setCurrent(indicator.current.value);
-    setCurrentYear(indicator.current.year);
+    // setCurrent(indicator.current.value);
+    // setCurrentYear(indicator.current.year);
   };
 
   const handleSave = () => {
@@ -63,7 +63,7 @@ const IndicatorDetails = () => {
       description,
       baseline: { value: parseFloat(baseline as string), year: parseInt(baselineYear as string) },
       target: { value: parseFloat(target as string), year: parseInt(targetYear as string) },
-      current: { value: parseFloat(current as string), year: parseInt(currentYear as string) },
+      // current: { value: parseFloat(current as string), year: parseInt(currentYear as string) },
     };
 
     updateIndicator(updatedIndicator); 
@@ -207,9 +207,9 @@ const IndicatorDetails = () => {
                 <p className="text-sm text-gray-700">
                   Target: {indicator.target.value.toFixed(2)} ({indicator.target.year})
                 </p>
-                <p className="text-sm text-gray-700">
+                {/* <p className="text-sm text-gray-700">
                   Current: {indicator.current.value.toFixed(2)} ({indicator.current.year})
-                </p>
+                </p> */}
               </div>
               <div className="flex justify-end mt-4">
                 <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-yellow-500 text-white rounded-md">

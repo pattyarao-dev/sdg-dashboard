@@ -7,20 +7,21 @@ export enum IndicatorStatus {
   Disabled = "disabled",
 }
 
-export type Indicator = {
+export interface Indicator {
   id: number;
   name: string;
+  sdgs: number[];
+  description: string;
   baseline: { value: number; year: number };
   target: { value: number; year: number };
   current: { value: number; year: number };
-  description: string;
   status: IndicatorStatus;
   subIndicators?: Indicator[];
-};
+}
 
 interface IndicatorContextProps {
   indicators: Indicator[];
-  addIndicator: (indicator: Omit<Indicator, "id">) => void;
+  addIndicator: (indicator: Indicator) => void;
   updateIndicatorStatus: (id: number, status: IndicatorStatus.Active | IndicatorStatus.Disabled) => void;
   updateIndicator: (updatedIndicator: Indicator) => void;
 }
@@ -34,7 +35,6 @@ export const IndicatorProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const addIndicator = (newIndicator: Omit<Indicator, "id">) => {
     const id = idCounter;
     setIndicators([...indicators, { ...newIndicator, id }]);
-    setIdCounter(id + 1); 
   };
 
   const updateIndicatorStatus = (id: number, status: IndicatorStatus) => {

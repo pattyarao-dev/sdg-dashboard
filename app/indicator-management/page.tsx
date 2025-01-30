@@ -11,8 +11,9 @@ const IndicatorManagement = () => {
   const router = useRouter();
   const [activeList, setActiveList] = useState(true);
 
-  const activeIndicators = indicators.filter((ind) => ind.status === IndicatorStatus.Active);
-  const disabledIndicators = indicators.filter((ind) => ind.status === IndicatorStatus.Disabled);
+  const activeIndicators = indicators.filter((indicator) => indicator.status === IndicatorStatus.Active);
+  const disabledIndicators = indicators.filter((indicator) => indicator.status === IndicatorStatus.Disabled);
+
 
   // List of SDGs
   const sdgs = [
@@ -24,6 +25,10 @@ const IndicatorManagement = () => {
   const handleAction = (id: number, newStatus: IndicatorStatus) => {
     updateIndicatorStatus(id, newStatus);
   };
+
+  console.log("SDGs List:", sdgs); // Debugging
+console.log("Indicators List:", activeList ? activeIndicators : disabledIndicators);
+
 
   return (
     <div className="flex">

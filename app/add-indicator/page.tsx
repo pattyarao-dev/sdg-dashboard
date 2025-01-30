@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import SubIndicatorForm from "@/components/SubIndicatorForm";
 import IndicatorForm from "@/components/IndicatorForm";
 import { Indicator, useIndicators, IndicatorStatus } from "@/context/IndicatorContext";
 
@@ -20,29 +19,16 @@ const AddIndicator = () => {
   const [baselineYear, setBaselineYear] = useState<number | string>("");
   const [targetYear, setTargetYear] = useState<number | string>("");
   const [currentYear, setCurrentYear] = useState<number | string>("");
-
   const [subIndicators, setSubIndicators] = useState<Indicator[]>([]);
-  const [isSubIndicatorFormVisible, setIsSubIndicatorFormVisible] = useState(false);
-
-  const handleAddSubIndicator = (newSubIndicator: Indicator) => {
-    setSubIndicators([...subIndicators, newSubIndicator]);
-    setIsSubIndicatorFormVisible(false); // Close the sub-indicator form after adding
-  };
-
-  const sdgsList = [
-    { id: 1, name: "SDG 1" },
-    { id: 2, name: "SDG 2" },
-    { id: 3, name: "SDG 3" },
-  ];
-
-  const selectedSdgsWithNames = selectedSdgs.map((id) => {
-    const sdg = sdgsList.find((sdg) => sdg.id === id);
-    return sdg ? sdg : { id, name: `Unknown SDG ${id}` }; // default if not found
-  });
 
   const handleAddIndicator = () => {
+    if (!name) {
+      alert("Please enter a name for the indicator.");
+      return;
+    }
 
-    const newIndicator = {
+    const newIndicator: Indicator = {
+      id: Math.random(), // Temporary ID
       name,
       sdgs: selectedSdgs,
       description,
@@ -53,7 +39,9 @@ const AddIndicator = () => {
       subIndicators,
     };
 
+    console.log("Adding new indicator:", newIndicator); // ✅ Debugging log
     addIndicator(newIndicator);
+
     router.push("/indicator-management");
   };
 
@@ -74,7 +62,6 @@ const AddIndicator = () => {
           Back to Indicator List
         </button>
 
-        {/* Main Indicator Form */}
         <IndicatorForm
           name={name}
           baseline={baseline}
@@ -94,18 +81,8 @@ const AddIndicator = () => {
           setDescription={setDescription}
           subIndicators={subIndicators}
           setSubIndicators={setSubIndicators}
-          handleAddSubIndicator={() => setIsSubIndicatorFormVisible(true)}
         />
 
-        {/* Sub-Indicator Form */}
-        {isSubIndicatorFormVisible && (
-          <SubIndicatorForm
-            onAddSubIndicator={handleAddSubIndicator}
-            onCancel={() => setIsSubIndicatorFormVisible(false)} // Hide form on cancel
-          />
-        )}
-
-        {/* Button to Add Indicator */}
         <button
           onClick={handleAddIndicator}
           className="mt-6 px-4 py-2 bg-yellow-500 text-white rounded-md"
