@@ -21,11 +21,6 @@ const GaugeChart: React.FC<GaugeChartProps> = ({ title, value, color }) => {
       title: { text: "SDG " + title , font: { size: 12 } },
       gauge: {
         axis: { range: [0, 100] }, // Set the range of the gauge
-        steps: [
-          { range: [0, 30], color: "#ff4d4d" },
-          { range: [30, 70], color: "#ffcc00" },
-          { range: [70, 100], color: "#66ff66" },
-        ], // Color segments
         bar: { color: "#f44336" }, // Color of the gauge bar
       },
     },

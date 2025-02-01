@@ -4,7 +4,7 @@ import * as React from "react";
 import Plot from "react-plotly.js"; // Import the Plot component
 import { Data } from "plotly.js"; // Import the Plotly data type
 
-const PlotlyChart: React.FC = () => {
+const PieChart: React.FC = () => {
     // Specify the type correctly using TypeScript type assertion
     const data: Data[] = [
         {
@@ -28,4 +28,4 @@ const PlotlyChart: React.FC = () => {
     );
 };
 
-export default PlotlyChart;
+export default PieChart;
