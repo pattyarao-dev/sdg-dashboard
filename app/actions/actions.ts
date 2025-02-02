@@ -84,31 +84,42 @@ export async function createIndicatorsBatch(formData: FormData) {
   const goalId = parseInt(formData.get("goalId") as string, 10);
   const indicatorsData = JSON.parse(formData.get("indicators") as string);
 
+  console.log("Received indicators:", indicatorsData);
+
+  if (!Array.isArray(indicatorsData) || indicatorsData.length === 0) {
+    return {
+      success: false,
+      message: "❌ No indicators were added.",
+      addedIndicators: [],
+      duplicateIndicators: [],
+    };
+  }
+
+  const addedIndicators: string[] = [];
+  const duplicateIndicators: string[] = [];
+
   for (const indicator of indicatorsData) {
     let indicatorId = indicator.indicator_id;
 
-    // 🔍 Check if the indicator is new (temporary frontend ID)
-    if (indicatorId >= 1_000_000_000) {
-      // ✅ Prevent duplicate indicators by checking before creation
-      const existingIndicator = await prisma.md_indicator.findUnique({
-        where: { name: indicator.name },
-      });
+    // 🔍 Check if the indicator already exists in the database
+    const existingIndicator = await prisma.md_indicator.findUnique({
+      where: { name: indicator.name },
+    });
 
-      if (existingIndicator) {
-        indicatorId = existingIndicator.indicator_id;
-      } else {
-        const newIndicator = await prisma.md_indicator.create({
-          data: {
-            name: indicator.name,
-            description: indicator.description ?? "",
-            status: "active",
-          },
-        });
-        indicatorId = newIndicator.indicator_id;
-      }
+    if (existingIndicator) {
+      indicatorId = existingIndicator.indicator_id;
+    } else {
+      const newIndicator = await prisma.md_indicator.create({
+        data: {
+          name: indicator.name,
+          description: indicator.description ?? "",
+          status: "active",
+        },
+      });
+      indicatorId = newIndicator.indicator_id;
     }
 
-    // 🔍 Check if the goal-indicator link already exists
+    // 🔍 Check if the goal-indicator relationship already exists
     const existingLink = await prisma.td_goal_indicator.findFirst({
       where: {
         goal_id: goalId,
@@ -116,7 +127,6 @@ export async function createIndicatorsBatch(formData: FormData) {
       },
     });
 
-    // 🛑 Prevent duplicate links & add indicator metadata
     if (!existingLink) {
       await prisma.td_goal_indicator.create({
         data: {
@@ -127,10 +137,24 @@ export async function createIndicatorsBatch(formData: FormData) {
           global_current_value: indicator.current ?? 0,
         },
       });
+      addedIndicators.push(indicator.name);
+    } else {
+      duplicateIndicators.push(indicator.name);
     }
   }
 
-  return { success: true, message: "Indicators successfully added to goal" };
+  console.log("Added:", addedIndicators);
+  console.log("Duplicates:", duplicateIndicators);
+
+  return {
+    success: true,
+    message:
+      addedIndicators.length > 0
+        ? "✅ Indicators successfully added."
+        : "⚠️ Some indicators were already assigned.",
+    addedIndicators,
+    duplicateIndicators,
+  };
 }
 
 // export async function addIndicator(formData: FormData) {
