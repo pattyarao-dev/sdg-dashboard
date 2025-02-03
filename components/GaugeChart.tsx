@@ -9,10 +9,15 @@ const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 interface GaugeChartProps {
   title: string;
   value: number;
+  onClick?: () => void;
 }
 
-const GaugeChart: React.FC<GaugeChartProps> = ({ title, value }) => {
+const GaugeChart: React.FC<GaugeChartProps> = ({ title, value, onClick }) => {
   
+  const handleOnClick = () => {
+    if (onClick) onClick();
+  };
+
   const getGaugeColor = (percentage: number) => {
     if (percentage < 50) return "#E5243B"; // Red (0-49%)
     if (percentage < 80) return "#FF9800"; // Orange (50-79%)
@@ -51,7 +56,12 @@ const GaugeChart: React.FC<GaugeChartProps> = ({ title, value }) => {
     // ],
   };
 
-  return <Plot data={data} layout={layout} />;
+  return (
+    <div onClick={onClick}> 
+      <Plot data={data} layout={layout} />
+    </div>
+  );
+
 };
 
 export default GaugeChart;

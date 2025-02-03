@@ -20,6 +20,9 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
       },
       yaxis: {
         title: "Progress",
+        tickformat: ".0f%", // Keep whole numbers but show "%" (e.g., 10%, 20%, 30%)
+        range: [0, 100], // Keep the Y-axis within 0-100
+        dtick: 10, // 10% increments
       },
     showlegend: true,
   };

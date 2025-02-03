@@ -10,9 +10,11 @@ interface ProgressBarChartProps {
   label: string;
   progress: number; // Current progress (in %)
   target: number; // Target value (in %)
+  onClick?: () => void;
+  
 }
 
-const ProgressBarChart: React.FC<ProgressBarChartProps> = ({ label, progress, target }) => {
+const ProgressBarChart: React.FC<ProgressBarChartProps> = ({ label, progress, target, onClick }) => {
   const data: Data[] = [
     {
       x: [progress], // Progress value
@@ -57,7 +59,12 @@ const ProgressBarChart: React.FC<ProgressBarChartProps> = ({ label, progress, ta
     ],
   };
 
-  return <Plot data={data} layout={layout} />;
+  return (
+    <div onClick={onClick}> {/* Wrap the chart in a div to handle onClick */}
+      <Plot data={data} layout={layout} />
+    </div>
+  );
+
 };
 
 export default ProgressBarChart;
