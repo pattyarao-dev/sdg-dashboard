@@ -30,26 +30,54 @@ const sdgData = [
 ];
 
 const Dashboard: React.FC = () => {
-  const [selectedDataset, setSelectedDataset] = React.useState<string>("dataset1");
+  // const [selectedDataset, setSelectedDataset] = React.useState<string>("dataset1");
   const [selectedYear, setSelectedYear] = useState(2023);
   const [selectedSDG, setSelectedSDG] = React.useState<string>("");
+
+  const selectedSDGData = sdgData.find((sdg) => sdg.id === parseInt(selectedSDG)) || null;
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", padding: "20px" }}>
       <h1>LGU SDG Dashboard</h1>
 
       {/* Year and SDG Filters */}
-      <SlicerChart
-        selectedDataset={selectedDataset}     
-        setSelectedDataset={setSelectedDataset}
-        selectedYear={selectedYear}
-        setSelectedYear={setSelectedYear}
-        selectedSDG={selectedSDG}
-        setSelectedSDG={setSelectedSDG}
+      <SlicerChart selectedYear={selectedYear} 
+      setSelectedYear={setSelectedYear} 
+      selectedSDG={selectedSDG} 
+      setSelectedSDG={setSelectedSDG} />
+
+      {/* SDG Progress Over Time (Line Chart) */}
+      <h2>SDG {selectedSDG} Progress Over Time</h2>
+      <LineChart
+        data={[
+          {
+            x: [2020, 2021, 2022, 2023], // Dummy Years
+            y: selectedSDGData ? [selectedSDGData.global_current_value - 10, 
+              selectedSDGData.global_current_value - 5, 
+              selectedSDGData.global_current_value, 
+              selectedSDGData.global_target_value] : [],
+            type: "scatter",
+            mode: "lines+markers",
+            marker: { color: "blue" },
+          },
+        ]}
       />
 
-      {/* SDG Progress Gauges (All 17 SDGs) */}
-      <h2>SDG Progress Overview</h2>
+      {/* Indicator Progress Bars */}
+      <h2>Indicator Progress for SDG {selectedSDG}</h2>
+      {selectedSDGData && (
+        <>
+          <h2>Indicator Progress for {selectedSDGData.title}</h2>
+          {selectedSDGData.indicators.map((indicator, index) => (
+            <ProgressBarChart key={index} 
+            label={indicator.name} 
+            progress={(indicator.current / indicator.target) * 100} />
+          ))}
+        </>
+      )}
+
+    {/* SDG Progress Gauges (All 17 SDGs) */}
+    <h2>SDG Progress Overview</h2>
       <div
         style={{
           display: "grid",
@@ -85,30 +113,6 @@ const Dashboard: React.FC = () => {
           />
         ))}
       </div>
-
-      {/* SDG Progress Over Time (Line Chart) */}
-      <h2>SDG {selectedSDG} Progress Over Time</h2>
-      <LineChart
-        data={[
-          {
-            x: [2020, 2021, 2022, 2023], // Dummy Years
-            y: [30, 45, 60, 75], // Dummy progress values
-            type: "scatter",
-            mode: "lines+markers",
-            marker: { color: "blue" },
-          },
-        ]}
-      />
-
-      {/* Indicator Progress Bars */}
-      <h2>Indicator Progress for SDG {selectedSDG}</h2>
-      {sdgData.find((sdg) => sdg.id === parseInt(selectedSDG))?.indicators.map((indicator, index) => (
-      <ProgressBarChart 
-        key={index} 
-        label={indicator.name} 
-        progress={(indicator.current / indicator.target) * 100} 
-      />
-    ))}
 
       {/* Placeholder for Stacked Bar Chart & Treemap */}
       {/* <h2>SDG Breakdown by Sector</h2>
