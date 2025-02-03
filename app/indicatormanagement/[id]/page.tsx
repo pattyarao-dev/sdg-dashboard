@@ -1,7 +1,5 @@
-import { getIndicators } from "@/app/actions/actions";
 import AddIndicator from "@/components/AddIndicator";
 import GoBackButton from "@/components/GoBackButton";
-import { IIndicator } from "@/types/indicator.types";
 import prisma from "@/utils/prisma";
 
 export default async function AddGoalIndicator({
@@ -11,7 +9,19 @@ export default async function AddGoalIndicator({
 }) {
   const id = (await params).id;
 
-  const indicators = await prisma.md_indicator.findMany();
+  const indicators = await prisma.md_indicator.findMany({
+    select: {
+      indicator_id: true,
+      name: true,
+      description: true,
+      md_sub_indicator: {
+        select: {
+          sub_indicator_id: true,
+          name: true,
+        },
+      },
+    },
+  });
   const goalIndicators = await prisma.td_goal_indicator.findMany({
     where: {
       goal_id: Number(id),
@@ -30,6 +40,8 @@ export default async function AddGoalIndicator({
       return indicator;
     }
   });
+
+  console.log(JSON.stringify(availableIndicators, null, 2));
 
   return (
     <div className="w-full min-h-screen p-10 flex flex-col items-start justify-start gap-10">
