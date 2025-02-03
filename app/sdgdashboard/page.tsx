@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/router";
+// import { useRouter } from "next/router";
 import GaugeChart from "@/components/GaugeChart";
 import LineChart from "@/components/LineChart";
 import SlicerChart from "@/components/SlicerChart";
@@ -251,12 +251,12 @@ const sdgData = [
 
 const Dashboard: React.FC = () => {
 
-  const router = useRouter();
+  // const router = useRouter();
 
-  const handleGaugeClick = (sdgTitle: string) => {
-    // Redirect to the project dashboard based on the SDG title
-    router.push(`/projectdashboard/${sdgTitle}`);
-  };
+  // const handleGaugeClick = (sdgTitle: string) => {
+  //   // Redirect to the project dashboard based on the SDG title
+  //   router.push(`/projectdashboard/${sdgTitle}`);
+  // };
 
   const [selectedYear, setSelectedYear] = useState(2020);
   const [selectedSDG, setSelectedSDG] = useState<string>("");
@@ -373,7 +373,7 @@ const Dashboard: React.FC = () => {
             key={sdg.id}
             title={sdg.title}
             value={(sdg.global_current_value.find(item => item.year === selectedYear)?.current || 0) / sdg.global_target_value * 100}
-            onClick={() => handleGaugeClick(sdg.title)}
+            // onClick={() => handleGaugeClick(sdg.title)}
           />
         ))}
       </div>
