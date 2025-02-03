@@ -12,8 +12,15 @@ interface LineChartProps {
 
 const LineChart: React.FC<LineChartProps> = ({ data }) => {
   const layout: Partial<Layout> = {
-    xaxis: { title: "Year" },
-    yaxis: { title: "% Goal Achieved" },
+      xaxis: {
+        title: "Year",
+        tickmode: "linear",
+        dtick: 1, // Ensures ticks are at whole-number years
+        tickformat: "d", // Formats the year values as whole numbers
+      },
+      yaxis: {
+        title: "Progress",
+      },
     showlegend: true,
   };
 
