@@ -48,7 +48,7 @@ const SlicerChart: React.FC<SlicerChartProps> = ({ selectedYear, setSelectedYear
       {/* Year Slider */}
       <div>
         <label className="block mb-2 text-lg font-semibold">Select Year: {selectedYear}</label>
-        <input type="range" min={2020} max={2023} step={1} value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="w-full" />
+        <input type="range" min={2020} max={2030} step={1} value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="w-full" />
       </div>
     </div>
   );
