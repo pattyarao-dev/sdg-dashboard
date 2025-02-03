@@ -1,43 +1,38 @@
 "use client";
 
 import dynamic from "next/dynamic";
-const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 import * as React from "react";
-import { Data } from "plotly.js";
+import { Data, Layout } from "plotly.js";
+
+const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
 interface GaugeChartProps {
-    title: string;
-    value: number;
-    color: string;
+  title: string;
+  value: number;
+  color?: string;
 }
 
-const GaugeChart: React.FC<GaugeChartProps> = ({ title, value, color }) => {
-  // Define the data for the gauge
+const GaugeChart: React.FC<GaugeChartProps> = ({ title, value, color = "#f44336" }) => {
   const data: Data[] = [
     {
-      type: 'indicator' as 'indicator',
+      type: "indicator",
       mode: "gauge+number",
-      value: 70, // Initial value of the gauge
-      title: { text: "SDG " + title , font: { size: 12 } },
+      value,
+      title: { text: `SDG ${title}`, font: { size: 14 } },
       gauge: {
-        axis: { range: [0, 100] }, // Set the range of the gauge
-        bar: { color: "#f44336" }, // Color of the gauge bar
+        axis: { range: [0, 100] },
+        bar: { color },
       },
     },
   ];
 
-  // Define layout (optional)
-  const layout = {
-    width: 100, // Set width
-    height: 150, // Set height
-    margin: { t: 5, b: 5, l: 5, r: 5 }, // Set margins
+  const layout: Partial<Layout> = {
+    width: 200,
+    height: 150,
+    margin: { t: 10, b: 10, l: 10, r: 10 },
   };
 
-  return (
-    <div>
-      <Plot data={data} layout={layout} />
-    </div>
-  );
+  return <Plot data={data} layout={layout} />;
 };
 
 export default GaugeChart;

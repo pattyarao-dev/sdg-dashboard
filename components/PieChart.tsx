@@ -1,31 +1,27 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import * as React from "react";
-import Plot from "react-plotly.js"; // Import the Plot component
-import { Data } from "plotly.js"; // Import the Plotly data type
+import { Data, Layout } from "plotly.js";
+
+const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
 const PieChart: React.FC = () => {
-    // Specify the type correctly using TypeScript type assertion
-    const data: Data[] = [
-        {
-            labels: ['A', 'B', 'C', 'D'],
-            values: [10, 20, 30, 40],
-            type: 'pie' as 'pie', // This tells TypeScript that `type` is exactly 'pie'
-            marker: { colors: ['#ff6347', '#1e90ff', '#32cd32', '#ff4500'] },
-        },
-    ];
+  const data: Data[] = [
+    {
+      labels: ["Education", "Health", "Environment", "Economy"],
+      values: [30, 25, 20, 25],
+      type: "pie",
+      marker: { colors: ["#ff6347", "#1e90ff", "#32cd32", "#ff4500"] },
+    },
+  ];
 
-    const layout = {
-        title: 'Simple Pie Chart',
-        showlegend: true, // Show legend
-    };
-    
-    return (
-        <div>
-            <h1>Plotly Pie Chart</h1>
-            <Plot data={data} layout={layout} />
-        </div>
-    );
+  const layout: Partial<Layout> = {
+    title: "SDG Contribution by Sector",
+    showlegend: true,
+  };
+
+  return <Plot data={data} layout={layout} />;
 };
 
 export default PieChart;
