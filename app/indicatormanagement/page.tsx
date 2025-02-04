@@ -15,7 +15,7 @@ export default async function IndicatorManagement() {
           {goalsList.map((goal, index) => (
             <div
               key={goal.goal_id}
-              className={`w-full p-4 ${index % 2 ? "" : "bg-neutral-300"} flex flex-col gap-6 rounded-xl`}
+              className={`w-full p-4 ${index % 2 ? "bg-gray-100" : "bg-gray-300"} flex flex-col gap-6 rounded-xl`}
             >
               <div>
                 <p className="w-full text-2xl font-bold">
@@ -27,11 +27,18 @@ export default async function IndicatorManagement() {
                 </p>
               </div>
               <div className="w-full flex flex-col gap-4">
-                <div>
+                <div className="flex flex-col gap-4">
                   <p className="w-full font-semibold">Indicators:</p>
-                  {goal.td_goal_indicator.map(({ md_indicator }) => (
-                    <p key={md_indicator.indicator_id}>{md_indicator.name}</p>
-                  ))}
+                  <div className="w-full flex flex-col gap-2">
+                    {goal.td_goal_indicator.map(({ md_indicator }, index) => (
+                      <p
+                        key={md_indicator.indicator_id}
+                        className={`${index % 2 == 0 ? "bg-white" : ""} p-2 rounded-md`}
+                      >
+                        {md_indicator.name}
+                      </p>
+                    ))}
+                  </div>
                 </div>
                 <button className="w-fit px-2 py-1 flex items-center justify-center gap-1 bg-blue-100 rounded-lg">
                   <IoAddSharp className="text-sm" />

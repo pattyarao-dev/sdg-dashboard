@@ -332,18 +332,19 @@
 import { createIndicatorsBatch } from "@/app/actions/actions";
 import { useEffect, useState } from "react";
 import { IIndicator, ISubIndicator } from "@/types/indicator.types";
-import { IoAdd } from "react-icons/io5";
 
 interface AddIndicatorProps {
+  goalName: string;
   goalId: number;
   indicators: IIndicator[];
 }
 
 export default function AddIndicator({
+  goalName,
   goalId,
   indicators,
 }: AddIndicatorProps) {
-  const [selectedAddMethod, setSelectedAddMethod] = useState("");
+  const [selectedAddMethod, setSelectedAddMethod] = useState("Select Existing");
   const [selectedIndicators, setSelectedIndicators] = useState<
     {
       indicator_id: number;
@@ -353,10 +354,15 @@ export default function AddIndicator({
       sub_indicators: ISubIndicator[] | null | undefined;
     }[]
   >([]);
+
   const [newSubIndicatorName, setNewSubIndicatorName] = useState("");
 
   const [subIndicatorInputs, setSubIndicatorInputs] = useState<{
-    [key: number]: { name: string; target: number }[];
+    [indicatorId: number]: {
+      sub_indicator_id: number;
+      name: string;
+      target: number;
+    }[];
   }>({});
 
   const [newIndicator, setNewIndicator] = useState({
@@ -395,6 +401,18 @@ export default function AddIndicator({
     indicatorId: number,
     subIndicator: ISubIndicator,
   ) => {
+    setSubIndicatorInputs((prev) => ({
+      ...prev,
+      [indicatorId]: [
+        ...(prev[indicatorId] || []),
+        {
+          sub_indicator_id: subIndicator.sub_indicator_id,
+          name: subIndicator.name,
+          target: subIndicator.target ?? 0,
+        },
+      ],
+    }));
+
     setSelectedIndicators((prevIndicators) =>
       prevIndicators.map((indicator) =>
         indicator.indicator_id === indicatorId
@@ -449,27 +467,6 @@ export default function AddIndicator({
     });
   };
 
-  const handleAddSubIndicator = (indicatorId: number) => {
-    setSubIndicatorInputs((prev) => ({
-      ...prev,
-      [indicatorId]: [...(prev[indicatorId] || []), { name: "", target: 0 }],
-    }));
-  };
-
-  const handleUpdateSubIndicator = (
-    indicatorId: number,
-    index: number,
-    field: "name" | "target",
-    value: string | number,
-  ) => {
-    setSubIndicatorInputs((prev) => ({
-      ...prev,
-      [indicatorId]: prev[indicatorId].map((sub, i) =>
-        i === index ? { ...sub, [field]: value } : sub,
-      ),
-    }));
-  };
-
   const handleCreateSubIndicator = (
     indicatorId: number,
     subIndicatorName: string,
@@ -479,6 +476,7 @@ export default function AddIndicator({
     const newSubIndicator: ISubIndicator = {
       sub_indicator_id: Date.now(), // Temporary unique ID
       name: subIndicatorName,
+      target: 0,
     };
 
     handleAssignSubIndicator(indicatorId, newSubIndicator);
@@ -503,216 +501,272 @@ export default function AddIndicator({
 
     console.log("Server Response:", result);
     setMessage(result.message || "❌ No indicators were added.");
+    setSelectedIndicators([]);
   };
 
   return (
     <div className="w-full p-10 flex flex-col gap-10 rounded-xl drop-shadow-md">
-      <div
-        className="w-3/5 p-10 bg-gray-200 flex flex-col gap-10"
-        id="indicator_form"
-      >
-        <div className="w-full bg-gray-400 flex items-center">
-          <button
-            type="button"
-            className={`w-1/2 px-2 py-1 text-center border border-gray-600 ${
-              selectedAddMethod === "Select Existing"
-                ? "bg-gray-500 text-white"
-                : ""
-            }`}
-            onClick={() => setSelectedAddMethod("Select Existing")}
-          >
-            Select existing indicator
-          </button>
-          <button
-            type="button"
-            className={`w-1/2 px-2 py-1 text-center border border-gray-600 ${
-              selectedAddMethod === "Create New" ? "bg-gray-500 text-white" : ""
-            }`}
-            onClick={() => setSelectedAddMethod("Create New")}
-          >
-            Create a new indicator
-          </button>
-        </div>
-
-        {selectedAddMethod === "Create New" && (
-          <div className="flex flex-col gap-6">
-            <input
-              type="text"
-              placeholder="Indicator Name"
-              value={newIndicator.name}
-              onChange={(e) =>
-                setNewIndicator({ ...newIndicator, name: e.target.value })
-              }
-              className="p-2 rounded-md"
-            />
-            <input
-              type="text"
-              placeholder="Description"
-              value={newIndicator.description}
-              onChange={(e) =>
-                setNewIndicator({
-                  ...newIndicator,
-                  description: e.target.value,
-                })
-              }
-              className="p-2 rounded-md"
-            />
+      <div>Create Indicators for {goalName}</div>
+      <div className="w-full flex items-start justify-between gap-10">
+        <div
+          className="w-2/5 p-10 bg-gray-100 flex flex-col gap-10"
+          id="indicator_form"
+        >
+          <div className="w-full bg-gray-400 flex items-center">
             <button
-              className="px-4 py-2 bg-green-500 text-white rounded"
-              onClick={handleCreateNewIndicator}
+              type="button"
+              className={`w-1/2 px-2 py-1 text-center border border-gray-600 ${
+                selectedAddMethod === "Select Existing"
+                  ? "bg-gray-500 text-white"
+                  : ""
+              }`}
+              onClick={() => setSelectedAddMethod("Select Existing")}
             >
-              Add Indicator
+              Select existing indicator
+            </button>
+            <button
+              type="button"
+              className={`w-1/2 px-2 py-1 text-center border border-gray-600 ${
+                selectedAddMethod === "Create New"
+                  ? "bg-gray-500 text-white"
+                  : ""
+              }`}
+              onClick={() => setSelectedAddMethod("Create New")}
+            >
+              Create a new indicator
             </button>
           </div>
-        )}
 
-        {selectedAddMethod === "Select Existing" && (
-          <div className="flex flex-col gap-4">
-            <p>Select an Indicator:</p>
-            <div className="border p-4 rounded-lg">
-              {indicators.map((indicator) => (
-                <p
-                  key={indicator.indicator_id}
-                  className="p-2 cursor-pointer hover:bg-gray-200"
-                  onClick={() =>
-                    handleAddExistingIndicator(
-                      indicator.indicator_id,
-                      indicator.name,
-                    )
-                  }
-                >
-                  {indicator.name}
-                </p>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <ul className="flex flex-col gap-4">
-        {selectedIndicators.map((indicator) => (
-          <li
-            key={indicator.indicator_id}
-            className="flex flex-col gap-2 bg-gray-100 p-4 rounded-lg"
-          >
-            <input
-              type="text"
-              className="bg-transparent font-semibold"
-              value={indicator.name}
-              readOnly
-            />
-
-            <input
-              type="number"
-              className="w-1/3 p-2 text-xs border rounded-md"
-              placeholder="Target"
-              value={indicator.target ?? ""}
-              onChange={(e) =>
-                handleUpdateIndicatorValues(
-                  indicator.indicator_id,
-                  Number(e.target.value),
-                )
-              }
-            />
-
-            {/* Sub-Indicator Selection & Creation */}
-            <div className="w-full p-4 flex flex-col gap-4 bg-gray-300 rounded-md">
-              <p>Select or Add Sub-Indicators:</p>
-
-              {/* Dropdown for Existing Sub-Indicators */}
-              <select
-                className="p-2 border rounded-md"
-                onChange={(e) => {
-                  const subIndicator = indicators
-                    .find((ind) => ind.indicator_id === indicator.indicator_id)
-                    ?.md_sub_indicator?.find(
-                      (sub) => sub.sub_indicator_id === Number(e.target.value),
-                    );
-
-                  if (subIndicator) {
-                    handleAssignSubIndicator(
-                      indicator.indicator_id,
-                      subIndicator,
-                    );
-                  }
-                }}
+          {selectedAddMethod === "Create New" && (
+            <div className="w-full flex flex-col gap-6">
+              <input
+                type="text"
+                placeholder="Indicator Name"
+                value={newIndicator.name}
+                onChange={(e) =>
+                  setNewIndicator({ ...newIndicator, name: e.target.value })
+                }
+                className="p-2 rounded-md"
+              />
+              <input
+                type="text"
+                placeholder="Description"
+                value={newIndicator.description}
+                onChange={(e) =>
+                  setNewIndicator({
+                    ...newIndicator,
+                    description: e.target.value,
+                  })
+                }
+                className="p-2 rounded-md"
+              />
+              <button
+                className="px-4 py-2 bg-green-500 text-white rounded"
+                onClick={handleCreateNewIndicator}
               >
-                <option value="">-- Select a sub-indicator --</option>
-                {indicators
-                  .find((ind) => ind.indicator_id === indicator.indicator_id)
-                  ?.md_sub_indicator?.map((sub) => (
-                    <option
-                      key={sub.sub_indicator_id}
-                      value={sub.sub_indicator_id}
-                    >
-                      {sub.name}
-                    </option>
-                  ))}
-              </select>
+                Add Indicator
+              </button>
+            </div>
+          )}
 
-              {/* Input for Creating a New Sub-Indicator */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="New Sub-Indicator"
-                  className="p-2 border rounded-md flex-grow"
-                  value={newSubIndicatorName}
-                  onChange={(e) => setNewSubIndicatorName(e.target.value)}
-                />
-                <button
-                  className="bg-blue-500 text-white px-3 py-2 rounded-md"
-                  onClick={() => {
-                    handleCreateSubIndicator(
-                      indicator.indicator_id,
-                      newSubIndicatorName,
-                    );
-                    setNewSubIndicatorName(""); // Clear input after adding
+          {selectedAddMethod === "Select Existing" && (
+            <div className="w-full flex flex-col gap-4">
+              <p>Select an Indicator:</p>
+              <div className="border p-4 rounded-lg">
+                {indicators.map((indicator) => (
+                  <p
+                    key={indicator.indicator_id}
+                    className="p-2 cursor-pointer hover:bg-gray-200"
+                    onClick={() =>
+                      handleAddExistingIndicator(
+                        indicator.indicator_id,
+                        indicator.name,
+                      )
+                    }
+                  >
+                    {indicator.name}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <ul className="w-4/5 flex flex-col gap-4">
+          {selectedIndicators.map((indicator) => (
+            <li
+              key={indicator.indicator_id}
+              className="flex flex-col gap-2 bg-gray-100 p-4 rounded-lg"
+            >
+              <input
+                type="text"
+                className="bg-transparent font-semibold"
+                value={indicator.name}
+                readOnly
+              />
+
+              <input
+                type="number"
+                className="w-1/3 p-2 text-xs border rounded-md"
+                placeholder="Target"
+                value={indicator.target ?? ""}
+                onChange={(e) =>
+                  handleUpdateIndicatorValues(
+                    indicator.indicator_id,
+                    Number(e.target.value),
+                  )
+                }
+              />
+
+              {/* Sub-Indicator Selection & Creation */}
+              <div className="w-full p-4 flex flex-col gap-4 bg-gray-300 rounded-md">
+                <p>Select or Add Sub-Indicators:</p>
+
+                {/* Dropdown for Existing Sub-Indicators */}
+                <select
+                  className="p-2 border rounded-md"
+                  onChange={(e) => {
+                    const subIndicatorId = Number(e.target.value);
+                    if (!subIndicatorId) return;
+
+                    const subIndicator = indicators
+                      .find(
+                        (ind) => ind.indicator_id === indicator.indicator_id,
+                      )
+                      ?.md_sub_indicator?.find(
+                        (sub) => sub.sub_indicator_id === subIndicatorId,
+                      );
+
+                    if (subIndicator) {
+                      setSubIndicatorInputs((prev) => ({
+                        ...prev,
+                        [indicator.indicator_id]: [
+                          ...(prev[indicator.indicator_id] || []),
+                          {
+                            sub_indicator_id: subIndicator.sub_indicator_id, // Ensure ID exists
+                            name: subIndicator.name,
+                            target: 0,
+                          },
+                        ],
+                      }));
+                    }
                   }}
                 >
-                  Add
-                </button>
-              </div>
-
-              {/* Show Assigned Sub-Indicators */}
-              {indicator.sub_indicators &&
-                indicator.sub_indicators.length > 0 && (
-                  <ul className="w-full flex flex-col gap-2">
-                    {indicator.sub_indicators.map((sub) => (
-                      <li
+                  <option value="">-- Select a sub-indicator --</option>
+                  {indicators
+                    .find((ind) => ind.indicator_id === indicator.indicator_id)
+                    ?.md_sub_indicator?.map((sub) => (
+                      <option
                         key={sub.sub_indicator_id}
-                        className="flex justify-between items-center bg-white p-2 rounded-md"
+                        value={sub.sub_indicator_id}
                       >
                         {sub.name}
-                        <button
-                          className="text-red-500 text-sm"
-                          onClick={() =>
-                            setSelectedIndicators((prevIndicators) =>
-                              prevIndicators.map((ind) =>
-                                ind.indicator_id === indicator.indicator_id
-                                  ? {
-                                      ...ind,
-                                      sub_indicators:
-                                        ind.sub_indicators?.filter(
-                                          (s) =>
-                                            s.sub_indicator_id !==
-                                            sub.sub_indicator_id,
-                                        ),
-                                    }
-                                  : ind,
-                              ),
-                            )
-                          }
-                        >
-                          Remove
-                        </button>
-                      </li>
+                      </option>
                     ))}
-                  </ul>
+                </select>
+
+                {/* Input for Creating a New Sub-Indicator */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="New Sub-Indicator"
+                    className="p-2 border rounded-md flex-grow"
+                    value={newSubIndicatorName}
+                    onChange={(e) => setNewSubIndicatorName(e.target.value)}
+                  />
+
+                  <button
+                    className="bg-blue-500 text-white px-3 py-2 rounded-md"
+                    onClick={() => {
+                      handleCreateSubIndicator(
+                        indicator.indicator_id,
+                        newSubIndicatorName,
+                      );
+                      setNewSubIndicatorName(""); // Clear input after adding
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {/* Show Assigned Sub-Indicators */}
+                {subIndicatorInputs[indicator.indicator_id]?.length > 0 && (
+                  <div className="mt-2 p-2 bg-white rounded-md shadow">
+                    <p className="font-semibold">Selected Sub-Indicators:</p>
+                    <ul className="mt-2 space-y-2">
+                      {subIndicatorInputs[indicator.indicator_id].map(
+                        (sub, index) => (
+                          <li key={index} className="flex items-center gap-2">
+                            <span className="flex-grow">{sub.name}</span>
+                            <input
+                              type="number"
+                              className="p-1 border rounded-md w-20"
+                              value={sub.target}
+                              onChange={(e) => {
+                                const updatedTarget = Number(e.target.value);
+                                setSubIndicatorInputs((prev) => ({
+                                  ...prev,
+                                  [indicator.indicator_id]: prev[
+                                    indicator.indicator_id
+                                  ].map((s, i) =>
+                                    i === index
+                                      ? { ...s, target: updatedTarget }
+                                      : s,
+                                  ),
+                                }));
+                              }}
+                            />
+                            <button
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => {
+                                setSubIndicatorInputs((prev) => ({
+                                  ...prev,
+                                  [indicator.indicator_id]: prev[
+                                    indicator.indicator_id
+                                  ].filter((_, i) => i !== index),
+                                }));
+                              }}
+                            >
+                              ✖
+                            </button>
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  </div>
                 )}
-            </div>
-          </li>
-        ))}
-      </ul>
+              </div>
+
+              {/* <button
+                className="text-red-500 text-sm"
+                onClick={() =>
+                  setSelectedIndicators((prevIndicators) =>
+                    prevIndicators.map((ind) =>
+                      ind.indicator_id === indicator.indicator_id
+                        ? {
+                            ...ind,
+                            sub_indicators: ind.sub_indicators?.filter(
+                              (s) => s.sub_indicator_id !== sub.sub_indicator_id,
+                            ),
+                          }
+                        : ind,
+                    ),
+                  )
+                }
+              >
+                Remove
+              </button> */}
+              <button
+                onClick={() => {
+                  handleRemoveIndicator(indicator.indicator_id);
+                }}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <form onSubmit={handleSubmit}>
         <button className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">
