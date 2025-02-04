@@ -42,11 +42,11 @@ const sdgData = [
       { year: 2023, current: 50, target: 60 },
       { year: 2024, current: 55, target: 60 },
       { year: 2025, current: 58, target: 60 },
-      { year: 2026, current: 60, target: 60 },
+      { year: 2026, current: 57, target: 60 },
       { year: 2027, current: 65, target: 60 },
       { year: 2028, current: 70, target: 60 },
-      { year: 2029, current: 80, target: 60 },
-      { year: 2030, current: 100, target: 100 },
+      { year: 2029, current: 50, target: 60 },
+      { year: 2030, current: 70, target: 100 },
     ],
     indicators: [
       {
@@ -111,13 +111,13 @@ const sdgData = [
       { year: 2021, current: 45, target: 60 },
       { year: 2022, current: 50, target: 60 },
       { year: 2023, current: 55, target: 60 },
-      { year: 2024, current: 60, target: 60 },
-      { year: 2025, current: 62, target: 60 },
+      { year: 2024, current: 40, target: 60 },
+      { year: 2025, current: 52, target: 60 },
       { year: 2026, current: 65, target: 60 },
-      { year: 2027, current: 70, target: 60 },
+      { year: 2027, current: 45, target: 60 },
       { year: 2028, current: 75, target: 60 },
-      { year: 2029, current: 85, target: 60 },
-      { year: 2030, current: 100, target: 100 },
+      { year: 2029, current: 35, target: 60 },
+      { year: 2030, current: 75, target: 100 },
     ],
     indicators: [
       {
@@ -183,12 +183,12 @@ const sdgData = [
       { year: 2022, current: 60, target: 80 },
       { year: 2023, current: 65, target: 80 },
       { year: 2024, current: 70, target: 80 },
-      { year: 2025, current: 72, target: 80 },
+      { year: 2025, current: 65, target: 80 },
       { year: 2026, current: 75, target: 80 },
       { year: 2027, current: 78, target: 80 },
       { year: 2028, current: 82, target: 80 },
-      { year: 2029, current: 85, target: 80 },
-      { year: 2030, current: 100, target: 100 },
+      { year: 2029, current: 60, target: 80 },
+      { year: 2030, current: 82, target: 100 },
     ],
     indicators: [
       {
@@ -220,12 +220,12 @@ const sdgData = [
       { year: 2022, current: 70, target: 90 },
       { year: 2023, current: 75, target: 90 },
       { year: 2024, current: 80, target: 90 },
-      { year: 2025, current: 82, target: 90 },
-      { year: 2026, current: 85, target: 90 },
+      { year: 2025, current: 78, target: 90 },
+      { year: 2026, current: 87, target: 90 },
       { year: 2027, current: 88, target: 90 },
       { year: 2028, current: 90, target: 90 },
-      { year: 2029, current: 95, target: 90 },
-      { year: 2030, current: 100, target: 100 },
+      { year: 2029, current: 30, target: 90 },
+      { year: 2030, current: 93, target: 100 },
     ],
     indicators: [
       {
@@ -304,6 +304,10 @@ const Dashboard: React.FC = () => {
               </>
             )}
           </div>
+          {/* Display the StackedBarChart if an SDG and indicator are selected */}
+          {selectedSDG && selectedIndicator && (
+              <StackedBarChart selectedIndicator={selectedIndicator} sdgData={sdgData} />
+            )}
         </div>
 
         {/* LineChart & ProgressBars */}
@@ -335,11 +339,6 @@ const Dashboard: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Display the StackedBarChart if an SDG and indicator are selected */}
-      {selectedSDG && selectedIndicator && (
-        <StackedBarChart selectedIndicator={selectedIndicator} sdgData={sdgData} />
-      )}
 
       {/* SDG Progress Gauges */}
       <h2>SDG Progress Overview</h2>
