@@ -7,6 +7,7 @@ import LineChart from "@/components/LineChart";
 import SlicerChart from "@/components/SlicerChart";
 import ProgressBarChart from "@/components/ProgressBarChart";
 import StackedBarChart from "@/components/StackedBarChart";
+import Scorecard from "@/components/Scorecard";
 import TreemapChart from "@/components/TreemapChart";
 
 const sdgColors: { [key: string]: string } = {
@@ -247,7 +248,470 @@ const sdgData = [
       },
     ],
   },
-];
+    // SDG 5: Gender Equality
+    {
+      id: 5,
+      title: "Gender Equality",
+      global_target_value: 80,
+      global_current_value: [
+        { year: 2020, current: 50, target: 80 },
+        { year: 2021, current: 55, target: 80 },
+        { year: 2022, current: 60, target: 80 },
+        { year: 2023, current: 65, target: 80 },
+        { year: 2024, current: 70, target: 80 },
+        { year: 2025, current: 72, target: 80 },
+        { year: 2026, current: 75, target: 80 },
+        { year: 2027, current: 78, target: 80 },
+        { year: 2028, current: 80, target: 80 },
+        { year: 2029, current: 85, target: 90 },
+        { year: 2030, current: 85, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Women in Leadership",
+          current: [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80],
+          target: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90],
+          sub_indicators: [
+            {
+              name: "Women in Politics",
+              current: [25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75],
+              target: [35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85],
+            },
+            {
+              name: "Women in Business",
+              current: [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80],
+              target: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90],
+            },
+          ],
+        },
+        {
+          name: "Gender Pay Gap",
+          current: [20, 18, 16, 14, 12, 10, 8, 7, 6, 5, 4],
+          target: [10, 8, 6, 4, 2, 0, 0, 0, 0, 0, 0],
+          sub_indicators: [],
+        },
+      ],
+    },
+  
+    // SDG 6: Clean Water and Sanitation
+    {
+      id: 6,
+      title: "Clean Water and Sanitation",
+      global_target_value: 90,
+      global_current_value: [
+        { year: 2020, current: 70, target: 90 },
+        { year: 2021, current: 72, target: 90 },
+        { year: 2022, current: 75, target: 90 },
+        { year: 2023, current: 77, target: 90 },
+        { year: 2024, current: 80, target: 90 },
+        { year: 2025, current: 82, target: 90 },
+        { year: 2026, current: 84, target: 90 },
+        { year: 2027, current: 85, target: 90 },
+        { year: 2028, current: 87, target: 90 },
+        { year: 2029, current: 88, target: 90 },
+        { year: 2030, current: 90, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Access to Clean Water",
+          current: [60, 65, 70, 75, 80, 85, 88, 90, 92, 95, 100],
+          target: [70, 75, 80, 85, 90, 95, 100, 100, 100, 100, 100],
+          sub_indicators: [
+            {
+              name: "Urban Access to Water",
+              current: [85, 87, 90, 93, 95, 97, 98, 99, 100, 100, 100],
+              target: [90, 92, 94, 96, 98, 100, 100, 100, 100, 100, 100],
+            },
+            {
+              name: "Rural Access to Water",
+              current: [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+              target: [60, 65, 70, 75, 80, 85, 90, 95, 100, 100, 100],
+            },
+          ],
+        },
+        {
+          name: "Sanitation Access",
+          current: [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+          target: [60, 65, 70, 75, 80, 85, 90, 95, 100, 100, 100],
+          sub_indicators: [],
+        },
+      ],
+    },
+  
+    // SDG 7: Affordable and Clean Energy
+    {
+      id: 7,
+      title: "Affordable and Clean Energy",
+      global_target_value: 80,
+      global_current_value: [
+        { year: 2020, current: 60, target: 80 },
+        { year: 2021, current: 63, target: 80 },
+        { year: 2022, current: 67, target: 80 },
+        { year: 2023, current: 70, target: 80 },
+        { year: 2024, current: 73, target: 80 },
+        { year: 2025, current: 75, target: 80 },
+        { year: 2026, current: 77, target: 80 },
+        { year: 2027, current: 80, target: 80 },
+        { year: 2028, current: 82, target: 80 },
+        { year: 2029, current: 85, target: 85 },
+        { year: 2030, current: 90, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Access to Electricity",
+          current: [60, 65, 70, 75, 80, 85, 90, 95, 100, 100, 100],
+          target: [70, 75, 80, 85, 90, 95, 100, 100, 100, 100, 100],
+          sub_indicators: [],
+        },
+        {
+          name: "Renewable Energy Share",
+          current: [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
+          target: [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80],
+          sub_indicators: [],
+        },
+      ],
+    },
+  
+    // SDG 8: Decent Work and Economic Growth
+    {
+      id: 8,
+      title: "Decent Work and Economic Growth",
+      global_target_value: 75,
+      global_current_value: [
+        { year: 2020, current: 55, target: 75 },
+        { year: 2021, current: 58, target: 75 },
+        { year: 2022, current: 60, target: 75 },
+        { year: 2023, current: 62, target: 75 },
+        { year: 2024, current: 65, target: 75 },
+        { year: 2025, current: 68, target: 75 },
+        { year: 2026, current: 70, target: 75 },
+        { year: 2027, current: 72, target: 75 },
+        { year: 2028, current: 75, target: 75 },
+        { year: 2029, current: 80, target: 85 },
+        { year: 2030, current: 85, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Unemployment Rate",
+          current: [10, 8, 7, 6, 5, 4, 3, 2, 1, 1, 0],
+          target: [5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0],
+          sub_indicators: [],
+        },
+        {
+          name: "Wage Growth",
+          current: [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15],
+          target: [5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 20],
+          sub_indicators: [],
+        },
+      ],
+    },
+  
+    // SDG 9: Industry, Innovation, and Infrastructure
+    {
+      id: 9,
+      title: "Industry, Innovation, and Infrastructure",
+      global_target_value: 80,
+      global_current_value: [
+        { year: 2020, current: 55, target: 80 },
+        { year: 2021, current: 58, target: 80 },
+        { year: 2022, current: 60, target: 80 },
+        { year: 2023, current: 63, target: 80 },
+        { year: 2024, current: 65, target: 80 },
+        { year: 2025, current: 68, target: 80 },
+        { year: 2026, current: 70, target: 80 },
+        { year: 2027, current: 73, target: 80 },
+        { year: 2028, current: 75, target: 80 },
+        { year: 2029, current: 78, target: 85 },
+        { year: 2030, current: 85, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Industrialization",
+          current: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90],
+          target: [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+          sub_indicators: [],
+        },
+        {
+          name: "Innovation Index",
+          current: [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+          target: [60, 65, 70, 75, 80, 85, 90, 95, 100, 100, 100],
+          sub_indicators: [],
+        },
+      ],
+    },
+  
+    // SDG 10: Reduced Inequalities
+    {
+      id: 10,
+      title: "Reduced Inequalities",
+      global_target_value: 75,
+      global_current_value: [
+        { year: 2020, current: 55, target: 75 },
+        { year: 2021, current: 57, target: 75 },
+        { year: 2022, current: 60, target: 75 },
+        { year: 2023, current: 63, target: 75 },
+        { year: 2024, current: 65, target: 75 },
+        { year: 2025, current: 68, target: 75 },
+        { year: 2026, current: 70, target: 75 },
+        { year: 2027, current: 73, target: 75 },
+        { year: 2028, current: 75, target: 75 },
+        { year: 2029, current: 80, target: 85 },
+        { year: 2030, current: 85, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Income Inequality",
+          current: [30, 28, 25, 22, 20, 18, 15, 12, 10, 8, 5],
+          target: [15, 13, 10, 8, 6, 4, 3, 2, 1, 1, 0],
+          sub_indicators: [],
+        },
+        {
+          name: "Access to Resources",
+          current: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90],
+          target: [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+          sub_indicators: [],
+        },
+      ],
+    },
+  
+    // SDG 11: Sustainable Cities and Communities
+    {
+      id: 11,
+      title: "Sustainable Cities and Communities",
+      global_target_value: 85,
+      global_current_value: [
+        { year: 2020, current: 60, target: 85 },
+        { year: 2021, current: 63, target: 85 },
+        { year: 2022, current: 65, target: 85 },
+        { year: 2023, current: 68, target: 85 },
+        { year: 2024, current: 70, target: 85 },
+        { year: 2025, current: 73, target: 85 },
+        { year: 2026, current: 75, target: 85 },
+        { year: 2027, current: 78, target: 85 },
+        { year: 2028, current: 80, target: 85 },
+        { year: 2029, current: 82, target: 85 },
+        { year: 2030, current: 85, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Urban Green Spaces",
+          current: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90],
+          target: [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+          sub_indicators: [],
+        },
+        {
+          name: "Waste Management",
+          current: [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80],
+          target: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90],
+          sub_indicators: [],
+        },
+      ],
+    },
+  
+    // SDG 12: Responsible Consumption and Production
+    {
+      id: 12,
+      title: "Responsible Consumption and Production",
+      global_target_value: 80,
+      global_current_value: [
+        { year: 2020, current: 60, target: 80 },
+        { year: 2021, current: 62, target: 80 },
+        { year: 2022, current: 65, target: 80 },
+        { year: 2023, current: 67, target: 80 },
+        { year: 2024, current: 70, target: 80 },
+        { year: 2025, current: 72, target: 80 },
+        { year: 2026, current: 75, target: 80 },
+        { year: 2027, current: 78, target: 80 },
+        { year: 2028, current: 80, target: 80 },
+        { year: 2029, current: 82, target: 85 },
+        { year: 2030, current: 85, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Recycling Rate",
+          current: [25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75],
+          target: [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80],
+          sub_indicators: [],
+        },
+        {
+          name: "Sustainable Product Designs",
+          current: [15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65],
+          target: [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
+          sub_indicators: [],
+        },
+      ],
+    },
+  
+    // SDG 13: Climate Action
+    {
+      id: 13,
+      title: "Climate Action",
+      global_target_value: 75,
+      global_current_value: [
+        { year: 2020, current: 60, target: 75 },
+        { year: 2021, current: 62, target: 75 },
+        { year: 2022, current: 64, target: 75 },
+        { year: 2023, current: 65, target: 75 },
+        { year: 2024, current: 67, target: 75 },
+        { year: 2025, current: 69, target: 75 },
+        { year: 2026, current: 71, target: 75 },
+        { year: 2027, current: 73, target: 75 },
+        { year: 2028, current: 75, target: 75 },
+        { year: 2029, current: 78, target: 80 },
+        { year: 2030, current: 80, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Greenhouse Gas Emissions",
+          current: [30, 32, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+          target: [35, 32, 30, 27, 25, 20, 18, 15, 12, 10, 5],
+          sub_indicators: [],
+        },
+        {
+          name: "Renewable Energy Adoption",
+          current: [30, 33, 35, 38, 40, 42, 45, 48, 50, 55, 60],
+          target: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90],
+          sub_indicators: [],
+        },
+      ],
+    },
+    
+    // SDG 14: Life Below Water
+    {
+      id: 14,
+      title: "Life Below Water",
+      global_target_value: 80,
+      global_current_value: [
+        { year: 2020, current: 50, target: 80 },
+        { year: 2021, current: 53, target: 80 },
+        { year: 2022, current: 55, target: 80 },
+        { year: 2023, current: 57, target: 80 },
+        { year: 2024, current: 59, target: 80 },
+        { year: 2025, current: 61, target: 80 },
+        { year: 2026, current: 63, target: 80 },
+        { year: 2027, current: 65, target: 80 },
+        { year: 2028, current: 67, target: 80 },
+        { year: 2029, current: 70, target: 85 },
+        { year: 2030, current: 75, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Ocean Pollution",
+          current: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90],
+          target: [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+          sub_indicators: [],
+        },
+        {
+          name: "Marine Biodiversity",
+          current: [30, 32, 35, 37, 39, 40, 43, 46, 50, 54, 60],
+          target: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90],
+          sub_indicators: [],
+        },
+      ],
+    },
+    {
+      id: 15,
+      title: "Life on Land",
+      global_target_value: 80,
+      global_current_value: [
+        { year: 2020, current: 55, target: 80 },
+        { year: 2021, current: 58, target: 80 },
+        { year: 2022, current: 60, target: 80 },
+        { year: 2023, current: 62, target: 80 },
+        { year: 2024, current: 64, target: 80 },
+        { year: 2025, current: 66, target: 80 },
+        { year: 2026, current: 68, target: 80 },
+        { year: 2027, current: 70, target: 80 },
+        { year: 2028, current: 72, target: 80 },
+        { year: 2029, current: 74, target: 85 },
+        { year: 2030, current: 80, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Deforestation Rate",
+          current: [10, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0],
+          target: [5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0],
+          sub_indicators: [],
+        },
+        {
+          name: "Protected Land Areas",
+          current: [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
+          target: [25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75],
+          sub_indicators: [],
+        },
+      ],
+    },
+  
+    // SDG 16: Peace, Justice, and Strong Institutions
+    {
+      id: 16,
+      title: "Peace, Justice, and Strong Institutions",
+      global_target_value: 80,
+      global_current_value: [
+        { year: 2020, current: 55, target: 80 },
+        { year: 2021, current: 58, target: 80 },
+        { year: 2022, current: 60, target: 80 },
+        { year: 2023, current: 62, target: 80 },
+        { year: 2024, current: 64, target: 80 },
+        { year: 2025, current: 66, target: 80 },
+        { year: 2026, current: 68, target: 80 },
+        { year: 2027, current: 70, target: 80 },
+        { year: 2028, current: 72, target: 80 },
+        { year: 2029, current: 75, target: 85 },
+        { year: 2030, current: 80, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "Rule of Law",
+          current: [60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80],
+          target: [65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85],
+          sub_indicators: [],
+        },
+        {
+          name: "Access to Justice",
+          current: [50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70],
+          target: [55, 57, 59, 61, 63, 65, 67, 69, 71, 73, 75],
+          sub_indicators: [],
+        },
+      ],
+    },
+  
+    // SDG 17: Partnerships for the Goals
+    {
+      id: 17,
+      title: "Partnerships for the Goals",
+      global_target_value: 90,
+      global_current_value: [
+        { year: 2020, current: 70, target: 90 },
+        { year: 2021, current: 72, target: 90 },
+        { year: 2022, current: 75, target: 90 },
+        { year: 2023, current: 77, target: 90 },
+        { year: 2024, current: 80, target: 90 },
+        { year: 2025, current: 82, target: 90 },
+        { year: 2026, current: 85, target: 90 },
+        { year: 2027, current: 87, target: 90 },
+        { year: 2028, current: 89, target: 90 },
+        { year: 2029, current: 90, target: 90 },
+        { year: 2030, current: 95, target: 100 },
+      ],
+      indicators: [
+        {
+          name: "International Cooperation",
+          current: [60, 65, 70, 75, 80, 85, 90, 92, 95, 98, 100],
+          target: [65, 70, 75, 80, 85, 90, 95, 100, 100, 100, 100],
+          sub_indicators: [],
+        },
+        {
+          name: "Development Assistance",
+          current: [45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95],
+          target: [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+          sub_indicators: [],
+        },
+      ],
+    },
+  ];
+  
+
 
 const Dashboard: React.FC = () => {
 
@@ -280,12 +744,17 @@ const Dashboard: React.FC = () => {
 
         {/* Filters (SDG & Year) */}
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          
           <SlicerChart
             selectedYear={selectedYear}
             setSelectedYear={setSelectedYear}
             selectedSDG={selectedSDG}
             setSelectedSDG={setSelectedSDG}
           />
+
+          <div>
+          <Scorecard sdgData={sdgData} />  {/* Pass sdgData as a prop to Scorecard */}
+          </div>
 
           {/* Scrollable ProgressBars */}
           <div style={{ maxHeight: "300px", overflowY: "auto", marginTop: "20px", padding: "10px", border: "1px solid #ddd", borderRadius: "8px" }}>
