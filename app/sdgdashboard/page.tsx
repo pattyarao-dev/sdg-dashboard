@@ -8,6 +8,7 @@ import SlicerChart from "@/components/SlicerChart";
 import ProgressBarChart from "@/components/ProgressBarChart";
 import StackedBarChart from "@/components/StackedBarChart";
 import Scorecard from "@/components/Scorecard";
+import ChoroplethMap from "@/components/ChoroplethMap";
 // import { getSdgData } from "@/api/get-sdg-data/route.ts";
 
 const sdgColors: { [key: string]: string } = {
@@ -827,31 +828,19 @@ const Dashboard: React.FC = () => {
               ]}
             />
           )}
+
+          <h1>Choropleth Map of Pasig City Barangays</h1>
+          <ChoroplethMap />
         </div>
       </div>
 
       {/* SDG Progress Gauges */}
       <h2>SDG Progress Overview</h2>
-      {/* <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(9, minmax(120px, 1fr))",
-          gap: "10px",
-          marginTop: "20px",
-          padding: "20px",
-        }}
-      >
-        {sdgData.slice(0, 9).map((sdg) => (
-          <GaugeChart 
-              key={sdg.id} 
-              title={sdg.title} value={(sdg.global_current_value.find(item => item.year === selectedYear)?.current || 0) / sdg.global_target_value * 100} />
-        ))}
-      </div> */}
-
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(8, minmax(120px, 1fr))",
+          gridTemplateColumns: "repeat(9, minmax(120px, 1fr))",
+          gridTemplateRows: "repeat(2, 120px)",
           gap: "10px",
           marginTop: "25px",
           padding: "20px",
