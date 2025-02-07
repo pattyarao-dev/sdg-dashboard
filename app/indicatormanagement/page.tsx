@@ -5,13 +5,13 @@ import { IoAddSharp } from "react-icons/io5";
 export default async function IndicatorManagement() {
   const goalsList = await getGoals();
   return (
-    <div className="w-full min-h-screen p-10 flex items-center justify-center">
+    <div className="w-full min-h-screen p-10 flex items-center justify-center bg-green-50">
       <div className="w-full h-full p-10 flex flex-col gap-10">
         <h1 className="w-full font-black text-4xl uppercase">
           Sustainable Development Goals
         </h1>
 
-        <div className="w-full flex flex-col gap-4">
+        <div className="w-full flex flex-col gap-16">
           {goalsList.map((goal, index) => (
             <div
               key={goal.goal_id}
