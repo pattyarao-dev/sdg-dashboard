@@ -6,6 +6,7 @@ import GaugeChart from "@/components/GaugeChart";
 import LineChart from "@/components/LineChart";
 import SlicerChart from "@/components/SlicerChart";
 import ProgressBarChart from "@/components/ProgressBarChart";
+import DonutChart from "@/components/DonutChart";
 import StackedBarChart from "@/components/StackedBarChart";
 import Scorecard from "@/components/Scorecard";
 import ChoroplethMap from "@/components/ChoroplethMap";
@@ -789,16 +790,17 @@ const Dashboard: React.FC = () => {
                     label={indicator.name}
                     progress={(indicator.current[selectedYear - 2020] / indicator.target[selectedYear - 2020]) * 100}
                     target={indicator.target[selectedYear - 2020]}
-                    onClick={() => setSelectedIndicator(indicator.name)}
+                    onClick={() => setSelectedIndicator(indicator.name)} // Set selected indicator
                   />
                 ))}
               </>
             )}
           </div>
-          {/* Display the StackedBarChart if an SDG and indicator are selected */}
-          {selectedSDG && selectedIndicator && (
-              <StackedBarChart selectedIndicator={selectedIndicator} sdgData={sdgData} />
-            )}
+
+            {/* Display the DonutChart when an SDG and indicator are selected */}
+            {selectedSDG && selectedIndicator && (
+                <DonutChart selectedIndicator={selectedIndicator} sdgData={sdgData} />
+              )}
         </div>
 
         {/* LineChart & ProgressBars */}
@@ -834,25 +836,28 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* SDG Progress Gauges */}
       <h2>SDG Progress Overview</h2>
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(9, minmax(120px, 1fr))",
-          gridTemplateRows: "repeat(2, 120px)",
+          gridAutoRows: "120px", // Allow rows to be created dynamically
           gap: "10px",
           marginTop: "25px",
           padding: "20px",
         }}
       >
-        {sdgData.slice(0, 9).map((sdg) => (
+        {sdgData.map((sdg) => (
           <GaugeChart
-          key={sdg.goal_id}
-          title={sdg.title}
-          value={(sdg.global_current_value.find((item: { year: number; current: number; target: number }) => item.year === selectedYear)?.current || 0) /
-            sdg.global_target_value * 100}
-        />        
+            key={sdg.goal_id}
+            title={sdg.title}
+            value={
+              (sdg.global_current_value.find(
+                (item: { year: number; current: number; target: number }) =>
+                  item.year === selectedYear
+              )?.current || 0) / sdg.global_target_value * 100
+            }
+          />
         ))}
       </div>
     </div>

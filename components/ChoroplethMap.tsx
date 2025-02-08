@@ -44,7 +44,7 @@ const ChoroplethMap = () => {
             marker: {
               line: {
                 width: 1, // Ensure visible outlines
-                color: "red",
+                color: [1, "rgba(204, 0, 0, 0.6)"],
               },
             },
           },
@@ -73,7 +73,7 @@ const ChoroplethMap = () => {
               sourcetype: "geojson",
               source: geoData, // ✅ Ensure the GeoJSON is loaded
               type: "line", // ✅ This makes outlines appear
-              color: "black",
+              color: "red",
               line: { width: 1 }, // ✅ Ensure visible borders
             },
           ],

@@ -53,7 +53,7 @@ const ProgressBarChart: React.FC<ProgressBarChartProps> = ({ label, progress, ta
         line: {
           color: "red", // Target marker color
           width: 3,
-          dash: "dashdot", // Makes it a dashed line
+          dash: "solid", // Makes it a dashed line
         },
       },
     ],
