@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/utils/prisma";
-import { redirect } from "next/navigation";
+// import { redirect } from "next/navigation";
 
 export async function getProjects() {
   const projects = await prisma.td_project.findMany({
@@ -12,17 +12,6 @@ export async function getProjects() {
   });
   return projects;
 }
-
-// export async function getIndicators() {
-//   const indicators = await prisma.md_indicator.findMany({
-//     select: {
-//       indicator_id: true,
-//       name: true,
-//       description: true, // Include the related `td_indicator_value` records
-//     },
-//   });
-//   return indicators;
-// }
 
 export async function getGoals() {
   const goals = await prisma.md_goal.findMany({
@@ -46,39 +35,71 @@ export async function getGoals() {
   return goals;
 }
 
-export async function createIndicator(formData: FormData) {
-  const name = formData.get("name") as string;
-  const description = formData.get("description") as string;
-  const goalIdString = formData.get("goalNum") as string;
-  const goalId = parseInt(goalIdString, 10);
-
-  const targetValueString = formData.get("globalTarget") as string;
-  const globalTargetValue = parseInt(targetValueString, 10);
-
-  const baselineValueString = formData.get("globalBaseline") as string;
-  const globalBaselineValue = parseInt(baselineValueString, 10);
-
-  const currentValueString = formData.get("globalCurrent") as string;
-  const globalCurrentValue = parseInt(currentValueString, 10);
-
-  const newIndicator = await prisma.md_indicator.create({
-    data: {
-      name,
-      description,
-      status: "active",
+export async function getGoalsInformation() {
+  const goals = await prisma.md_goal.findMany({
+    include: {
+      td_goal_indicator: {
+        include: {
+          md_indicator: true, // Get the indicator details
+          td_goal_sub_indicator: {
+            include: {
+              md_sub_indicator: true, // Get only sub-indicators applicable to the goal
+            },
+          },
+        },
+      },
     },
   });
 
-  await prisma.td_goal_indicator.create({
-    data: {
-      goal_id: goalId,
-      indicator_id: newIndicator.indicator_id,
-      global_target_value: globalTargetValue,
-      global_baseline_value: globalBaselineValue,
-      global_current_value: globalCurrentValue,
-    },
-  });
+  const processedGoals = goals.map((goal) => ({
+    goalId: goal.goal_id,
+    goalName: goal.name,
+    indicators: goal.td_goal_indicator.map((gi) => ({
+      indicatorId: gi.md_indicator.indicator_id,
+      indicatorName: gi.md_indicator.name,
+      subIndicators: gi.td_goal_sub_indicator.map((gs) => ({
+        subIndicatorId: gs.md_sub_indicator.sub_indicator_id,
+        subIndicatorName: gs.md_sub_indicator.name,
+      })),
+    })),
+  }));
+
+  return processedGoals;
 }
+
+// export async function createIndicator(formData: FormData) {
+//   const name = formData.get("name") as string;
+//   const description = formData.get("description") as string;
+//   const goalIdString = formData.get("goalNum") as string;
+//   const goalId = parseInt(goalIdString, 10);
+
+//   const targetValueString = formData.get("globalTarget") as string;
+//   const globalTargetValue = parseInt(targetValueString, 10);
+
+//   const baselineValueString = formData.get("globalBaseline") as string;
+//   const globalBaselineValue = parseInt(baselineValueString, 10);
+
+//   const currentValueString = formData.get("globalCurrent") as string;
+//   const globalCurrentValue = parseInt(currentValueString, 10);
+
+//   const newIndicator = await prisma.md_indicator.create({
+//     data: {
+//       name,
+//       description,
+//       status: "active",
+//     },
+//   });
+
+//   await prisma.td_goal_indicator.create({
+//     data: {
+//       goal_id: goalId,
+//       indicator_id: newIndicator.indicator_id,
+//       global_target_value: globalTargetValue,
+//       global_baseline_value: globalBaselineValue,
+//       global_current_value: globalCurrentValue,
+//     },
+//   });
+// }
 
 export async function createIndicatorsBatch(formData: FormData) {
   const goalId = parseInt(formData.get("goalId") as string, 10);
@@ -145,12 +166,12 @@ export async function createIndicatorsBatch(formData: FormData) {
 
     const goalIndicatorId = goalIndicator.goal_indicator_id;
 
-    // 🚀 Process Sub-Indicators
+    // Process Sub-Indicators
     if (indicator.sub_indicators && indicator.sub_indicators.length > 0) {
       for (const subIndicator of indicator.sub_indicators) {
         let subIndicatorId = subIndicator.sub_indicator_id;
 
-        // 🔍 Check if the sub-indicator already exists under this indicator
+        // Check if the sub-indicator already exists under this indicator
         const existingSubIndicator = await prisma.md_sub_indicator.findFirst({
           where: {
             name: subIndicator.name,
@@ -161,7 +182,7 @@ export async function createIndicatorsBatch(formData: FormData) {
         if (existingSubIndicator) {
           subIndicatorId = existingSubIndicator.sub_indicator_id;
         } else {
-          // 🆕 Create new sub-indicator
+          // Create new sub-indicator
           const newSubIndicator = await prisma.md_sub_indicator.create({
             data: {
               name: subIndicator.name,
@@ -173,11 +194,10 @@ export async function createIndicatorsBatch(formData: FormData) {
           addedSubIndicators.push(subIndicator.name);
         }
 
-        // 🔗 Link sub-indicator to the goal-indicator relationship
+        // Link sub-indicator to the goal-indicator relationship
         await prisma.td_goal_sub_indicator.upsert({
           where: {
             goal_indicator_id_sub_indicator_id: {
-              // ✅ FIXED: Use composite unique key
               goal_indicator_id: goalIndicatorId,
               sub_indicator_id: subIndicatorId,
             },
