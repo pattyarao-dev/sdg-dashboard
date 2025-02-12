@@ -47,6 +47,7 @@ const Dashboard: React.FC = () => {
   const [selectedSDG, setSelectedSDG] = useState<string>("");
   const [sdgData, setSdgData] = useState<any[]>([]); // State to store SDG data
   const [selectedIndicator, setSelectedIndicator] = useState<string>("");
+  const [selectedBarangay, setSelectedBarangay] = useState<string | null>(null);
   const [selectedIndicators, setSelectedIndicators] = useState<string[]>([]);
 
 
@@ -86,6 +87,10 @@ const Dashboard: React.FC = () => {
   }, []);
 
   const selectedSDGData = sdgData.find((sdg) => sdg.goal_id.toString() === selectedSDG) || null;
+  
+    const barangayData = dummySDGData.find((sdg) =>
+    sdg.location_data?.some((loc: any) => loc.barangay === selectedBarangay)
+  );
 
   const handleIndicatorClick = (indicatorName: string) => {
     setSelectedIndicators((prevSelectedIndicators) => {
@@ -104,6 +109,7 @@ const Dashboard: React.FC = () => {
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", padding: "20px" }}>
       <h1>LGU SDG Dashboard</h1>
+      
       {/* Grid Layout for Filters, LineChart & ProgressBars */}
       <div
         style={{
@@ -122,13 +128,11 @@ const Dashboard: React.FC = () => {
             setSelectedSDG={setSelectedSDG}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
           />
-
-          <div>
-            <Scorecard sdgData={sdgData} /> {/* Pass sdgData as a prop to Scorecard */}
-          </div>
+          <Scorecard sdgData={sdgData} />
         </div>
-        
-        <div>{/* Scrollable ProgressBars */}
+
+        {/* Scrollable ProgressBars */}
+        <div>
           <div
             style={{
               maxHeight: "300px",
@@ -167,18 +171,12 @@ const Dashboard: React.FC = () => {
 
           {/* Display the DonutChart when an SDG and indicator are selected */}
           {selectedSDG && selectedIndicator && (
-            <DonutChart
-              selectedIndicator={selectedIndicator}
-              sdgData={sdgData}
-              selectedYear={selectedYear} // Pass selected year
-            />
+            <DonutChart selectedIndicator={selectedIndicator} sdgData={sdgData} selectedYear={selectedYear} />
           )}
-          
         </div>
 
-        {/* LineChart & ProgressBars */}
+        {/* LineChart Section */}
         <div>
-          {/* LineChart */}
           <h2>SDG {selectedSDG} Achievement Level by Year</h2>
           {selectedSDGData && (
             <LineChart
@@ -193,49 +191,83 @@ const Dashboard: React.FC = () => {
                   name: "Current Progress",
                 },
               ]}
-              target={selectedSDGData.global_target_value} // Pass the global target value dynamically
-              onClick={(event) => {
-                if (event && event.points && event.points.length > 0) {
-                  const clickedYear = event.points[0].x; // Extract the year clicked
-                  handleYearClick(clickedYear); // Update state
-                }
-              }} 
-            />
-          )}
-          {selectedIndicator && selectedSDGData && (
-            <LineChart
-              data={[
-                {
-                  x: selectedSDGData.indicators
-                    .find((indicator) => indicator.name === selectedIndicator)
-                    ?.current.map((_, idx) => 2020 + idx),
-                  y: selectedSDGData.indicators
-                    .find((indicator) => indicator.name === selectedIndicator)
-                    ?.current,
-                  type: "scatter",
-                  mode: "lines+markers",
-                  marker: { color: "green" }, // You can customize the color
-                  line: { color: "green" },
-                  name: selectedIndicator,
-                },
-              ]}
               target={selectedSDGData.global_target_value}
               onClick={(event) => {
-                if (event && event.points && event.points.length > 0) {
-                  const clickedYear = event.points[0].x;
-                  handleYearClick(clickedYear); // Update state for year click
+                if (event?.points?.length) {
+                  handleYearClick(event.points[0].x);
                 }
               }}
             />
           )}
+
+          {selectedIndicator && selectedSDGData && (() => {
+            const selectedIndicatorData = selectedSDGData.indicators.find(
+              (indicator) => indicator.name === selectedIndicator
+            );
+
+            if (!selectedIndicatorData) return null; // Ensure it exists
+
+            return (
+              <>
+                <h2>{selectedIndicatorData.name} Achievement Level by Year</h2>  
+                <LineChart
+                  data={[
+                    {
+                      x: selectedIndicatorData.current.map((_, idx) => 2020 + idx),
+                      y: selectedIndicatorData.current,
+                      type: "scatter",
+                      mode: "lines+markers",
+                      marker: { color: "green" },
+                      line: { color: "green" },
+                      name: selectedIndicatorData.name, // Ensure correct name display
+                    },
+                  ]}
+                  target={selectedSDGData.global_target_value}
+                  onClick={(event) => {
+                    if (event?.points?.length) {
+                      handleYearClick(event.points[0].x);
+                    }
+                  }}
+                />
+              </>
+            );
+          })()}
         </div>
 
-        <div>
-          <h1>Choropleth Map of Pasig City</h1>
-          <ChoroplethMap />
+        <div> 
+          {/* Choropleth Map & Drilldown Panel */}
+          <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
+            {/* Choropleth Map */}
+            <div style={{ flex: 2 }}>
+              <h2>Choropleth Map of Pasig City</h2>
+              <ChoroplethMap onBarangaySelect={setSelectedBarangay} />
+            </div>
+
+            {/* Drilldown Panel */}
+            {selectedBarangay && barangayData && (
+              <div style={{ flex: 1, border: "1px solid #ddd", padding: "15px", borderRadius: "10px" }}>
+                <h2>{selectedBarangay} - SDG Performance</h2>
+                <LineChart
+                  data={[
+                    {
+                      x: barangayData.location_data.map((data: any) => data.year),
+                      y: barangayData.location_data.map((data: any) => data.sdg1_poverty_rate),
+                      type: "scatter",
+                      mode: "lines+markers",
+                      marker: { color: "blue" },
+                      line: { color: "blue" },
+                      name: "Poverty Rate",
+                    },
+                  ]}
+                />
+                <DonutChart selectedIndicator="sdg1_poverty_rate" sdgData={[barangayData]} selectedYear={2023} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* SDG Progress Overview */}
       <h2>SDG Progress Overview</h2>
       <div
         style={{
@@ -247,19 +279,21 @@ const Dashboard: React.FC = () => {
           padding: "20px",
         }}
       >
-        {sdgData.map((sdg) => (
-          <GaugeChart
-            key={sdg.goal_id}
-            title={sdg.title}
-            value={
-              (sdg.global_current_value.find(
-                (item: { year: number; current: number; target: number }) =>
-                  item.year === selectedYear
-              )?.current || 0) / sdg.global_target_value * 100
-            }
-            sdgNumber={sdg.goal_id} // Pass SDG number for dynamic routing
-          />
-        ))}
+        {sdgData.map((sdg) => {
+          const currentValue =
+            sdg.global_current_value.find((item: { year: number; current: number }) => item.year === selectedYear)
+              ?.current || 0;
+          const progressPercentage = (currentValue / sdg.global_target_value) * 100;
+
+          return (
+            <GaugeChart
+              key={sdg.goal_id}
+              title={sdg.title}
+              value={isNaN(progressPercentage) ? 0 : progressPercentage}
+              sdgNumber={sdg.goal_id}
+            />
+          );
+        })}
       </div>
     </div>
   );
