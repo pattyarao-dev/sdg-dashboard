@@ -16,14 +16,12 @@ const ChoroplethMap = () => {
         const data = await response.json();
         setGeoData(data);
 
-        // ✅ Debugging: Check available properties in GeoJSON
         console.log("GeoJSON Feature Properties:", data.features[0].properties);
 
-        // ✅ Ensure correct feature ID key
         const featureKey = "properties.NAME_3"; // Change if necessary
         const locations = data.features.map((feature: any) => feature.properties.NAME_3);
 
-        // ✅ Generate example data values
+        //random for now
         const values = data.features.map(() => Math.random() * 100);
 
         setPlotData([
@@ -65,22 +63,22 @@ const ChoroplethMap = () => {
       layout={{
         title: "Pasig City Barangays",
         mapbox: {
-          style: "carto-positron", // ✅ Alternative to Mapbox
+          style: "carto-positron", 
           center: { lon: 121.08, lat: 14.58 },
           zoom: 12,
           layers: [
             {
               sourcetype: "geojson",
-              source: geoData, // ✅ Ensure the GeoJSON is loaded
-              type: "line", // ✅ This makes outlines appear
+              source: geoData, 
+              type: "line", 
               color: "red",
-              line: { width: 1 }, // ✅ Ensure visible borders
+              line: { width: 1 }, 
             },
           ],
         },
       }}
       config={{ scrollZoom: false }}
-      style={{ width: "100%", height: "500px" }}
+      style={{ width: "100%", height: "1000px" }}
     />
   );
 };

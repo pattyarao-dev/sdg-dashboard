@@ -47,6 +47,8 @@ const Dashboard: React.FC = () => {
   const [selectedSDG, setSelectedSDG] = useState<string>("");
   const [sdgData, setSdgData] = useState<any[]>([]); // State to store SDG data
   const [selectedIndicator, setSelectedIndicator] = useState<string>("");
+  const [selectedIndicators, setSelectedIndicators] = useState<string[]>([]);
+
 
   // useEffect(() => {
   //   const fetchData = async () => {
@@ -85,14 +87,23 @@ const Dashboard: React.FC = () => {
 
   const selectedSDGData = sdgData.find((sdg) => sdg.goal_id.toString() === selectedSDG) || null;
 
+  const handleIndicatorClick = (indicatorName: string) => {
+    setSelectedIndicators((prevSelectedIndicators) => {
+      if (prevSelectedIndicators.includes(indicatorName)) {
+        return prevSelectedIndicators.filter((indicator) => indicator !== indicatorName);
+      } else {
+        return [...prevSelectedIndicators, indicatorName];
+      }
+    });
+  };  
+
   const handleYearClick = (year: number) => {
-    setSelectedYear(year); // Update selected year when a point on the chart is clicked
+    setSelectedYear(year); 
   };
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", padding: "20px" }}>
       <h1>LGU SDG Dashboard</h1>
-
       {/* Grid Layout for Filters, LineChart & ProgressBars */}
       <div
         style={{
@@ -180,7 +191,33 @@ const Dashboard: React.FC = () => {
                   const clickedYear = event.points[0].x; // Extract the year clicked
                   handleYearClick(clickedYear); // Update state
                 }
-              }} // ✅ Properly closing onClick function
+              }} 
+            />
+          )}
+          {selectedIndicator && selectedSDGData && (
+            <LineChart
+              data={[
+                {
+                  x: selectedSDGData.indicators
+                    .find((indicator) => indicator.name === selectedIndicator)
+                    ?.current.map((_, idx) => 2020 + idx),
+                  y: selectedSDGData.indicators
+                    .find((indicator) => indicator.name === selectedIndicator)
+                    ?.current,
+                  type: "scatter",
+                  mode: "lines+markers",
+                  marker: { color: "green" }, // You can customize the color
+                  line: { color: "green" },
+                  name: selectedIndicator,
+                },
+              ]}
+              target={selectedSDGData.global_target_value}
+              onClick={(event) => {
+                if (event && event.points && event.points.length > 0) {
+                  const clickedYear = event.points[0].x;
+                  handleYearClick(clickedYear); // Update state for year click
+                }
+              }}
             />
           )}
         </div>
