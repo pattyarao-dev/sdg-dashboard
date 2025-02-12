@@ -58,6 +58,20 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/",
   },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id; // Store user id in the JWT token
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id; // Attach user id to session
+      }
+      return session;
+    },
+  },
 };
 
 const handler = NextAuth(authOptions);

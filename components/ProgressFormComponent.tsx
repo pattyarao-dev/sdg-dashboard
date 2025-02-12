@@ -1,5 +1,6 @@
 "use client";
 
+import { updateValues } from "@/app/actions/actions";
 import { useState } from "react";
 
 interface SubIndicator {
@@ -24,8 +25,62 @@ interface ProgressFormProps {
 }
 
 const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
+  const [formValues, setFormValues] = useState<Record<string, number>>({});
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormValues((prev) => ({
+      ...prev,
+      [name]: parseFloat(value) || 0, // Ensure numeric input
+    }));
+  };
+
+  const handleUpdateValuesSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const formData = new FormData();
+
+    goals.forEach((goal) => {
+      formData.append("goalIndicatorId", goal.goalId.toString());
+
+      goal.indicators.forEach((indicator) => {
+        const indicatorValue =
+          formValues[`indicator-${indicator.indicatorId}`] || 0;
+
+        formData.append(
+          "indicatorValues",
+          JSON.stringify({
+            indicator_id: indicator.indicatorId,
+            value: indicatorValue,
+            notes: "",
+          }),
+        );
+
+        indicator.subIndicators.forEach((sub) => {
+          const subIndicatorValue =
+            formValues[`subindicator-${sub.subIndicatorId}`] || 0;
+
+          formData.append(
+            "subIndicatorValues",
+            JSON.stringify({
+              sub_indicator_id: sub.subIndicatorId,
+              value: subIndicatorValue,
+              notes: "",
+            }),
+          );
+        });
+      });
+    });
+
+    console.log("Submitting FormData:", [...formData.entries()]); // Debugging
+    await updateValues(formData);
+  };
+
   return (
-    <div className="w-full border-2 border-black">
+    <form
+      onSubmit={handleUpdateValuesSubmit}
+      className="w-full border-2 border-black p-4"
+    >
       {goals.map((goal) => (
         <div
           key={goal.goalId}
@@ -45,16 +100,18 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
                   {indicator.indicatorName}
                 </h3>
                 <div className="flex items-center gap-4">
-                  <label htmlFor="indicator_current value">
+                  <label htmlFor={`indicator-${indicator.indicatorId}`}>
                     Indicator Current Value:
                   </label>
                   <input
                     className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
-                    name="indicator_current_value"
+                    name={`indicator-${indicator.indicatorId}`}
                     type="number"
+                    onChange={handleInputChange}
                   />
                 </div>
               </div>
+
               <div className="w-full p-4 flex flex-col gap-4">
                 {indicator.subIndicators.length > 0 ? (
                   indicator.subIndicators.map((sub) => (
@@ -64,13 +121,14 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
                     >
                       <p className="text-sm">{sub.subIndicatorName}</p>
                       <div className="flex items-center gap-4 text-sm">
-                        <label htmlFor="subindicator_current value">
+                        <label htmlFor={`subindicator-${sub.subIndicatorId}`}>
                           Sub-Indicator Current Value:
                         </label>
                         <input
                           className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
-                          name="subindicator_current_value"
+                          name={`subindicator-${sub.subIndicatorId}`}
                           type="number"
+                          onChange={handleInputChange}
                         />
                       </div>
                     </div>
@@ -83,12 +141,14 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
           ))}
         </div>
       ))}
-      <form onSubmit={handleUpdateValuesSubmit}>
-        <button className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">
-          Submit
-        </button>
-      </form>
-    </div>
+
+      <button
+        className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+        type="submit"
+      >
+        Submit
+      </button>
+    </form>
   );
 };
 

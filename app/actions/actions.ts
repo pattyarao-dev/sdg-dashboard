@@ -1,6 +1,8 @@
 "use server";
 
 import prisma from "@/utils/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../api/auth/[...nextauth]/route";
 // import { redirect } from "next/navigation";
 
 export async function getProjects() {
@@ -195,11 +197,94 @@ export async function createIndicatorsBatch(formData: FormData) {
   };
 }
 
-export async function updateIndicatorValues(formData: FormData) {
+export async function updateValues(formData: FormData) {
+  const auth = await getServerSession(authOptions);
   const goal_indicator_id = parseInt(
     formData.get("goalIndicatorId") as string,
     10,
   );
+  if (!auth) {
+    throw new Error("Unauthorized");
+  }
+  const user = auth.user; // Get the authenticated user
+
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+
+  console.log(user);
+
+  const created_by = Number(user.id);
+  console.log(created_by);
+  const indicatorEntries = formData.getAll("indicatorValues") as string[];
+  for (const entry of indicatorEntries) {
+    const { indicator_id, value, notes } = JSON.parse(entry);
+
+    await prisma.td_indicator_value.upsert({
+      where: {
+        goal_indicator_id_indicator_id: { goal_indicator_id, indicator_id },
+      },
+      update: {
+        value: parseFloat(value),
+        measurement_date: new Date(),
+        notes,
+        created_by,
+      },
+      create: {
+        goal_indicator_id,
+        indicator_id,
+        value: parseFloat(value),
+        measurement_date: new Date(),
+        notes,
+        created_by,
+      },
+    });
+  }
+
+  // Process sub-indicator values
+  const subIndicatorEntries = formData.getAll("subIndicatorValues") as string[];
+  for (const entry of subIndicatorEntries) {
+    const { sub_indicator_id, value, notes } = JSON.parse(entry);
+
+    // Find the associated `td_goal_sub_indicator` to get the correct `goal_sub_indicator_id`
+    const goalSubIndicator = await prisma.td_goal_sub_indicator.findFirst({
+      where: {
+        goal_indicator_id,
+        sub_indicator_id,
+      },
+      select: { goal_sub_indicator_id: true },
+    });
+
+    if (!goalSubIndicator) {
+      console.warn(
+        `No goal_sub_indicator found for sub_indicator_id: ${sub_indicator_id}`,
+      );
+      continue; // Skip if no mapping exists
+    }
+
+    await prisma.td_sub_indicator_value.upsert({
+      where: {
+        goal_sub_indicator_id_sub_indicator_id: {
+          goal_sub_indicator_id: goalSubIndicator.goal_sub_indicator_id,
+          sub_indicator_id,
+        },
+      },
+      update: {
+        value: parseFloat(value),
+        measurement_date: new Date(),
+        notes,
+        created_by,
+      },
+      create: {
+        goal_sub_indicator_id: goalSubIndicator.goal_sub_indicator_id,
+        sub_indicator_id,
+        value: parseFloat(value),
+        measurement_date: new Date(),
+        notes,
+        created_by,
+      },
+    });
+  }
   // read indicator values
   // post to td_indicator_values
   // read subindicator of indicator values
