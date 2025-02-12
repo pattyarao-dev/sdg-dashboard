@@ -20,7 +20,7 @@ type DonutChartProps = {
       name: string;
       current: number[];
       target: number[];
-      subIndicators: { name: string; current: number[]; target: number[] }[];
+      sub_indicators: { name: string; current: number[]; target: number[] }[];
     }[];
   }[];
 };
@@ -41,7 +41,7 @@ const DonutChart: React.FC<DonutChartProps> = ({ selectedIndicator, sdgData }) =
   if (!selectedIndicatorData) return <p>No indicator data found for this indicator.</p>;
 
   // Prepare the data for the donut chart (sub-indicators within the selected indicator)
-  const subIndicators: SubIndicator[] = selectedIndicatorData.subIndicators || [];
+  const subIndicators: SubIndicator[] = selectedIndicatorData.sub_indicators || [];
 
   const dataForChart = subIndicators.map((subIndicator: SubIndicator) => {
     const totalProgress = subIndicator.current.reduce((sum, currentVal, index) => {
@@ -57,6 +57,13 @@ const DonutChart: React.FC<DonutChartProps> = ({ selectedIndicator, sdgData }) =
     };
   });
 
+  const overallProgress = selectedIndicatorData.current.reduce((sum, currentVal, index) => {
+    const targetValue = selectedIndicatorData.target[index] || 1; // Avoid division by zero
+    return sum + (currentVal / targetValue) * 100;
+  }, 0);
+  
+  const averageOverallProgress = overallProgress / selectedIndicatorData.current.length || 0;  
+
   return (
     <Plot
       data={[
@@ -64,9 +71,9 @@ const DonutChart: React.FC<DonutChartProps> = ({ selectedIndicator, sdgData }) =
           values: dataForChart.map((ind) => ind.value),
           labels: dataForChart.map((ind) => ind.label),
           type: "pie",
-          hole: 0.4, // Donut effect
-          textinfo: "label+percent",
-          hoverinfo: "label+percent+name", // Corrected hoverinfo value
+          hole: 0.5, // Increased hole size to make the donut thinner
+          textinfo: "percent", // Hide full labels inside the chart
+          hoverinfo: "label+percent", // Keep full label in hover tooltip
           marker: {
             colors: [
               "#FF5733", "#33FF57", "#3377FF", "#FFC300", "#C70039",
@@ -84,9 +91,20 @@ const DonutChart: React.FC<DonutChartProps> = ({ selectedIndicator, sdgData }) =
         },
         showlegend: true,
         margin: { t: 40, b: 20, l: 20, r: 20 },
+        annotations: [
+          {
+            text: `Indicator Progress:<br>${averageOverallProgress.toFixed(1)}%`,
+            showarrow: false,
+            font: { size: 16 },
+            x: 0.5,
+            y: 0.5,
+            xanchor: "center",
+            yanchor: "middle",
+          },
+        ],
       }}
       config={{ responsive: true }}
-      style={{ width: "100%", height: "400px" }}
+      style={{ width: "100%", height: "400px" }}      
     />
   );
 };

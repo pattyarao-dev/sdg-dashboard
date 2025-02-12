@@ -7,6 +7,7 @@ interface SlicerChartProps {
   setSelectedYear: (year: number) => void;
   selectedSDG: string;
   setSelectedSDG: (sdg: string) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 const sdgs = [
