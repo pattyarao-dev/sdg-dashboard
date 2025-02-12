@@ -23,46 +23,38 @@ type DonutChartProps = {
       sub_indicators: { name: string; current: number[]; target: number[] }[];
     }[];
   }[];
+  selectedYear: number; 
 };
 
-const DonutChart: React.FC<DonutChartProps> = ({ selectedIndicator, sdgData }) => {
-  // Find the SDG by matching the indicator name
+const DonutChart: React.FC<DonutChartProps> = ({ selectedIndicator, sdgData, selectedYear }) => {
   const selectedSDG = sdgData.find((sdg) =>
     sdg.indicators.some((indicator) => indicator.name === selectedIndicator)
   );
 
   if (!selectedSDG) return <p>No data available for this SDG.</p>;
 
-  // Get the selected indicator data for the SDG
   const selectedIndicatorData = selectedSDG.indicators.find(
     (indicator) => indicator.name === selectedIndicator
   );
 
   if (!selectedIndicatorData) return <p>No indicator data found for this indicator.</p>;
 
-  // Prepare the data for the donut chart (sub-indicators within the selected indicator)
   const subIndicators: SubIndicator[] = selectedIndicatorData.sub_indicators || [];
+  const yearIndex = selectedYear - 2020; // Adjust based on first year of data
 
   const dataForChart = subIndicators.map((subIndicator: SubIndicator) => {
-    const totalProgress = subIndicator.current.reduce((sum, currentVal, index) => {
-      const targetValue = subIndicator.target[index] || 1; // Avoid division by zero
-      return sum + (currentVal / targetValue) * 100;
-    }, 0);
-
-    const averageProgress = totalProgress / subIndicator.current.length || 0;
+    const currentValue = subIndicator.current[yearIndex] ?? subIndicator.current[subIndicator.current.length - 1];
+    const targetValue = (subIndicator.target[yearIndex] ?? subIndicator.target[subIndicator.target.length - 1]) || 1;
 
     return {
       label: subIndicator.name,
-      value: Math.max(averageProgress, 0), // Ensure non-negative values
+      value: Math.max((currentValue / targetValue) * 100, 0),
     };
   });
 
-  const overallProgress = selectedIndicatorData.current.reduce((sum, currentVal, index) => {
-    const targetValue = selectedIndicatorData.target[index] || 1; // Avoid division by zero
-    return sum + (currentVal / targetValue) * 100;
-  }, 0);
-  
-  const averageOverallProgress = overallProgress / selectedIndicatorData.current.length || 0;  
+  const overallProgress = selectedIndicatorData.current[yearIndex] ?? selectedIndicatorData.current[selectedIndicatorData.current.length - 1];
+  const overallTarget = (selectedIndicatorData.target[yearIndex] ?? selectedIndicatorData.target[selectedIndicatorData.target.length - 1]) || 1;
+  const averageOverallProgress = (overallProgress / overallTarget) * 100;
 
   return (
     <Plot
@@ -71,9 +63,9 @@ const DonutChart: React.FC<DonutChartProps> = ({ selectedIndicator, sdgData }) =
           values: dataForChart.map((ind) => ind.value),
           labels: dataForChart.map((ind) => ind.label),
           type: "pie",
-          hole: 0.5, // Increased hole size to make the donut thinner
-          textinfo: "percent", // Hide full labels inside the chart
-          hoverinfo: "label+percent", // Keep full label in hover tooltip
+          hole: 0.5,
+          textinfo: "percent",
+          hoverinfo: "label+percent",
           marker: {
             colors: [
               "#FF5733", "#33FF57", "#3377FF", "#FFC300", "#C70039",
@@ -86,7 +78,7 @@ const DonutChart: React.FC<DonutChartProps> = ({ selectedIndicator, sdgData }) =
         title: {
           text: `Indicator Breakdown for ${selectedSDG.title} - ${selectedIndicator}`,
           font: { size: 18 },
-          x: 0.5, // Center title
+          x: 0.5,
           xanchor: "center",
         },
         showlegend: true,
@@ -104,7 +96,7 @@ const DonutChart: React.FC<DonutChartProps> = ({ selectedIndicator, sdgData }) =
         ],
       }}
       config={{ responsive: true }}
-      style={{ width: "100%", height: "400px" }}      
+      style={{ width: "100%", height: "400px" }}
     />
   );
 };

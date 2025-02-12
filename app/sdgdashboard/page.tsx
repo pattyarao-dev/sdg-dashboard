@@ -165,7 +165,13 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Display the DonutChart when an SDG and indicator are selected */}
-          {selectedSDG && selectedIndicator && <DonutChart selectedIndicator={selectedIndicator} sdgData={sdgData} />}
+          {selectedSDG && selectedIndicator && (
+            <DonutChart
+              selectedIndicator={selectedIndicator}
+              sdgData={sdgData}
+              selectedYear={selectedYear} // Pass selected year
+            />
+          )}
         </div>
 
         {/* LineChart & ProgressBars */}
@@ -233,7 +239,7 @@ const Dashboard: React.FC = () => {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(9, minmax(120px, 1fr))",
-          gridAutoRows: "120px", // Allow rows to be created dynamically
+          gridAutoRows: "120px",
           gap: "10px",
           marginTop: "25px",
           padding: "20px",
@@ -249,6 +255,7 @@ const Dashboard: React.FC = () => {
                   item.year === selectedYear
               )?.current || 0) / sdg.global_target_value * 100
             }
+            sdgNumber={sdg.goal_id} // Pass SDG number for dynamic routing
           />
         ))}
       </div>

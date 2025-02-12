@@ -3,19 +3,21 @@
 import dynamic from "next/dynamic";
 import * as React from "react";
 import { Data, Layout } from "plotly.js";
+import { useRouter } from "next/navigation"; // Use useRouter instead of redirect
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
 interface GaugeChartProps {
   title: string;
   value: number;
-  onClick?: () => void;
+  sdgNumber: number; // New prop for SDG number
 }
 
-const GaugeChart: React.FC<GaugeChartProps> = ({ title, value, onClick }) => {
-  
+const GaugeChart: React.FC<GaugeChartProps> = ({ title, value, sdgNumber }) => {
+  const router = useRouter(); // Initialize router
+
   const handleOnClick = () => {
-    if (onClick) onClick();
+    router.push(`/projectdashboard/${sdgNumber}/projects`); // Redirect dynamically
   };
 
   const getGaugeColor = (percentage: number) => {
@@ -44,24 +46,13 @@ const GaugeChart: React.FC<GaugeChartProps> = ({ title, value, onClick }) => {
     width: 200,
     height: 150,
     margin: { t: 40, b: 10, l: 10, r: 10 },
-    // annotations: [
-    //   {
-    //     x: 0.5,
-    //     y: -0.2, // Positioning below the gauge
-    //     xref: "paper",
-    //     yref: "paper",
-    //     showarrow: false,
-    //     font: { size: 12, color: "black" },
-    //   },
-    // ],
   };
 
   return (
-    <div onClick={onClick}> 
+    <div onClick={handleOnClick} style={{ cursor: "pointer" }}>
       <Plot data={data} layout={layout} />
     </div>
   );
-
 };
 
 export default GaugeChart;
