@@ -37,6 +37,20 @@ const dummySDGData = [
         ],
       },
     ],
+    location_data: [
+      {
+        region: "Pasig City",
+        barangay: "Bagong Ilog",
+        sdg1_poverty_rate: 18.5,
+        sdg2_food_security_index: 75,
+      },
+      {
+        region: "Pasig City",
+        barangay: "Bagong Katipunan",
+        sdg1_poverty_rate: 22.1,
+        sdg2_food_security_index: 70,
+      },
+    ],
   },
   {
     goal_id: 2,
@@ -64,6 +78,20 @@ const dummySDGData = [
           { name: "Child Malnutrition Rate", current: [15, 17, 19, 18, 17, 21, 23, 26, 24, 28, 30], target: [75] },
           { name: "Food Distribution Efficiency", current: [50, 55, 60, 62, 60, 65, 68, 72, 70, 75, 80], target: [90] },
         ],
+      },
+    ],
+    location_data: [
+      {
+        region: "Pasig City",
+        barangay: "Bagong Ilog",
+        sdg2_food_security_index: 80,
+        sdg2_child_malnutrition_rate: 18,
+      },
+      {
+        region: "Pasig City",
+        barangay: "Bagong Katipunan",
+        sdg2_food_security_index: 78,
+        sdg2_child_malnutrition_rate: 22,
       },
     ],
   },

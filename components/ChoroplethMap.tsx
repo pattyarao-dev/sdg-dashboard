@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import dummySDGData from "@/app/dummydata/dummySDGData";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -18,27 +19,41 @@ const ChoroplethMap = () => {
 
         console.log("GeoJSON Feature Properties:", data.features[0].properties);
 
-        const featureKey = "properties.NAME_3"; // Change if necessary
+        const featureKey = "properties.NAME_3"; // This is the key for barangay names
         const locations = data.features.map((feature: any) => feature.properties.NAME_3);
 
-        //random for now
-        const values = data.features.map(() => Math.random() * 100);
+        // Map SDG data to the features in GeoJSON based on barangay names
+        const values = data.features.map((feature: any) => {
+          const barangayName = feature.properties.NAME_3;
+
+          // Find SDG data for each barangay by matching it with the location_data
+          const sdgData = dummySDGData.find((sdg: any) =>
+            sdg.location_data && sdg.location_data.some((loc: any) => loc.barangay === barangayName)
+          );
+
+          // Access sdg1_poverty_rate safely using a type guard
+          const povertyRate = sdgData?.location_data?.find(
+            (loc: any) => loc.barangay === barangayName
+          )?.sdg1_poverty_rate;
+
+          // If sdg1_poverty_rate is not found, or the property doesn't exist, default to 0
+          return povertyRate !== undefined ? povertyRate : 0;
+        });
 
         setPlotData([
           {
             type: "choroplethmapbox",
             geojson: data,
             locations: locations, // Must match featureidkey
-            z: values,
+            z: values, // SDG values mapped to barangays
             zauto: false,
             colorscale: [
-              [0, "rgba(255, 255, 204, 0.4)"],  // Light Yellow, 40% transparent
-              [0.5, "rgba(255, 153, 51, 0.5)"], // Orange, 50% transparent
-              [1, "rgba(204, 0, 0, 0.6)"],      // Dark Red, 60% transparent
+              [0, "rgba(0, 255, 0, 0.7)"],  // Green (good performance), 70% opacity
+              [0.5, "rgba(255, 165, 0, 0.7)"],  // Orange (moderate performance), 70% opacity
+              [1, "rgba(255, 0, 0, 0.8)"],      // Red (poor performance), 80% opacity
             ],
-            // colorscale: "YlOrRd",
-            colorbar: { title: "Data Value" },
-            featureidkey: featureKey, // Key from GeoJSON
+            colorbar: { title: "Poverty Rate" }, // Change this based on the SDG
+            featureidkey: featureKey, // Must match the key in GeoJSON properties
             marker: {
               line: {
                 width: 1, // Ensure visible outlines
@@ -71,13 +86,13 @@ const ChoroplethMap = () => {
               sourcetype: "geojson",
               source: geoData, 
               type: "line", 
-              color: "red",
+              color: "black",
               line: { width: 1 }, 
             },
           ],
         },
       }}
-      config={{ scrollZoom: false }}
+      config={{ scrollZoom: true }}
       style={{ width: "100%", height: "1000px" }}
     />
   );

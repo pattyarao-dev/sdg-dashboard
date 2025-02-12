@@ -34,7 +34,7 @@ const SlicerChart: React.FC<SlicerChartProps> = ({ selectedYear, setSelectedYear
   return (
     <div className="p-4 space-y-4">
       {/* SDG Dropdown */}
-      <div>
+      <div style={{ width: "100%" }}>
         <label className="block mb-2 text-lg font-semibold">Select SDG:</label>
         <select className="p-2 border rounded-md w-full" value={selectedSDG} onChange={(e) => setSelectedSDG(e.target.value)}>
           <option value="">Select an SDG</option>
@@ -47,7 +47,7 @@ const SlicerChart: React.FC<SlicerChartProps> = ({ selectedYear, setSelectedYear
       </div>
 
       {/* Year Slider */}
-      <div>
+      <div style={{ width: "100%" }}>
         <label className="block mb-2 text-lg font-semibold">Select Year: {selectedYear}</label>
         <input type="range" min={2020} max={2030} step={1} value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="w-full" />
       </div>

@@ -108,8 +108,8 @@ const Dashboard: React.FC = () => {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
-          gap: "20px",
+          gridTemplateColumns: "1fr 1fr 1fr 1fr",
+          gap: "10px",
           alignItems: "start",
         }}
       >
@@ -126,8 +126,9 @@ const Dashboard: React.FC = () => {
           <div>
             <Scorecard sdgData={sdgData} /> {/* Pass sdgData as a prop to Scorecard */}
           </div>
-
-          {/* Scrollable ProgressBars */}
+        </div>
+        
+        <div>{/* Scrollable ProgressBars */}
           <div
             style={{
               maxHeight: "300px",
@@ -172,6 +173,7 @@ const Dashboard: React.FC = () => {
               selectedYear={selectedYear} // Pass selected year
             />
           )}
+          
         </div>
 
         {/* LineChart & ProgressBars */}
