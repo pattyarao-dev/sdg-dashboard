@@ -505,7 +505,7 @@ export default function AddIndicator({
   };
 
   return (
-    <div className="w-full p-10 flex flex-col gap-10 rounded-xl drop-shadow-md">
+    <div className="z-0 w-full p-10 flex flex-col gap-10 rounded-xl drop-shadow-md">
       <div>Create Indicators for {goalName}</div>
       <div className="w-full flex items-start justify-between gap-10">
         <div

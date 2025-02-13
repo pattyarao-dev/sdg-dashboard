@@ -21,6 +21,7 @@ model md_indicator {
   status               status
   md_sub_indicator     md_sub_indicator[]
   td_goal_indicator    td_goal_indicator[]
+  td_indicator_value   td_indicator_value[]
   td_project_indicator td_project_indicator[]
 }
 
@@ -33,15 +34,18 @@ model md_sub_indicator {
   md_indicator             md_indicator               @relation(fields: [parent_indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_goal_sub_indicator    td_goal_sub_indicator[]
   td_project_sub_indicator td_project_sub_indicator[]
+  td_sub_indicator_value   td_sub_indicator_value[]
 }
 
 model md_user {
-  user_id      Int            @id @default(autoincrement())
-  first_name   String?        @db.VarChar(45)
-  last_name    String?        @db.VarChar(45)
-  email        String         @unique @db.VarChar(45)
-  password     String         @db.VarChar(45)
-  md_user_role md_user_role[]
+  user_id                Int                      @id @default(autoincrement())
+  first_name             String?                  @db.VarChar(45)
+  last_name              String?                  @db.VarChar(45)
+  email                  String                   @unique @db.VarChar(45)
+  password               String                   @db.VarChar(255)
+  md_user_role           md_user_role[]
+  td_indicator_value     td_indicator_value[]
+  td_sub_indicator_value td_sub_indicator_value[]
 }
 
 model md_user_role {
@@ -63,28 +67,45 @@ model td_goal_indicator {
   goal_indicator_id     Int                     @id @default(autoincrement())
   goal_id               Int
   indicator_id          Int
-  global_target_value   Float?
   global_baseline_value Float?
-  global_current_value  Float?
+  global_target_value   Float?
   md_goal               md_goal                 @relation(fields: [goal_id], references: [goal_id], onDelete: Cascade, onUpdate: NoAction)
   md_indicator          md_indicator            @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_goal_sub_indicator td_goal_sub_indicator[]
+  td_indicator_value    td_indicator_value[]
   td_project_indicator  td_project_indicator[]
 
   @@unique([goal_id, indicator_id])
 }
 
 model td_goal_sub_indicator {
-  goal_sub_indicator_id Int               @id @default(autoincrement())
-  goal_indicator_id     Int
-  sub_indicator_id      Int
-  global_target_value   Float?
-  global_baseline_value Float?
-  global_current_value  Float?
-  td_goal_indicator     td_goal_indicator @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-  md_sub_indicator      md_sub_indicator  @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  goal_sub_indicator_id  Int                      @id @default(autoincrement())
+  goal_indicator_id      Int
+  sub_indicator_id       Int
+  global_target_value    Float?
+  global_baseline_value  Float?
+  td_goal_indicator      td_goal_indicator        @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  md_sub_indicator       md_sub_indicator         @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  td_sub_indicator_value td_sub_indicator_value[]
 
   @@unique([goal_indicator_id, sub_indicator_id])
+}
+
+model td_indicator_value {
+  value_id             Int                   @id @default(autoincrement())
+  goal_indicator_id    Int?
+  project_indicator_id Int?
+  indicator_id         Int
+  value                Float
+  measurement_date     DateTime              @default(now()) @db.Timestamp(6)
+  notes                String?
+  created_by           Int
+  md_user              md_user               @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  td_goal_indicator    td_goal_indicator?    @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  md_indicator         md_indicator          @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  td_project_indicator td_project_indicator? @relation(fields: [project_indicator_id], references: [project_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([goal_indicator_id, indicator_id], map: "unique_goal_indicator")
 }
 
 model td_project {
@@ -104,7 +125,7 @@ model td_project_indicator {
   goal_indicator_id        Int?
   project_target_value     Float?
   project_baseline_value   Float?
-  project_current_value    Float?
+  td_indicator_value       td_indicator_value[]
   td_goal_indicator        td_goal_indicator?         @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   md_indicator             md_indicator               @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_project               td_project                 @relation(fields: [project_id], references: [project_id], onDelete: Cascade, onUpdate: NoAction)
@@ -114,16 +135,33 @@ model td_project_indicator {
 }
 
 model td_project_sub_indicator {
-  project_sub_indicator_id Int                  @id @default(autoincrement())
+  project_sub_indicator_id Int                      @id @default(autoincrement())
   project_indicator_id     Int
   sub_indicator_id         Int
   project_target_value     Float?
   project_baseline_value   Float?
-  project_current_value    Float?
-  td_project_indicator     td_project_indicator @relation(fields: [project_indicator_id], references: [project_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-  md_sub_indicator         md_sub_indicator     @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  td_project_indicator     td_project_indicator     @relation(fields: [project_indicator_id], references: [project_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  md_sub_indicator         md_sub_indicator         @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  td_sub_indicator_value   td_sub_indicator_value[]
 
   @@unique([project_indicator_id, sub_indicator_id])
+}
+
+model td_sub_indicator_value {
+  value_id                 Int                       @id @default(autoincrement())
+  goal_sub_indicator_id    Int?
+  project_sub_indicator_id Int?
+  sub_indicator_id         Int
+  value                    Float
+  measurement_date         DateTime                  @default(now()) @db.Timestamp(6)
+  notes                    String?
+  created_by               Int
+  md_user                  md_user                   @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  td_goal_sub_indicator    td_goal_sub_indicator?    @relation(fields: [goal_sub_indicator_id], references: [goal_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  td_project_sub_indicator td_project_sub_indicator? @relation(fields: [project_sub_indicator_id], references: [project_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  md_sub_indicator         md_sub_indicator          @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([goal_sub_indicator_id, sub_indicator_id], map: "unique_goal_sub_indicator")
 }
 
 enum project_status {
