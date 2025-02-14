@@ -169,10 +169,10 @@ const Dashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Display the DonutChart when an SDG and indicator are selected */}
+          {/* Display the DonutChart when an SDG and indicator are selected
           {selectedSDG && selectedIndicator && (
             <DonutChart selectedIndicator={selectedIndicator} sdgData={sdgData} selectedYear={selectedYear} />
-          )}
+          )} */}
         </div>
 
         {/* LineChart Section */}
