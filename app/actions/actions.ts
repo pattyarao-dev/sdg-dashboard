@@ -17,23 +17,20 @@ export async function getProjects() {
 
 export async function getGoals() {
   const goals = await prisma.md_goal.findMany({
-    select: {
-      goal_id: true,
-      name: true,
-      description: true,
+    include: {
       td_goal_indicator: {
-        select: {
-          md_indicator: {
-            select: {
-              indicator_id: true,
-              name: true,
-              description: true,
+        include: {
+          md_indicator: true, // Get the indicator details
+          td_goal_sub_indicator: {
+            include: {
+              md_sub_indicator: true, // Get only sub-indicators applicable to the goal
             },
           },
         },
       },
     },
   });
+
   return goals;
 }
 
@@ -199,94 +196,83 @@ export async function createIndicatorsBatch(formData: FormData) {
 
 export async function updateValues(formData: FormData) {
   const auth = await getServerSession(authOptions);
-  const goal_indicator_id = parseInt(
-    formData.get("goalIndicatorId") as string,
-    10,
-  );
-  if (!auth) {
-    throw new Error("Unauthorized");
-  }
-  const user = auth.user; // Get the authenticated user
 
-  if (!user) {
+  if (!auth?.user) {
     throw new Error("Unauthorized");
   }
 
-  console.log(user);
+  const created_by = Number(auth.user.id);
+  const goal_indicator_id_raw = formData.get("goalIndicatorId");
 
-  const created_by = Number(user.id);
-  console.log(created_by);
+  if (!goal_indicator_id_raw) {
+    throw new Error("goalIndicatorId is missing from formData.");
+  }
+
+  const goal_indicator_id = parseInt(goal_indicator_id_raw as string, 10);
+
+  if (isNaN(goal_indicator_id)) {
+    throw new Error("Invalid goalIndicatorId received.");
+  }
+
+  // ✅ Process Indicator Values
   const indicatorEntries = formData.getAll("indicatorValues") as string[];
-  for (const entry of indicatorEntries) {
-    const { indicator_id, value, notes } = JSON.parse(entry);
+  const indicatorPromises = indicatorEntries.map(async (entry) => {
+    try {
+      const { indicator_id, value, notes } = JSON.parse(entry);
 
-    await prisma.td_indicator_value.upsert({
-      where: {
-        goal_indicator_id_indicator_id: { goal_indicator_id, indicator_id },
-      },
-      update: {
-        value: parseFloat(value),
-        measurement_date: new Date(),
-        notes,
-        created_by,
-      },
-      create: {
-        goal_indicator_id,
-        indicator_id,
-        value: parseFloat(value),
-        measurement_date: new Date(),
-        notes,
-        created_by,
-      },
-    });
-  }
-
-  // Process sub-indicator values
-  const subIndicatorEntries = formData.getAll("subIndicatorValues") as string[];
-  for (const entry of subIndicatorEntries) {
-    const { sub_indicator_id, value, notes } = JSON.parse(entry);
-
-    // Find the associated `td_goal_sub_indicator` to get the correct `goal_sub_indicator_id`
-    const goalSubIndicator = await prisma.td_goal_sub_indicator.findFirst({
-      where: {
-        goal_indicator_id,
-        sub_indicator_id,
-      },
-      select: { goal_sub_indicator_id: true },
-    });
-
-    if (!goalSubIndicator) {
-      console.warn(
-        `No goal_sub_indicator found for sub_indicator_id: ${sub_indicator_id}`,
-      );
-      continue; // Skip if no mapping exists
+      return prisma.td_indicator_value.create({
+        data: {
+          goal_indicator_id,
+          indicator_id,
+          value: parseFloat(value),
+          measurement_date: new Date(),
+          notes,
+          created_by,
+        },
+      });
+    } catch (error) {
+      console.error("Error parsing indicator entry:", entry, error);
     }
+  });
 
-    await prisma.td_sub_indicator_value.upsert({
-      where: {
-        goal_sub_indicator_id_sub_indicator_id: {
-          goal_sub_indicator_id: goalSubIndicator.goal_sub_indicator_id,
+  // ✅ Process Sub-Indicator Values
+  const subIndicatorEntries = formData.getAll("subIndicatorValues") as string[];
+  const subIndicatorPromises = subIndicatorEntries.map(async (entry) => {
+    try {
+      const { sub_indicator_id, value, notes } = JSON.parse(entry);
+
+      const goalSubIndicator = await prisma.td_goal_sub_indicator.findFirst({
+        where: {
+          goal_indicator_id,
           sub_indicator_id,
         },
-      },
-      update: {
-        value: parseFloat(value),
-        measurement_date: new Date(),
-        notes,
-        created_by,
-      },
-      create: {
-        goal_sub_indicator_id: goalSubIndicator.goal_sub_indicator_id,
-        sub_indicator_id,
-        value: parseFloat(value),
-        measurement_date: new Date(),
-        notes,
-        created_by,
-      },
-    });
-  }
-  // read indicator values
-  // post to td_indicator_values
-  // read subindicator of indicator values
-  // post to td_subindicator_values
+        select: { goal_sub_indicator_id: true },
+      });
+
+      if (!goalSubIndicator) {
+        console.warn(
+          `No goal_sub_indicator found for sub_indicator_id: ${sub_indicator_id}`,
+        );
+        return null;
+      }
+
+      return prisma.td_sub_indicator_value.create({
+        data: {
+          goal_sub_indicator_id: goalSubIndicator.goal_sub_indicator_id,
+          sub_indicator_id,
+          value: parseFloat(value),
+          measurement_date: new Date(),
+          notes,
+          created_by,
+        },
+      });
+    } catch (error) {
+      console.error("Error parsing sub-indicator entry:", entry, error);
+    }
+  });
+
+  // ✅ Run all operations concurrently for better performance
+  await Promise.all([...indicatorPromises, ...subIndicatorPromises]);
+
+  console.log("Values updated successfully.");
 }
