@@ -22,7 +22,7 @@ const Login = () => {
       return;
     }
 
-    router.push("/projectmanagement");
+    router.push("/indicatormanagement");
   };
 
   return (

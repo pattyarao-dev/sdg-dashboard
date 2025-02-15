@@ -104,8 +104,6 @@ model td_indicator_value {
   td_goal_indicator    td_goal_indicator?    @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   md_indicator         md_indicator          @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_project_indicator td_project_indicator? @relation(fields: [project_indicator_id], references: [project_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([goal_indicator_id, indicator_id], map: "unique_goal_indicator")
 }
 
 model td_project {
@@ -160,8 +158,6 @@ model td_sub_indicator_value {
   td_goal_sub_indicator    td_goal_sub_indicator?    @relation(fields: [goal_sub_indicator_id], references: [goal_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_project_sub_indicator td_project_sub_indicator? @relation(fields: [project_sub_indicator_id], references: [project_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   md_sub_indicator         md_sub_indicator          @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([goal_sub_indicator_id, sub_indicator_id], map: "unique_goal_sub_indicator")
 }
 
 enum project_status {
