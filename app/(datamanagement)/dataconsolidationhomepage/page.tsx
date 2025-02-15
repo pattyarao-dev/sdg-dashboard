@@ -25,10 +25,13 @@ export default async function DataConsolidationHomepage() {
             <FaRegListAlt className="text-7xl" />
             <button>Update Progress Form</button>
           </Link>
-          <div className="w-[220px] h-[250px] p-4 flex flex-col justify-center items-center bg-white/70 rounded-lg drop-shadow-md gap-3">
+          <Link
+            href="/baselineform"
+            className="w-[220px] h-[250px] p-4 flex flex-col justify-center items-center bg-white/70 rounded-lg drop-shadow-md gap-3"
+          >
             <RiDatabaseLine className="text-7xl" />
             <button>Update Indicator Baselines</button>
-          </div>
+          </Link>
         </div>
       </div>
     </main>

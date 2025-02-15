@@ -276,3 +276,43 @@ export async function updateValues(formData: FormData) {
 
   console.log("Values updated successfully.");
 }
+
+export async function updateBaselineValues(formData: FormData) {
+  try {
+    // Extract FormData entries
+    const goalIndicatorsEntries = formData.getAll("goalIndicators");
+    const goalSubIndicatorsEntries = formData.getAll("goalSubIndicators");
+
+    // Convert FormData values to JSON
+    const goalIndicators = goalIndicatorsEntries.map((entry) =>
+      JSON.parse(entry as string),
+    );
+    const goalSubIndicators = goalSubIndicatorsEntries.map((entry) =>
+      JSON.parse(entry as string),
+    );
+
+    // Update goal indicators
+    await Promise.all(
+      goalIndicators.map(({ indicator_id, value }) =>
+        prisma.td_goal_indicator.updateMany({
+          where: { indicator_id },
+          data: { global_baseline_value: value },
+        }),
+      ),
+    );
+
+    // Update goal sub-indicators
+    await Promise.all(
+      goalSubIndicators.map(({ sub_indicator_id, value }) =>
+        prisma.td_goal_sub_indicator.updateMany({
+          where: { sub_indicator_id },
+          data: { global_baseline_value: value },
+        }),
+      ),
+    );
+
+    console.log("Baseline values updated successfully");
+  } catch (error) {
+    console.error("Error in updateBaselineValues:", error);
+  }
+}
