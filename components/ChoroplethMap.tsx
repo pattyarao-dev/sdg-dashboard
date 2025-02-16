@@ -2,40 +2,47 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import dummySDGData from "@/app/dummydata/dummySDGData";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
 const ChoroplethMap = ({ onBarangaySelect }: { onBarangaySelect: (barangay: string) => void }) => {
   const [geoData, setGeoData] = useState<any>(null);
   const [plotData, setPlotData] = useState<any[]>([]);
+  const [sdgData, setSdgData] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchGeoJSON = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch("/pasigcity.0.01.json");
-        const data = await response.json();
-        setGeoData(data);
+        // Fetch the GeoJSON file
+        const geoResponse = await fetch("/pasigcity.0.01.json");
+        const geoJson = await geoResponse.json();
+        setGeoData(geoJson);
 
-        const featureKey = "properties.NAME_3"; // Matches GeoJSON property
-        const locations = data.features.map((feature: any) => feature.properties.NAME_3);
+        // Fetch SDG data from API
+        const sdgResponse = await fetch("/api/get-sdg-data");
+        const sdgJson = await sdgResponse.json();
+        setSdgData(sdgJson);
 
-        const values = data.features.map((feature: any) => {
-          const barangayName = feature.properties.NAME_3;
-          const sdgData = dummySDGData.find((sdg: any) =>
+        // Extract barangay names from GeoJSON
+        const locations = geoJson.features.map((feature: any) => feature.properties.NAME_3);
+
+        // Match API data with barangay names
+        const values = locations.map((barangayName: string) => {
+          const sdgEntry = sdgJson.find((sdg: any) =>
             sdg.location_data?.some((loc: any) => loc.barangay === barangayName)
           );
 
-          if (!sdgData) return null; // No data available
+          if (!sdgEntry) return null; // No data found for this barangay
 
-          const locationData = sdgData.location_data.find((loc: any) => loc.barangay === barangayName);
+          const locationData = sdgEntry.location_data.find((loc: any) => loc.barangay === barangayName);
           return locationData?.sdg1_poverty_rate ?? null; // Use SDG indicator value
         });
 
+        // Set the plot data
         setPlotData([
           {
             type: "choroplethmapbox",
-            geojson: data,
+            geojson: geoJson,
             locations: locations,
             z: values.map((v) => (v !== null ? v : -1)), // Assign -1 for missing data
             zauto: false,
@@ -48,18 +55,18 @@ const ChoroplethMap = ({ onBarangaySelect }: { onBarangaySelect: (barangay: stri
               [1, "rgba(255, 0, 0, 0.8)"], // Red (poor progress)
             ],
             colorbar: { title: "SDG Progress" },
-            featureidkey: featureKey,
+            featureidkey: "properties.NAME_3",
             marker: {
               line: { width: 1, color: "black" }, // Black border for better visibility
             },
           },
         ]);
       } catch (error) {
-        console.error("Error loading GeoJSON:", error);
+        console.error("Error loading GeoJSON or API data:", error);
       }
     };
 
-    fetchGeoJSON();
+    fetchData();
   }, []);
 
   if (!geoData) return <p>Loading map...</p>;

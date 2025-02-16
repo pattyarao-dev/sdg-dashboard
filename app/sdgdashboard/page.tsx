@@ -51,40 +51,40 @@ const Dashboard: React.FC = () => {
   const [selectedIndicators, setSelectedIndicators] = useState<string[]>([]);
 
 
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       const res = await fetch("/api/get-sdg-data"); // Call the API
-  //       const data = await res.json();
-  //       console.log("Fetched SDG Data:", data); // Debugging
-  //       setSdgData(data);
-  //       if (data.length > 0) {
-  //         setSelectedSDG(data[0].goal_id.toString());
-  //       }
-  //     } catch (error) {
-  //       console.error("Error fetching SDG data:", error);
-  //     }
-  //   };
-  
-  //   fetchData();
-  // }, []);
-
   useEffect(() => {
-    // Simulating API call delay
-    const fetchDummyData = async () => {
+    const fetchData = async () => {
       try {
-        await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate loading time
-        setSdgData(dummySDGData); // Use dummy data
-        if (dummySDGData.length > 0) {
-          setSelectedSDG(dummySDGData[0].goal_id.toString());
+        const res = await fetch("/api/get-sdg-data"); // Call the real API
+        const data = await res.json();
+        console.log("Fetched SDG Data:", data); // Debugging
+        setSdgData(data);
+        if (data.length > 0) {
+          setSelectedSDG(data[0].goal_id.toString());
         }
       } catch (error) {
-        console.error("Error loading dummy data:", error);
+        console.error("Error fetching SDG data:", error);
       }
     };
   
-    fetchDummyData();
+    fetchData();
   }, []);
+
+  // useEffect(() => {
+  //   // Simulating API call delay
+  //   const fetchDummyData = async () => {
+  //     try {
+  //       await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate loading time
+  //       setSdgData(dummySDGData); // Use dummy data
+  //       if (dummySDGData.length > 0) {
+  //         setSelectedSDG(dummySDGData[0].goal_id.toString());
+  //       }
+  //     } catch (error) {
+  //       console.error("Error loading dummy data:", error);
+  //     }
+  //   };
+  
+  //   fetchDummyData();
+  // }, []);
 
   const selectedSDGData = sdgData.find((sdg) => sdg.goal_id.toString() === selectedSDG) || null;
   
