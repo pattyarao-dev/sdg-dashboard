@@ -98,6 +98,7 @@ model td_indicator_value {
   indicator_id         Int
   value                Float
   measurement_date     DateTime              @default(now()) @db.Timestamp(6)
+  location             String?               @db.VarChar(255)
   notes                String?
   created_by           Int
   md_user              md_user               @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
@@ -152,6 +153,7 @@ model td_sub_indicator_value {
   sub_indicator_id         Int
   value                    Float
   measurement_date         DateTime                  @default(now()) @db.Timestamp(6)
+  location            String?   @db.VarChar(255)
   notes                    String?
   created_by               Int
   md_user                  md_user                   @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)

@@ -26,19 +26,29 @@ interface BaselineFormProps {
 
 const BaselineFormComponent = ({ goals }: BaselineFormProps) => {
   const [formValues, setFormValues] = useState<Record<string, number>>({});
+  const [baselineDate, setBaselineDate] = useState<string>("");
+  const [location, setLocation] = useState<string>("");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({
       ...prev,
-      [name]: parseFloat(value) || 0, // Ensure numeric input
+      [name]: parseFloat(value) || 0,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!baselineDate || !location) {
+      alert("Please enter a valid date and location.");
+      return;
+    }
+
     const formData = new FormData();
+
+    formData.append("baselineDate", baselineDate);
+    formData.append("location", location);
 
     goals.forEach((goal) => {
       goal.indicators.forEach((indicator) => {
@@ -66,40 +76,52 @@ const BaselineFormComponent = ({ goals }: BaselineFormProps) => {
       });
     });
 
-    console.log("Submitting FormData:", [...formData.entries()]); // Debugging
+    console.log("Submitting FormData:", [...formData.entries()]);
     await updateBaselineValues(formData);
   };
 
   return (
-    <div>
-      <form
-        onSubmit={handleSubmit}
-        className="w-full border-2 border-black p-4"
-      >
+    <div className="p-4 w-full">
+      <form onSubmit={handleSubmit} className="border-2 border-black p-4 rounded-md">
+        {/* Date & Location Fields */}
+        <div className="mb-6 flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <label className="font-semibold">Baseline Date:</label>
+            <input
+              type="date"
+              className="border p-2 rounded-md"
+              value={baselineDate}
+              onChange={(e) => setBaselineDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="font-semibold">Location:</label>
+            <input
+              type="text"
+              className="border p-2 rounded-md w-full"
+              placeholder="Enter location (e.g., City, Country)"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              required
+            />
+          </div>
+        </div>
+
         {goals.map((goal) => (
-          <div
-            key={goal.goalId}
-            className="w-full p-4 flex flex-col gap-4 border-b"
-          >
-            <h2 className="w-full p-4 bg-gradient-to-br from-green-50 to-orange-50 rounded-md drop-shadow text-gray-600 text-lg font-bold">
+          <div key={goal.goalId} className="mb-6 border-b pb-4">
+            <h2 className="p-4 bg-gradient-to-br from-green-50 to-orange-50 rounded-md drop-shadow text-gray-600 text-lg font-bold">
               {goal.goalName}
             </h2>
 
             {goal.indicators.map((indicator) => (
-              <div
-                key={indicator.indicatorId}
-                className="w-full flex flex-col gap-4"
-              >
-                <div className="w-full px-4 py-2 flex items-center justify-between gap-10 bg-orange-50 rounded-md">
-                  <h3 className="text-md font-semibold">
-                    {indicator.indicatorName}
-                  </h3>
+              <div key={indicator.indicatorId} className="flex flex-col gap-4 mt-4">
+                <div className="px-4 py-2 flex items-center justify-between bg-orange-50 rounded-md">
+                  <h3 className="text-md font-semibold">{indicator.indicatorName}</h3>
                   <div className="flex items-center gap-4">
-                    <label htmlFor={`indicator-${indicator.indicatorId}`}>
-                      Indicator Baseline Value:
-                    </label>
+                    <label htmlFor={`indicator-${indicator.indicatorId}`}>Baseline Value:</label>
                     <input
-                      className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
+                      className="w-[100px] p-1 border border-gray-700 rounded-md focus:outline-none"
                       name={`indicator-${indicator.indicatorId}`}
                       type="number"
                       onChange={handleInputChange}
@@ -107,20 +129,17 @@ const BaselineFormComponent = ({ goals }: BaselineFormProps) => {
                   </div>
                 </div>
 
-                <div className="w-full p-4 flex flex-col gap-4">
+                <div className="p-4 flex flex-col gap-4">
                   {indicator.subIndicators.length > 0 ? (
                     indicator.subIndicators.map((sub) => (
-                      <div
-                        key={sub.subIndicatorId}
-                        className="w-full flex items-center justify-between"
-                      >
+                      <div key={sub.subIndicatorId} className="flex items-center justify-between">
                         <p className="text-sm">{sub.subIndicatorName}</p>
                         <div className="flex items-center gap-4 text-sm">
                           <label htmlFor={`subindicator-${sub.subIndicatorId}`}>
-                            Sub-Indicator Baseline Value:
+                            Sub-Indicator Baseline:
                           </label>
                           <input
-                            className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
+                            className="w-[100px] p-1 border border-gray-700 rounded-md focus:outline-none"
                             name={`subindicator-${sub.subIndicatorId}`}
                             type="number"
                             onChange={handleInputChange}
@@ -129,9 +148,7 @@ const BaselineFormComponent = ({ goals }: BaselineFormProps) => {
                       </div>
                     ))
                   ) : (
-                    <p className="pl-6 text-gray-500 italic">
-                      No sub-indicators
-                    </p>
+                    <p className="pl-6 text-gray-500 italic">No sub-indicators</p>
                   )}
                 </div>
               </div>
@@ -140,7 +157,7 @@ const BaselineFormComponent = ({ goals }: BaselineFormProps) => {
         ))}
 
         <button
-          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
           type="submit"
         >
           Submit
