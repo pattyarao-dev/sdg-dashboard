@@ -33,21 +33,30 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({
       ...prev,
-      [name]: parseFloat(value) || 0,
+      [name]: parseFloat(value) || 0, // Ensure numeric input
     }));
   };
 
-  const handleUpdateValuesSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!measurementDate || !location) {
+      alert("Please enter a valid date and location.");
+      return;
+    }
+
     const formData = new FormData();
+
     formData.append("measurementDate", measurementDate);
     formData.append("location", location);
 
     goals.forEach((goal) => {
+      formData.append("goalIndicatorId", goal.goalId.toString());
+
       goal.indicators.forEach((indicator) => {
         const indicatorValue =
           formValues[`indicator-${indicator.indicatorId}`] || 0;
+
         formData.append(
           "indicatorValues",
           JSON.stringify({
@@ -60,6 +69,7 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
         indicator.subIndicators.forEach((sub) => {
           const subIndicatorValue =
             formValues[`subindicator-${sub.subIndicatorId}`] || 0;
+
           formData.append(
             "subIndicatorValues",
             JSON.stringify({
@@ -72,73 +82,92 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
       });
     });
 
-    console.log("Submitting FormData:", [...formData.entries()]);
+    console.log("Submitting FormData:", [...formData.entries()]); // Debugging
     await updateValues(formData);
   };
 
   return (
-    <form onSubmit={handleUpdateValuesSubmit} className="w-full border-2 border-black p-4">
-      {/* Date Picker */}
-      <div className="flex flex-col mb-4">
-        <label className="font-semibold" htmlFor="measurementDate">Measurement Date:</label>
-        <input
-          type="date"
-          id="measurementDate"
-          className="border rounded p-2"
-          value={measurementDate}
-          onChange={(e) => setMeasurementDate(e.target.value)}
-          required
-        />
-      </div>
-
-      {/* Location Input */}
-      <div className="flex flex-col mb-4">
-        <label className="font-semibold" htmlFor="location">Location:</label>
-        <input
-          type="text"
-          id="location"
-          className="border rounded p-2"
-          placeholder="Enter location"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          required
-        />
+    <form onSubmit={handleSubmit} className="w-full border-2 border-black p-4 rounded-md">
+      {/* Date & Location Fields */}
+      <div className="mb-6 flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <label className="font-semibold">Measurement Date:</label>
+          <input
+            type="date"
+            className="border p-2 rounded-md"
+            value={measurementDate}
+            onChange={(e) => setMeasurementDate(e.target.value)}
+            required
+          />
+        </div>
+        <div className="flex items-center gap-4">
+          <label className="font-semibold">Location:</label>
+          <input
+            type="text"
+            className="border p-2 rounded-md w-full"
+            placeholder="Enter location (e.g., City, Country)"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            required
+          />
+        </div>
       </div>
 
       {goals.map((goal) => (
         <div key={goal.goalId} className="w-full p-4 flex flex-col gap-4 border-b">
-          <h2 className="p-4 bg-green-100 rounded-md font-bold">{goal.goalName}</h2>
-          
+          <h2 className="w-full p-4 bg-gradient-to-br from-green-50 to-orange-50 rounded-md drop-shadow text-gray-600 text-lg font-bold">
+            {goal.goalName}
+          </h2>
+
           {goal.indicators.map((indicator) => (
             <div key={indicator.indicatorId} className="w-full flex flex-col gap-4">
-              <div className="p-4 bg-orange-50 rounded-md flex justify-between">
-                <h3 className="font-semibold">{indicator.indicatorName}</h3>
-                <input
-                  className="w-[100px] p-1 border rounded-md"
-                  name={`indicator-${indicator.indicatorId}`}
-                  type="number"
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              {indicator.subIndicators.map((sub) => (
-                <div key={sub.subIndicatorId} className="flex justify-between px-4">
-                  <p>{sub.subIndicatorName}</p>
+              <div className="w-full px-4 py-2 flex items-center justify-between gap-10 bg-orange-50 rounded-md">
+                <h3 className="text-md font-semibold">{indicator.indicatorName}</h3>
+                <div className="flex items-center gap-4">
+                  <label htmlFor={`indicator-${indicator.indicatorId}`}>
+                    Indicator Current Value:
+                  </label>
                   <input
-                    className="w-[100px] p-1 border rounded-md"
-                    name={`subindicator-${sub.subIndicatorId}`}
+                    className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
+                    name={`indicator-${indicator.indicatorId}`}
                     type="number"
                     onChange={handleInputChange}
                   />
                 </div>
-              ))}
+              </div>
+
+              <div className="w-full p-4 flex flex-col gap-4">
+                {indicator.subIndicators.length > 0 ? (
+                  indicator.subIndicators.map((sub) => (
+                    <div key={sub.subIndicatorId} className="w-full flex items-center justify-between">
+                      <p className="text-sm">{sub.subIndicatorName}</p>
+                      <div className="flex items-center gap-4 text-sm">
+                        <label htmlFor={`subindicator-${sub.subIndicatorId}`}>
+                          Sub-Indicator Current Value:
+                        </label>
+                        <input
+                          className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
+                          name={`subindicator-${sub.subIndicatorId}`}
+                          type="number"
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="pl-6 text-gray-500 italic">No sub-indicators</p>
+                )}
+              </div>
             </div>
           ))}
         </div>
       ))}
 
-      <button className="mt-4 bg-blue-500 text-white px-4 py-2 rounded" type="submit">
-        Submit
+      <button
+        className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+        type="submit"
+      >
+        Submit Progress
       </button>
     </form>
   );

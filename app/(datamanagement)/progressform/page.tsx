@@ -1,90 +1,24 @@
-"use client";
+import ProgressFormComponent from "@/components/ProgressFormComponent";
+import { getGoalsInformation } from "@/app/actions/actions";
 
-import { useState } from "react";
-
-const ProgressFormComponent = ({ goals }: { goals: any[] }) => {
-  const [selectedGoal, setSelectedGoal] = useState("");
-  const [indicatorValue, setIndicatorValue] = useState("");
-  const [measurementDate, setMeasurementDate] = useState("");
-  const [location, setLocation] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const payload = {
-      goal_id: selectedGoal,
-      value: parseFloat(indicatorValue),
-      measurement_date: new Date(measurementDate),
-      location,
-    };
-
-    const response = await fetch("/api/progress", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (response.ok) {
-      alert("Progress recorded successfully!");
-      setIndicatorValue("");
-      setMeasurementDate("");
-      setLocation("");
-    } else {
-      alert("Error recording progress.");
-    }
-  };
+export default async function ProgressForm() {
+  const processedGoals = await getGoalsInformation();
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-4 border rounded">
-      <label>
-        Select Goal:
-        <select value={selectedGoal} onChange={(e) => setSelectedGoal(e.target.value)} required>
-          <option value="">-- Choose a Goal --</option>
-          {goals.map((goal) => (
-            <option key={goal.goal_id} value={goal.goal_id}>
-              {goal.name}
-            </option>
+    <main className="w-full min-h-screen p-10 flex flex-col items-center ">
+      <div className="w-full h-full p-10 flex flex-col gap-10">
+        <div>
+          <h1>Update the progress of your indicators.</h1>
+        </div>
+        {/* <div className="w-full flex flex-col gap-6">
+          {goalNames.map((goal, index) => (
+            <div key={index}>
+              <p>{goal}</p>
+            </div>
           ))}
-        </select>
-      </label>
-
-      <label>
-        Indicator Value:
-        <input
-          type="number"
-          value={indicatorValue}
-          onChange={(e) => setIndicatorValue(e.target.value)}
-          required
-        />
-      </label>
-
-      <label>
-        Measurement Date:
-        <input
-          type="date"
-          value={measurementDate}
-          onChange={(e) => setMeasurementDate(e.target.value)}
-          required
-        />
-      </label>
-
-      <label>
-        Location:
-        <input
-          type="text"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          required
-        />
-      </label>
-
-      <button type="submit" className="bg-blue-500 text-white p-2 rounded">
-        Submit Progress
-      </button>
-    </form>
+        </div> */}
+        <ProgressFormComponent goals={processedGoals} />
+      </div>
+    </main>
   );
-};
-
-export default ProgressFormComponent;
+}
