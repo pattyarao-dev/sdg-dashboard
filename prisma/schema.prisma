@@ -67,8 +67,8 @@ model td_goal_indicator {
   goal_indicator_id     Int                     @id @default(autoincrement())
   goal_id               Int
   indicator_id          Int
-  global_baseline_value Float?
   global_target_value   Float?
+  global_baseline_value Float?
   md_goal               md_goal                 @relation(fields: [goal_id], references: [goal_id], onDelete: Cascade, onUpdate: NoAction)
   md_indicator          md_indicator            @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_goal_sub_indicator td_goal_sub_indicator[]
@@ -153,7 +153,7 @@ model td_sub_indicator_value {
   sub_indicator_id         Int
   value                    Float
   measurement_date         DateTime                  @default(now()) @db.Timestamp(6)
-  location            String?   @db.VarChar(255)
+  location                 String?                   @db.VarChar(255)
   notes                    String?
   created_by               Int
   md_user                  md_user                   @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
