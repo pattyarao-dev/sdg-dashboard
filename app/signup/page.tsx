@@ -1,7 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getUserRoles } from "../actions/actions";
+
+interface UserRole {
+  user_type_id: number;
+  name: string;
+}
 
 const SignUp = () => {
   const [firstname, setFirstname] = useState("");
@@ -9,11 +15,21 @@ const SignUp = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [selectedRoleId, setSelectedRoleId] = useState<number | "">("");
+  const [roles, setRoles] = useState<UserRole[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      const availableRoles = await getUserRoles();
+      setRoles(availableRoles);
+    };
+    fetchRoles();
+  }, []);
 
   const handleSignup = async () => {
     //PLEASE IMPLEMENT IF FORMS ARE NOT FILLED (like toast or somethin)
-    if (!firstname || !lastname || !email || !password) {
+    if (!firstname || !lastname || !email || !password || !selectedRoleId) {
       console.log("Please complete the forms!");
       return;
     }
@@ -25,7 +41,13 @@ const SignUp = () => {
 
     const res = await fetch("/api/auth/signup", {
       method: "POST",
-      body: JSON.stringify({ firstname, lastname, email, password }),
+      body: JSON.stringify({
+        firstname,
+        lastname,
+        email,
+        password,
+        roleId: selectedRoleId,
+      }),
     });
 
     const json = await res.json();
@@ -64,6 +86,18 @@ const SignUp = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+          <select
+            className="w-full p-2 rounded-md text-xs"
+            value={selectedRoleId}
+            onChange={(e) => setSelectedRoleId(Number(e.target.value))}
+          >
+            <option value="">Select Role</option>
+            {roles.map((role) => (
+              <option key={role.user_type_id} value={role.user_type_id}>
+                {role.name}
+              </option>
+            ))}
+          </select>
           <input
             className="w-full p-2 rounded-md text-xs"
             type="password"

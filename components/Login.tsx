@@ -23,6 +23,7 @@ const Login = () => {
     }
 
     router.push("/indicatormanagement");
+    router.refresh();
   };
 
   return (

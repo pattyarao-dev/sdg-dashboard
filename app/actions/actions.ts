@@ -66,6 +66,21 @@ export async function getGoalsInformation() {
   return processedGoals;
 }
 
+export async function getUserRoles() {
+  try {
+    const roles = await prisma.ref_user_type.findMany({
+      select: {
+        user_type_id: true,
+        name: true,
+      },
+    });
+    return roles;
+  } catch (error) {
+    console.error("Error fetching user roles:", error);
+    return [];
+  }
+}
+
 export async function createIndicatorsBatch(formData: FormData) {
   const goalId = parseInt(formData.get("goalId") as string, 10);
   const indicatorsData = JSON.parse(formData.get("indicators") as string);
