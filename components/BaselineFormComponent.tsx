@@ -1,7 +1,7 @@
 "use client";
 
 import { updateBaselineValues } from "@/app/actions/actions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SubIndicator {
   subIndicatorId: number;
@@ -28,6 +28,25 @@ const BaselineFormComponent = ({ goals }: BaselineFormProps) => {
   const [formValues, setFormValues] = useState<Record<string, number>>({});
   const [baselineDate, setBaselineDate] = useState<string>("");
   const [location, setLocation] = useState<string>("");
+  const [locationOptions, setLocationOptions] = useState<string[]>([]);
+
+  // Load the GeoJSON data
+  useEffect(() => {
+    const fetchGeoJson = async () => {
+      try {
+        const response = await fetch("/pasigcity.0.01.json"); // Path to your GeoJSON file
+        const geoJson = await response.json();
+
+        // Extract the location names from GeoJSON (NAME_3)
+        const locations = geoJson.features.map((feature: any) => feature.properties.NAME_3);
+        setLocationOptions(locations);
+      } catch (error) {
+        console.error("Error loading GeoJSON:", error);
+      }
+    };
+
+    fetchGeoJson();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -46,7 +65,6 @@ const BaselineFormComponent = ({ goals }: BaselineFormProps) => {
     }
 
     const formData = new FormData();
-
     formData.append("baselineDate", baselineDate);
     formData.append("location", location);
 
@@ -95,16 +113,22 @@ const BaselineFormComponent = ({ goals }: BaselineFormProps) => {
               required
             />
           </div>
+
           <div className="flex items-center gap-4">
             <label className="font-semibold">Location:</label>
-            <input
-              type="text"
+            <select
               className="border p-2 rounded-md w-full"
-              placeholder="Enter location (e.g., City, Country)"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               required
-            />
+            >
+              <option value="">Select a Location</option>
+              {locationOptions.map((loc, index) => (
+                <option key={index} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
