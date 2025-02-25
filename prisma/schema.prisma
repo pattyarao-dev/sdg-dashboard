@@ -1,4 +1,10 @@
-generator client {
+generator client_python {
+  provider = "prisma-client-py"
+  interface = "asyncio"  // Use "sync" if you prefer synchronous queries
+  recursive_type_depth = 5
+}
+
+generator client_js {
   provider = "prisma-client-js"
 }
 
