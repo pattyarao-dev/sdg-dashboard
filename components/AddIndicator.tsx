@@ -36,6 +36,17 @@ export default function AddIndicator({
     }[];
   }>({});
 
+  const [indicatorRequiredDataName, setIndicatorRequiredDataName] =
+    useState("");
+
+  const [indicatorRequiredDataInputs, setIndicatorRequiredDataInputs] =
+    useState<{
+      [indicatorId: number]: {
+        requiredDataId: number;
+        name: string;
+      }[];
+    }>({});
+
   const [newIndicator, setNewIndicator] = useState({
     name: "",
     description: "",
@@ -66,6 +77,10 @@ export default function AddIndicator({
         },
       ]);
       setSubIndicatorInputs((prev) => ({
+        ...prev,
+        [id]: [],
+      }));
+      setIndicatorRequiredDataInputs((prev) => ({
         ...prev,
         [id]: [],
       }));
@@ -173,6 +188,23 @@ export default function AddIndicator({
     }));
   };
 
+  const handleCreateIndicatorRequiredData = (
+    indicatorId: number,
+    name: string,
+  ) => {
+    if (!name.trim()) return; // Prevent empty inputs
+
+    setIndicatorRequiredDataInputs((prev) => ({
+      ...prev,
+      [indicatorId]: [
+        ...(prev[indicatorId] || []),
+        { requiredDataId: Date.now(), name },
+      ],
+    }));
+
+    setIndicatorRequiredDataName(""); // Clear input field after adding
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -191,6 +223,26 @@ export default function AddIndicator({
     console.log("Server Response:", result);
     setMessage(result.message || "❌ No indicators were added.");
     setSelectedIndicators([]);
+  };
+
+  const handleEditIndicatorName = (id: number, newName: string) => {
+    setSelectedIndicators((prev) =>
+      prev.map((indicator) =>
+        indicator.indicator_id === id
+          ? { ...indicator, name: newName }
+          : indicator,
+      ),
+    );
+  };
+
+  const handleRemoveIndicatorRequiredData = (
+    indicatorId: number,
+    index: number,
+  ) => {
+    setIndicatorRequiredDataInputs((prev) => ({
+      ...prev,
+      [indicatorId]: prev[indicatorId].filter((_, i) => i !== index),
+    }));
   };
 
   return (
@@ -233,7 +285,7 @@ export default function AddIndicator({
                 placeholder="Indicator Name"
                 value={newIndicator.name}
                 onChange={(e) =>
-                  setNewIndicator({ ...newIndicator, name: e.target.value })
+                  setNewIndicator((prev) => ({ ...prev, name: e.target.value }))
                 }
                 className="p-2 rounded-md"
               />
@@ -285,27 +337,111 @@ export default function AddIndicator({
           {selectedIndicators.map((indicator) => (
             <li
               key={indicator.indicator_id}
-              className="flex flex-col gap-2 bg-gray-100 p-4 rounded-lg"
+              className="w-full flex flex-col gap-4 bg-gray-100 p-4 rounded-lg"
             >
               <input
                 type="text"
-                className="bg-transparent font-semibold"
+                className="w-full text-wrap bg-transparent font-semibold"
                 value={indicator.name}
-                readOnly
-              />
-
-              <input
-                type="number"
-                className="w-1/3 p-2 text-xs border rounded-md"
-                placeholder="Target"
-                value={indicator.target ?? ""}
                 onChange={(e) =>
-                  handleUpdateIndicatorValues(
+                  handleEditIndicatorName(
                     indicator.indicator_id,
-                    Number(e.target.value),
+                    e.target.value,
                   )
                 }
               />
+
+              <div className="w-full flex items-center gap-10">
+                <div className="w-fit flex flex-col items-start gap-1">
+                  <label className="text-sm font-bold text-gray-500">
+                    2030 Target
+                  </label>
+                  <input
+                    type="number"
+                    className="w-fit p-2 text-xs border rounded-md"
+                    placeholder="Target"
+                    value={indicator.target ?? ""}
+                    onChange={(e) =>
+                      handleUpdateIndicatorValues(
+                        indicator.indicator_id,
+                        Number(e.target.value),
+                      )
+                    }
+                  />
+                </div>
+                <div className="w-fit flex flex-col items-start gap-1">
+                  <label className="text-sm font-bold text-gray-500">
+                    Baseline
+                  </label>
+                  <input
+                    type="number"
+                    className="w-fit p-2 text-xs border rounded-md"
+                    placeholder="Target"
+                    value={indicator.target ?? ""}
+                    onChange={(e) =>
+                      handleUpdateIndicatorValues(
+                        indicator.indicator_id,
+                        Number(e.target.value),
+                      )
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <p>Identify the data needed to be collected:</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Required Data Name"
+                    className="p-2 border rounded-md flex-grow"
+                    value={indicatorRequiredDataName}
+                    onChange={(e) =>
+                      setIndicatorRequiredDataName(e.target.value)
+                    }
+                  />
+
+                  <button
+                    className="bg-blue-500 text-white px-3 py-2 rounded-md"
+                    onClick={() =>
+                      handleCreateIndicatorRequiredData(
+                        indicator.indicator_id,
+                        indicatorRequiredDataName,
+                      )
+                    }
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {/* Show Assigned Required Data */}
+                {indicatorRequiredDataInputs[indicator.indicator_id]?.length >
+                  0 && (
+                  <div className="mt-2 p-2 bg-white rounded-md shadow">
+                    <p className="font-semibold">Required Data:</p>
+                    <ul className="mt-2 space-y-2">
+                      {indicatorRequiredDataInputs[indicator.indicator_id].map(
+                        (data, index) => (
+                          <li key={index} className="flex items-center gap-2">
+                            <span className="flex-grow">{data.name}</span>
+
+                            <button
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() =>
+                                handleRemoveIndicatorRequiredData(
+                                  indicator.indicator_id,
+                                  index,
+                                )
+                              }
+                            >
+                              ✖
+                            </button>
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
 
               {/* Sub-Indicator Selection & Creation */}
               <div className="w-full p-4 flex flex-col gap-4 bg-gray-300 rounded-md">
