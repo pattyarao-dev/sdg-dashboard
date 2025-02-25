@@ -1,7 +1,7 @@
 generator client_python {
-  provider = "prisma-client-py"
-  interface = "asyncio"  // Use "sync" if you prefer synchronous queries
-  recursive_type_depth = 5
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = "5"
 }
 
 generator client_js {
@@ -76,6 +76,7 @@ model td_goal_indicator {
   indicator_id                    Int
   global_target_value             Float?
   global_baseline_value           Float?
+  md_computation_rule             md_computation_rule[]
   md_goal                         md_goal                           @relation(fields: [goal_id], references: [goal_id], onDelete: Cascade, onUpdate: NoAction)
   md_indicator                    md_indicator                      @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_goal_indicator_required_data td_goal_indicator_required_data[]
@@ -93,6 +94,7 @@ model td_goal_sub_indicator {
   sub_indicator_id                    Int
   global_target_value                 Float?
   global_baseline_value               Float?
+  md_computation_rule                 md_computation_rule[]
   td_goal_indicator                   td_goal_indicator                     @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   md_sub_indicator                    md_sub_indicator                      @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_goal_sub_indicator_required_data td_goal_sub_indicator_required_data[]
@@ -219,6 +221,15 @@ model td_goal_sub_indicator_required_data {
   ref_required_data                   ref_required_data     @relation(fields: [required_data_id], references: [required_data_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_required_data_sub")
 
   @@unique([goal_sub_indicator_id, required_data_id], map: "unique_goal_sub_indicator_required_data")
+}
+
+model md_computation_rule {
+  rule_id               Int                    @id @default(autoincrement())
+  goal_indicator_id     Int?
+  goal_sub_indicator_id Int?
+  formula               String
+  td_goal_indicator     td_goal_indicator?     @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_goal_indicator")
+  td_goal_sub_indicator td_goal_sub_indicator? @relation(fields: [goal_sub_indicator_id], references: [goal_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_goal_sub_indicator")
 }
 
 enum project_status {
