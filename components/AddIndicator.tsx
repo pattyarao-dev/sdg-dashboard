@@ -15,13 +15,20 @@ export default function AddIndicator({
   goalId,
   indicators,
 }: AddIndicatorProps) {
+  // This is the state variable for the method for adding an indicator:
+  // Can add an existing indicator to another goal
+  // Can create a new indicator for this goal
   const [selectedAddMethod, setSelectedAddMethod] = useState("Select Existing");
+
+  // This is the state variable for the selected indicators
+  // An array of indicators that a user wants to add to a goal.
   const [selectedIndicators, setSelectedIndicators] = useState<
     {
       indicator_id: number;
       name: string;
       description?: string;
-      target?: number;
+      global_target_value: number;
+      global_baseline_value: number;
       sub_indicators: ISubIndicator[] | null | undefined;
     }[]
   >([]);
@@ -32,7 +39,8 @@ export default function AddIndicator({
     [indicatorId: number]: {
       sub_indicator_id: number;
       name: string;
-      target: number;
+      global_target_value: number;
+      global_baseline_value: number;
     }[];
   }>({});
 
@@ -50,6 +58,8 @@ export default function AddIndicator({
   const [newIndicator, setNewIndicator] = useState({
     name: "",
     description: "",
+    global_target_value: 0,
+    global_baseline_value: 0,
   });
 
   const [message, setMessage] = useState("");
@@ -58,6 +68,7 @@ export default function AddIndicator({
     console.log("Selected Indicators:", selectedIndicators);
   }, [selectedIndicators]);
 
+  // function for adding an existing indicator to the array of selected indicators.
   const handleAddExistingIndicator = (id: number, name: string) => {
     const selectedIndicator = indicators.find(
       (indicator) => indicator.indicator_id === id,
@@ -72,7 +83,8 @@ export default function AddIndicator({
         {
           indicator_id: id,
           name,
-          target: 0,
+          global_target_value: 0,
+          global_baseline_value: 0,
           sub_indicators: [],
         },
       ]);
@@ -98,7 +110,8 @@ export default function AddIndicator({
         {
           sub_indicator_id: subIndicator.sub_indicator_id,
           name: subIndicator.name,
-          target: subIndicator.target ?? 0,
+          global_target_value: subIndicator.global_target_value ?? 0,
+          global_baseline_value: subIndicator.global_baseline_value ?? 0,
         },
       ],
     }));
@@ -128,7 +141,8 @@ export default function AddIndicator({
         indicator_id: newId,
         name: newIndicator.name,
         description: newIndicator.description,
-        target: 0,
+        global_target_value: newIndicator.global_target_value ?? 0,
+        global_baseline_value: newIndicator.global_baseline_value ?? 0,
         sub_indicators: [],
       },
     ]);
@@ -137,14 +151,23 @@ export default function AddIndicator({
       [newId]: [],
     }));
 
-    setNewIndicator({ name: "", description: "" });
+    setNewIndicator({
+      name: "",
+      description: "",
+      global_target_value: 0,
+      global_baseline_value: 0,
+    });
   };
 
-  const handleUpdateIndicatorValues = (id: number, value: number) => {
+  const handleUpdateIndicatorValues = (
+    id: number,
+    key: "global_target_value" | "global_baseline_value",
+    value: number,
+  ) => {
     setSelectedIndicators(
       selectedIndicators.map((indicator) =>
         indicator.indicator_id === id
-          ? { ...indicator, target: value }
+          ? { ...indicator, [key]: value }
           : indicator,
       ),
     );
@@ -170,7 +193,8 @@ export default function AddIndicator({
     const newSubIndicator: ISubIndicator = {
       sub_indicator_id: Date.now(), // Temporary unique ID
       name: subIndicatorName,
-      target: 0,
+      global_target_value: 0,
+      global_baseline_value: 0,
     };
 
     handleAssignSubIndicator(indicatorId, newSubIndicator);
@@ -360,10 +384,11 @@ export default function AddIndicator({
                     type="number"
                     className="w-fit p-2 text-xs border rounded-md"
                     placeholder="Target"
-                    value={indicator.target ?? ""}
+                    value={indicator.global_target_value}
                     onChange={(e) =>
                       handleUpdateIndicatorValues(
                         indicator.indicator_id,
+                        "global_target_value",
                         Number(e.target.value),
                       )
                     }
@@ -377,10 +402,11 @@ export default function AddIndicator({
                     type="number"
                     className="w-fit p-2 text-xs border rounded-md"
                     placeholder="Target"
-                    value={indicator.target ?? ""}
+                    value={indicator.global_baseline_value}
                     onChange={(e) =>
                       handleUpdateIndicatorValues(
                         indicator.indicator_id,
+                        "global_baseline_value",
                         Number(e.target.value),
                       )
                     }
@@ -388,7 +414,7 @@ export default function AddIndicator({
                 </div>
               </div>
               <div>
-                <p>Identify the data needed to be collected:</p>
+                <p>Identify the data that to be collected:</p>
                 <div className="flex gap-2">
                   <input
                     type="text"

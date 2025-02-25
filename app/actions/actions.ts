@@ -134,8 +134,8 @@ export async function createIndicatorsBatch(formData: FormData) {
         data: {
           goal_id: goalId,
           indicator_id: indicatorId,
-          global_target_value: indicator.target ?? 0,
-          global_baseline_value: indicator.baseline ?? 0,
+          global_target_value: goalIndicator.global_target_value ?? 0,
+          global_baseline_value: goalIndicator.baseline ?? 0,
         },
       });
       addedIndicators.push(indicator.name);
