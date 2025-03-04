@@ -1,12 +1,12 @@
 from fastapi import FastAPI
-from fastapi.routing import APIRoute
-from api import etl
-from api import compute
+from fastapi.routing import APIRouter
+from api import extract, compute
+
 
 app = FastAPI()
 
 # Include ETL routes
-app.include_router(etl.router)
+app.include_router(extract.router)
 app.include_router(compute.router)
 
 for route in app.routes:

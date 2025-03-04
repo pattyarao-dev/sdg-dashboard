@@ -1,6 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from api.extract import extract_indicators
 from prisma import Prisma
-import re
 import ast
 import operator
 
@@ -26,9 +26,14 @@ def safe_eval(expr):
         if isinstance(node, ast.BinOp) and type(node.op) in SAFE_OPERATORS:
             left = eval_node(node.left)
             right = eval_node(node.right)
+
+            # Prevent division by zero
+            if isinstance(node.op, ast.Div) and right == 0:
+                return 0  
+
             return SAFE_OPERATORS[type(node.op)](left, right)
-        elif isinstance(node, ast.Num):  # Numeric literals
-            return node.n
+        elif isinstance(node, ast.Constant):  
+            return node.value
         else:
             raise ValueError("Unsafe expression detected!")
 
@@ -41,83 +46,129 @@ def safe_eval(expr):
 
 @router.get("/compute-indicators")
 async def compute_indicators():
-    if not db.is_connected():
-        await db.connect()
+    """Computes indicator values using extracted data."""
+    
+    await db.connect()  
 
-    # Fetch all required data values
-    required_data_values = await db.td_required_data_value.find_many()
-
-    # Organize required data into a dictionary
-    required_data_dict = {}
-    for data in required_data_values:
-        key = (data.goal_indicator_id, data.goal_sub_indicator_id, data.required_data_id) 
-        required_data_dict[key] = data.value  
-
-    # Fetch computation rules
-    computation_rules = await db.md_computation_rule.find_many()
-
+    indicators_data = await extract_indicators()  
+    indicators = indicators_data["indicators"]  
     computed_results = []
-    for rule in computation_rules:
-        formula = rule.formula  
-        goal_indicator_id = rule.goal_indicator_id
-        goal_sub_indicator_id = rule.goal_sub_indicator_id
 
-        # Fetch required data mappings for both indicators and sub-indicators
-        if goal_indicator_id:
-            rule_required_data = await db.td_goal_indicator_required_data.find_many(
-                where={"goal_indicator_id": goal_indicator_id}
-            )
-        elif goal_sub_indicator_id:
-            rule_required_data = await db.td_goal_sub_indicator_required_data.find_many(
-                where={"goal_sub_indicator_id": goal_sub_indicator_id}
-            )
-        else:
-            continue  # Skip invalid rules
+    print(f"Extracted {len(indicators)} indicators")
 
-        # Replace placeholders with values
-        for req_data in rule_required_data:
-            placeholder = f"{{{req_data.required_data_id}}}" 
-            value = required_data_dict.get(
-                (goal_indicator_id, goal_sub_indicator_id, req_data.required_data_id), 0  
-            )
-            formula = formula.replace(placeholder, str(value))
+    for indicator in indicators:
+        goal_indicators = indicator.td_goal_indicator or []
+        sub_indicators = indicator.md_sub_indicator or []
 
-        try:
-            computed_value = safe_eval(formula)
+        print(f"Processing Indicator: {indicator.indicator_id}, Goal Indicators: {len(goal_indicators)}, Sub Indicators: {len(sub_indicators)}")
 
-            if computed_value is not None:
-                if goal_indicator_id:
+        # Compute values for goal indicators
+        for goal_indicator in goal_indicators:
+            computation_rules = goal_indicator.md_computation_rule or []
+            print(f"  Goal Indicator: {goal_indicator.goal_indicator_id}, Computation Rules: {computation_rules}")
+
+            required_data_values = {
+                data.ref_required_data.name: next(
+                    (val.value for val in goal_indicator.td_required_data_value if val.goal_indicator_id == goal_indicator.goal_indicator_id),
+                    None  
+                )  
+                for data in goal_indicator.td_goal_indicator_required_data or []  
+            }
+
+            print(f"  Required Data Values: {required_data_values}")
+
+            for rule in computation_rules:
+                formula = rule.formula
+                print(f"  Original Formula: {formula}")
+
+                for data_name, value in required_data_values.items():
+                    if value is not None:
+                        formula = formula.replace(data_name, str(value))
+
+                print(f"  Evaluating Formula: {formula}")
+                try:
+                    computed_value = safe_eval(formula)
+                except Exception as e:
+                    print(f"  Error evaluating expression {formula}: {e}")
+                    computed_value = None
+
+                print(f"  Computed Value: {computed_value}")
+
+                if computed_value is not None:
                     await db.td_indicator_value.create(
                         data={
-                            "goal_indicator_id": goal_indicator_id,
-                            "indicator_id": (await db.td_goal_indicator.find_unique(
-                                where={"goal_indicator_id": goal_indicator_id},
-                                select={"indicator_id": True}
-                            )).indicator_id,  # ✅ Use attribute access
-                            "value": computed_value
-                        }
-                    )
-                elif goal_sub_indicator_id:
-                    await db.td_sub_indicator_value.create(
-                        data={
-                            "goal_sub_indicator_id": goal_sub_indicator_id,
-                            "sub_indicator_id": (await db.td_goal_sub_indicator.find_unique(
-                                where={"goal_sub_indicator_id": goal_sub_indicator_id},
-                                select={"sub_indicator_id": True}
-                            )).sub_indicator_id,  
-                            "value": computed_value
+                            "goal_indicator_id": goal_indicator.goal_indicator_id,
+                            "indicator_id": indicator.indicator_id,
+                            "value": computed_value,
+                            "created_by": 3,  
+                            # "md_indicator": {  
+                            #     "connect": {"indicator_id": indicator.indicator_id}
+                            # }
                         }
                     )
 
-                computed_results.append({
-                    "goal_indicator_id": goal_indicator_id,
-                    "goal_sub_indicator_id": goal_sub_indicator_id,
-                    "computed_value": computed_value
-                })
+                    print(f"  Saved Computed Value for Goal Indicator {goal_indicator.goal_indicator_id}")
 
-        except Exception as e:
-            print(f"Error computing rule {rule.rule_id}: {e}")
+                    computed_results.append({
+                        "goal_indicator_id": goal_indicator.goal_indicator_id, 
+                        "computed_value": computed_value
+                    })
 
-    await db.disconnect()
+        # Compute values for sub-indicators
+        for sub_indicator in sub_indicators:
+            goal_sub_indicators = sub_indicator.td_goal_sub_indicator or []
+            for goal_sub_indicator in goal_sub_indicators:
+                computation_rules = goal_sub_indicator.md_computation_rule or [] 
+
+                print(f"  Computation Rules for Sub Indicator: {computation_rules}")
+
+                print(f"  Processing Goal Sub Indicator: {goal_sub_indicator.goal_sub_indicator_id}, Computation Rules: {computation_rules}")
+
+                required_data_values = {
+                    data.ref_required_data.name: 
+                    {val.goal_sub_indicator_id: val.value for val in goal_sub_indicator.td_required_data_value}.get(goal_sub_indicator.goal_sub_indicator_id, None)
+                    for data in (goal_sub_indicator.td_goal_sub_indicator_required_data or [])
+                }
+
+
+                print(f"  Required Data Values for Sub Indicator: {required_data_values}")
+
+                for rule in computation_rules:
+                    formula = rule.formula
+                    print(f"  Original Formula: {formula}")
+
+                    for data_name, value in required_data_values.items():
+                        if value is not None:
+                            formula = formula.replace(data_name, str(value))
+
+                    print(f"  Evaluating Formula: {formula}")
+                    try:
+                        computed_value = safe_eval(formula)
+                    except Exception as e:
+                        print(f"  Error evaluating expression {formula}: {e}")
+                        computed_value = None
+
+                    print(f"  Computed Value: {computed_value}")
+
+                    if computed_value is not None:
+                        await db.td_sub_indicator_value.create(
+                            data={
+                                "goal_sub_indicator_id": goal_sub_indicator.goal_sub_indicator_id,  
+                                "sub_indicator_id": sub_indicator.sub_indicator_id,  
+                                "sub_indicator_id": sub_indicator.sub_indicator_id,  
+                                "value": computed_value,
+                                "created_by": 3  
+                            }
+                        )
+
+                        print(f"  Saved Computed Value for Sub Indicator {goal_sub_indicator.goal_sub_indicator_id}")
+
+                        computed_results.append({
+                            "goal_sub_indicator_id": goal_sub_indicator.goal_sub_indicator_id, 
+                            "computed_value": computed_value
+                        })
+
+    await db.disconnect()  
+
+    print(f"Total Computed Results: {len(computed_results)}")
     return {"computed_results": computed_results}
-

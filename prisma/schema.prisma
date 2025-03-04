@@ -1,7 +1,7 @@
 generator client_python {
   provider             = "prisma-client-py"
-  interface            = "asyncio"
   recursive_type_depth = "5"
+  interface            = "asyncio"
 }
 
 generator client_js {
