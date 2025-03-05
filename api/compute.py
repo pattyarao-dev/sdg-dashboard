@@ -106,19 +106,29 @@ async def compute_indicators():
                 print(f"  Computed Value: {computed_value}")
 
                 if computed_value is not None:
-                    await db.td_indicator_value.create(
-                        data={
-                            "goal_indicator_id": goal_indicator.goal_indicator_id,
-                            "indicator_id": indicator.indicator_id,
-                            "value": computed_value,
-                            "created_by": created_by,  # Use dynamically fetched creator
-                        }
+                    existing_value = await db.td_indicator_value.find_first(
+                        where={"goal_indicator_id": goal_indicator.goal_indicator_id}
                     )
 
-                    print(f"  Saved Computed Value for Goal Indicator {goal_indicator.goal_indicator_id}")
+                    if existing_value:
+                        await db.td_indicator_value.update(
+                            where={"value_id": existing_value.value_id},
+                            data={"value": computed_value}
+                        )
+                        print(f"  Updated Computed Value for Goal Indicator {goal_indicator.goal_indicator_id}")
+                    else:
+                        await db.td_indicator_value.create(
+                            data={
+                                "goal_indicator_id": goal_indicator.goal_indicator_id,
+                                "indicator_id": indicator.indicator_id,
+                                "value": computed_value,
+                                "created_by": created_by
+                            }
+                        )
+                        print(f"  Inserted New Computed Value for Goal Indicator {goal_indicator.goal_indicator_id}")
 
                     computed_results.append({
-                        "goal_indicator_id": goal_indicator.goal_indicator_id, 
+                        "goal_indicator_id": goal_indicator.goal_indicator_id,
                         "computed_value": computed_value
                     })
 
@@ -164,19 +174,29 @@ async def compute_indicators():
                     print(f"  Computed Value: {computed_value}")
 
                     if computed_value is not None:
-                        await db.td_sub_indicator_value.create(
-                            data={
-                                "goal_sub_indicator_id": goal_sub_indicator.goal_sub_indicator_id,  
-                                "sub_indicator_id": sub_indicator.sub_indicator_id,  
-                                "value": computed_value,
-                                "created_by": sub_created_by  # Use dynamically fetched creator
-                            }
+                        existing_value = await db.td_sub_indicator_value.find_first(
+                            where={"goal_sub_indicator_id": goal_sub_indicator.goal_sub_indicator_id}
                         )
 
-                        print(f"  Saved Computed Value for Sub Indicator {goal_sub_indicator.goal_sub_indicator_id}")
+                        if existing_value:
+                            await db.td_sub_indicator_value.update(
+                                where={"value_id": existing_value.value_id},
+                                data={"value": computed_value}
+                            )
+                            print(f"  Updated Computed Value for Goal Sub Indicator {goal_sub_indicator.goal_sub_indicator_id}")
+                        else:
+                            await db.td_sub_indicator_value.create(
+                                data={
+                                    "goal_sub_indicator_id": goal_sub_indicator.goal_sub_indicator_id,
+                                    "sub_indicator_id": sub_indicator.sub_indicator_id,
+                                    "value": computed_value,
+                                    "created_by": sub_created_by
+                                }
+                            )
+                            print(f"  Inserted New Computed Value for Goal Sub Indicator {goal_sub_indicator.goal_sub_indicator_id}")
 
                         computed_results.append({
-                            "goal_sub_indicator_id": goal_sub_indicator.goal_sub_indicator_id, 
+                            "goal_sub_indicator_id": goal_sub_indicator.goal_sub_indicator_id,
                             "computed_value": computed_value
                         })
 
