@@ -56,11 +56,22 @@ async def compute_indicators():
 
     print(f"Extracted {len(indicators)} indicators")
 
+    # Fetch all created_by values for indicators
+    created_by_values = await db.td_indicator_value.find_many()
+    created_by_dict = {item.indicator_id: item.created_by for item in created_by_values}
+
+    # Fetch all created_by values for sub-indicators
+    sub_created_by_values = await db.td_sub_indicator_value.find_many()
+    sub_created_by_dict = {item.sub_indicator_id: item.created_by for item in sub_created_by_values}
+
     for indicator in indicators:
         goal_indicators = indicator.td_goal_indicator or []
         sub_indicators = indicator.md_sub_indicator or []
 
         print(f"Processing Indicator: {indicator.indicator_id}, Goal Indicators: {len(goal_indicators)}, Sub Indicators: {len(sub_indicators)}")
+
+        # Get created_by for indicator
+        created_by = created_by_dict.get(indicator.indicator_id, 1)  # Default to `1` if not found
 
         # Compute values for goal indicators
         for goal_indicator in goal_indicators:
@@ -100,10 +111,7 @@ async def compute_indicators():
                             "goal_indicator_id": goal_indicator.goal_indicator_id,
                             "indicator_id": indicator.indicator_id,
                             "value": computed_value,
-                            "created_by": 3,  
-                            # "md_indicator": {  
-                            #     "connect": {"indicator_id": indicator.indicator_id}
-                            # }
+                            "created_by": created_by,  # Use dynamically fetched creator
                         }
                     )
 
@@ -117,6 +125,10 @@ async def compute_indicators():
         # Compute values for sub-indicators
         for sub_indicator in sub_indicators:
             goal_sub_indicators = sub_indicator.td_goal_sub_indicator or []
+
+            # Get created_by for sub-indicator
+            sub_created_by = sub_created_by_dict.get(sub_indicator.sub_indicator_id, 1)  # Default to `1` if not found
+
             for goal_sub_indicator in goal_sub_indicators:
                 computation_rules = goal_sub_indicator.md_computation_rule or [] 
 
@@ -129,7 +141,6 @@ async def compute_indicators():
                     {val.goal_sub_indicator_id: val.value for val in goal_sub_indicator.td_required_data_value}.get(goal_sub_indicator.goal_sub_indicator_id, None)
                     for data in (goal_sub_indicator.td_goal_sub_indicator_required_data or [])
                 }
-
 
                 print(f"  Required Data Values for Sub Indicator: {required_data_values}")
 
@@ -155,9 +166,8 @@ async def compute_indicators():
                             data={
                                 "goal_sub_indicator_id": goal_sub_indicator.goal_sub_indicator_id,  
                                 "sub_indicator_id": sub_indicator.sub_indicator_id,  
-                                "sub_indicator_id": sub_indicator.sub_indicator_id,  
                                 "value": computed_value,
-                                "created_by": 3  
+                                "created_by": sub_created_by  # Use dynamically fetched creator
                             }
                         )
 
