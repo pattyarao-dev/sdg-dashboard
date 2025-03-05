@@ -79,11 +79,10 @@ async def compute_indicators():
             print(f"  Goal Indicator: {goal_indicator.goal_indicator_id}, Computation Rules: {computation_rules}")
 
             required_data_values = {
-                data.ref_required_data.name: next(
-                    (val.value for val in goal_indicator.td_required_data_value if val.goal_indicator_id == goal_indicator.goal_indicator_id),
-                    None  
-                )  
-                for data in goal_indicator.td_goal_indicator_required_data or []  
+                data.ref_required_data.name: val.value  
+                    for data in goal_indicator.td_goal_indicator_required_data or []  
+                    for val in goal_indicator.td_required_data_value  
+                    if val.goal_indicator_id == goal_indicator.goal_indicator_id and val.required_data_id == data.required_data_id  
             }
 
             print(f"  Required Data Values: {required_data_values}")
@@ -94,6 +93,7 @@ async def compute_indicators():
 
                 for data_name, value in required_data_values.items():
                     if value is not None:
+                        print(f"Replacing {data_name} with {value} in formula {formula}")
                         formula = formula.replace(data_name, str(value))
 
                 print(f"  Evaluating Formula: {formula}")
@@ -137,9 +137,10 @@ async def compute_indicators():
                 print(f"  Processing Goal Sub Indicator: {goal_sub_indicator.goal_sub_indicator_id}, Computation Rules: {computation_rules}")
 
                 required_data_values = {
-                    data.ref_required_data.name: 
-                    {val.goal_sub_indicator_id: val.value for val in goal_sub_indicator.td_required_data_value}.get(goal_sub_indicator.goal_sub_indicator_id, None)
-                    for data in (goal_sub_indicator.td_goal_sub_indicator_required_data or [])
+                    data.ref_required_data.name: val.value  
+                        for data in goal_sub_indicator.td_goal_sub_indicator_required_data or []  
+                        for val in goal_sub_indicator.td_required_data_value  
+                        if val.goal_sub_indicator_id == goal_sub_indicator.goal_sub_indicator_id and val.required_data_id == data.required_data_id  
                 }
 
                 print(f"  Required Data Values for Sub Indicator: {required_data_values}")
@@ -150,6 +151,7 @@ async def compute_indicators():
 
                     for data_name, value in required_data_values.items():
                         if value is not None:
+                            print(f"Replacing {data_name} with {value} in formula {formula}")
                             formula = formula.replace(data_name, str(value))
 
                     print(f"  Evaluating Formula: {formula}")
