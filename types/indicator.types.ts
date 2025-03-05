@@ -4,7 +4,7 @@ export interface IIndicator {
   global_target_value: number;
   global_baseline_value: number;
   description?: string | null;
-  //required_data: IRequiredData[];
+  required_data: IRequiredData[];
   md_sub_indicator?: ISubIndicator[];
 }
 

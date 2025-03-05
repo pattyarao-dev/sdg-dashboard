@@ -145,6 +145,52 @@ export async function createIndicatorsBatch(formData: FormData) {
 
     const goalIndicatorId = goalIndicator.goal_indicator_id;
 
+    // 🆕 Process Required Data
+    if (indicator.required_data && indicator.required_data.length > 0) {
+      for (const requiredData of indicator.required_data) {
+        let requiredDataId = requiredData.requiredDataId;
+
+        if (requiredDataId < 0) {
+          requiredDataId = undefined;
+        }
+
+        // Check if required data already exists
+        let existingRequiredData = null;
+        if (requiredDataId) {
+          existingRequiredData = await prisma.ref_required_data.findUnique({
+            where: { required_data_id: requiredDataId },
+          });
+        }
+
+        // If not found, create it and let Prisma handle the ID
+        if (!existingRequiredData) {
+          const newRequiredData = await prisma.ref_required_data.create({
+            data: {
+              name: requiredData.name, // Assuming required_data has a 'name' field
+            },
+          });
+
+          requiredDataId = newRequiredData.required_data_id; // Use the generated ID
+        }
+
+        // Link Required Data to Indicator
+        await prisma.td_goal_indicator_required_data.upsert({
+          where: {
+            goal_indicator_id_required_data_id: {
+              // Referencing the unique constraint
+              goal_indicator_id: goalIndicatorId,
+              required_data_id: requiredDataId,
+            },
+          },
+          update: {}, // No update needed if it already exists
+          create: {
+            goal_indicator_id: goalIndicatorId,
+            required_data_id: requiredDataId,
+          },
+        });
+      }
+    }
+
     // Process Sub-Indicators
     if (indicator.sub_indicators && indicator.sub_indicators.length > 0) {
       for (const subIndicator of indicator.sub_indicators) {
