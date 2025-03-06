@@ -134,8 +134,8 @@ export async function createIndicatorsBatch(formData: FormData) {
         data: {
           goal_id: goalId,
           indicator_id: indicatorId,
-          global_target_value: indicator.target ?? 0,
-          global_baseline_value: indicator.baseline ?? 0,
+          global_target_value: indicator.global_target_value ?? 0,
+          global_baseline_value: indicator.global_baseline_value ?? 0,
         },
       });
       addedIndicators.push(indicator.name);
@@ -144,6 +144,52 @@ export async function createIndicatorsBatch(formData: FormData) {
     }
 
     const goalIndicatorId = goalIndicator.goal_indicator_id;
+
+    // 🆕 Process Required Data
+    if (indicator.required_data && indicator.required_data.length > 0) {
+      for (const requiredData of indicator.required_data) {
+        let requiredDataId = requiredData.requiredDataId;
+
+        if (requiredDataId < 0) {
+          requiredDataId = undefined;
+        }
+
+        // Check if required data already exists
+        let existingRequiredData = null;
+        if (requiredDataId) {
+          existingRequiredData = await prisma.ref_required_data.findUnique({
+            where: { required_data_id: requiredDataId },
+          });
+        }
+
+        // If not found, create it and let Prisma handle the ID
+        if (!existingRequiredData) {
+          const newRequiredData = await prisma.ref_required_data.create({
+            data: {
+              name: requiredData.name, // Assuming required_data has a 'name' field
+            },
+          });
+
+          requiredDataId = newRequiredData.required_data_id; // Use the generated ID
+        }
+
+        // Link Required Data to Indicator
+        await prisma.td_goal_indicator_required_data.upsert({
+          where: {
+            goal_indicator_id_required_data_id: {
+              // Referencing the unique constraint
+              goal_indicator_id: goalIndicatorId,
+              required_data_id: requiredDataId,
+            },
+          },
+          update: {}, // No update needed if it already exists
+          create: {
+            goal_indicator_id: goalIndicatorId,
+            required_data_id: requiredDataId,
+          },
+        });
+      }
+    }
 
     // Process Sub-Indicators
     if (indicator.sub_indicators && indicator.sub_indicators.length > 0) {
@@ -185,10 +231,57 @@ export async function createIndicatorsBatch(formData: FormData) {
           create: {
             goal_indicator_id: goalIndicatorId,
             sub_indicator_id: subIndicatorId,
-            global_target_value: subIndicator.target ?? 0,
-            global_baseline_value: subIndicator.baseline ?? 0,
+            global_target_value: subIndicator.global_target_value ?? 0,
+            global_baseline_value: subIndicator.global_baseline_value ?? 0,
           },
         });
+
+        if (
+          subIndicator.required_data &&
+          subIndicator.required_data.length > 0
+        ) {
+          for (const requiredData of subIndicator.required_data) {
+            let requiredDataId = requiredData.requiredDataId;
+
+            if (requiredDataId < 0) {
+              requiredDataId = undefined;
+            }
+
+            // Check if required data already exists
+            let existingRequiredData = null;
+            if (requiredDataId) {
+              existingRequiredData = await prisma.ref_required_data.findUnique({
+                where: { required_data_id: requiredDataId },
+              });
+            }
+
+            // If not found, create it and let Prisma handle the ID
+            if (!existingRequiredData) {
+              const newRequiredData = await prisma.ref_required_data.create({
+                data: {
+                  name: requiredData.name, // Assuming required_data has a 'name' field
+                },
+              });
+
+              requiredDataId = newRequiredData.required_data_id; // Use the generated ID
+            }
+
+            // Link Required Data to Sub-Indicator
+            await prisma.td_goal_sub_indicator_required_data.upsert({
+              where: {
+                goal_sub_indicator_id_required_data_id: {
+                  goal_sub_indicator_id: subIndicatorId, // Reference sub-indicator
+                  required_data_id: requiredDataId,
+                },
+              },
+              update: {}, // No update needed if it already exists
+              create: {
+                goal_sub_indicator_id: subIndicatorId,
+                required_data_id: requiredDataId,
+              },
+            });
+          }
+        }
       }
     }
   }

@@ -2,26 +2,39 @@
 
 import { createIndicatorsBatch } from "@/app/actions/actions";
 import { useEffect, useState } from "react";
-import { IIndicator, ISubIndicator } from "@/types/indicator.types";
+import {
+  IIndicator,
+  ISubIndicator,
+  IRequiredData,
+} from "@/types/indicator.types";
 
 interface AddIndicatorProps {
   goalName: string;
   goalId: number;
   indicators: IIndicator[];
+  requiredData: IRequiredData[];
 }
 
 export default function AddIndicator({
   goalName,
   goalId,
   indicators,
+  requiredData,
 }: AddIndicatorProps) {
+  // This is the state variable for the method for adding an indicator:
+  // Can add an existing indicator to another goal
+  // Can create a new indicator for this goal
   const [selectedAddMethod, setSelectedAddMethod] = useState("Select Existing");
+
+  // This is the state variable for the selected indicators
+  // An array of indicators that a user wants to add to a goal.
   const [selectedIndicators, setSelectedIndicators] = useState<
     {
       indicator_id: number;
       name: string;
       description?: string;
-      target?: number;
+      global_target_value: number;
+      global_baseline_value: number;
       sub_indicators: ISubIndicator[] | null | undefined;
     }[]
   >([]);
@@ -32,13 +45,38 @@ export default function AddIndicator({
     [indicatorId: number]: {
       sub_indicator_id: number;
       name: string;
-      target: number;
+      global_target_value: number;
+      global_baseline_value: number;
     }[];
   }>({});
+
+  const [indicatorRequiredDataName, setIndicatorRequiredDataName] =
+    useState("");
+
+  const [subIndicatorRequiredDataName, setSubIndicatorRequiredDataName] =
+    useState("");
+
+  const [indicatorRequiredDataInputs, setIndicatorRequiredDataInputs] =
+    useState<{
+      [indicatorId: number]: {
+        requiredDataId: number;
+        name: string;
+      }[];
+    }>({});
+
+  const [subIndicatorRequiredDataInputs, setSubIndicatorRequiredDataInputs] =
+    useState<{
+      [subIndicatorId: number]: {
+        requiredDataId: number;
+        name: string;
+      }[];
+    }>({});
 
   const [newIndicator, setNewIndicator] = useState({
     name: "",
     description: "",
+    global_target_value: 0,
+    global_baseline_value: 0,
   });
 
   const [message, setMessage] = useState("");
@@ -47,6 +85,7 @@ export default function AddIndicator({
     console.log("Selected Indicators:", selectedIndicators);
   }, [selectedIndicators]);
 
+  // function for adding an existing indicator to the array of selected indicators.
   const handleAddExistingIndicator = (id: number, name: string) => {
     const selectedIndicator = indicators.find(
       (indicator) => indicator.indicator_id === id,
@@ -61,11 +100,16 @@ export default function AddIndicator({
         {
           indicator_id: id,
           name,
-          target: 0,
+          global_target_value: 0,
+          global_baseline_value: 0,
           sub_indicators: [],
         },
       ]);
       setSubIndicatorInputs((prev) => ({
+        ...prev,
+        [id]: [],
+      }));
+      setIndicatorRequiredDataInputs((prev) => ({
         ...prev,
         [id]: [],
       }));
@@ -83,7 +127,8 @@ export default function AddIndicator({
         {
           sub_indicator_id: subIndicator.sub_indicator_id,
           name: subIndicator.name,
-          target: subIndicator.target ?? 0,
+          global_target_value: subIndicator.global_target_value ?? 0,
+          global_baseline_value: subIndicator.global_baseline_value ?? 0,
         },
       ],
     }));
@@ -113,7 +158,8 @@ export default function AddIndicator({
         indicator_id: newId,
         name: newIndicator.name,
         description: newIndicator.description,
-        target: 0,
+        global_target_value: newIndicator.global_target_value ?? 0,
+        global_baseline_value: newIndicator.global_baseline_value ?? 0,
         sub_indicators: [],
       },
     ]);
@@ -122,14 +168,23 @@ export default function AddIndicator({
       [newId]: [],
     }));
 
-    setNewIndicator({ name: "", description: "" });
+    setNewIndicator({
+      name: "",
+      description: "",
+      global_target_value: 0,
+      global_baseline_value: 0,
+    });
   };
 
-  const handleUpdateIndicatorValues = (id: number, value: number) => {
+  const handleUpdateIndicatorValues = (
+    id: number,
+    key: "global_target_value" | "global_baseline_value",
+    value: number,
+  ) => {
     setSelectedIndicators(
       selectedIndicators.map((indicator) =>
         indicator.indicator_id === id
-          ? { ...indicator, target: value }
+          ? { ...indicator, [key]: value }
           : indicator,
       ),
     );
@@ -155,7 +210,8 @@ export default function AddIndicator({
     const newSubIndicator: ISubIndicator = {
       sub_indicator_id: Date.now(), // Temporary unique ID
       name: subIndicatorName,
-      target: 0,
+      global_target_value: 0,
+      global_baseline_value: 0,
     };
 
     handleAssignSubIndicator(indicatorId, newSubIndicator);
@@ -173,13 +229,55 @@ export default function AddIndicator({
     }));
   };
 
+  const handleCreateIndicatorRequiredData = (
+    indicatorId: number,
+    name: string,
+  ) => {
+    if (!name.trim()) return; // Prevent empty inputs
+
+    setIndicatorRequiredDataInputs((prev) => ({
+      ...prev,
+      [indicatorId]: [
+        ...(prev[indicatorId] || []),
+        { requiredDataId: -Date.now(), name }, // Use negative ID
+      ],
+    }));
+
+    setIndicatorRequiredDataName(""); // Clear input field after adding
+  };
+
+  const handleCreateSubIndicatorRequiredData = (
+    subIndicatorId: number,
+    name: string,
+  ) => {
+    if (!name.trim()) return;
+
+    setSubIndicatorRequiredDataInputs((prev) => ({
+      ...prev,
+      [subIndicatorId]: [
+        ...(prev[subIndicatorId] || []),
+        { requiredDataId: -Date.now(), name }, // Use negative ID
+      ],
+    }));
+
+    setSubIndicatorRequiredDataName("");
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const indicatorsWithSubIndicators = selectedIndicators.map((indicator) => ({
       ...indicator,
       // Only use the sub-indicators from subIndicatorInputs
-      sub_indicators: subIndicatorInputs[indicator.indicator_id] || [],
+      required_data: indicatorRequiredDataInputs[indicator.indicator_id] || [],
+      sub_indicators: (subIndicatorInputs[indicator.indicator_id] || []).map(
+        (subIndicator) => ({
+          ...subIndicator,
+          required_data:
+            subIndicatorRequiredDataInputs?.[subIndicator.sub_indicator_id] ||
+            [],
+        }),
+      ),
     }));
 
     const formData = new FormData();
@@ -191,6 +289,42 @@ export default function AddIndicator({
     console.log("Server Response:", result);
     setMessage(result.message || "❌ No indicators were added.");
     setSelectedIndicators([]);
+  };
+
+  const handleEditIndicatorName = (id: number, newName: string) => {
+    setSelectedIndicators((prev) =>
+      prev.map((indicator) =>
+        indicator.indicator_id === id
+          ? { ...indicator, name: newName }
+          : indicator,
+      ),
+    );
+  };
+
+  // const handleRemoveIndicatorRequiredData = (
+  //   indicatorId: number,
+  //   index: number,
+  // ) => {
+  //   setIndicatorRequiredDataInputs((prev) => ({
+  //     ...prev,
+  //     [indicatorId]: prev[indicatorId].filter((_, i) => i !== index),
+  //   }));
+  // };
+
+  const handleUpdateSubIndicatorValue = (
+    indicatorId: number,
+    subIndicatorId: number,
+    field: "global_target_value" | "global_baseline_value",
+    value: number,
+  ) => {
+    setSubIndicatorInputs((prev) => ({
+      ...prev,
+      [indicatorId]: prev[indicatorId].map((sub) =>
+        sub.sub_indicator_id === subIndicatorId
+          ? { ...sub, [field]: value }
+          : sub,
+      ),
+    }));
   };
 
   return (
@@ -233,7 +367,7 @@ export default function AddIndicator({
                 placeholder="Indicator Name"
                 value={newIndicator.name}
                 onChange={(e) =>
-                  setNewIndicator({ ...newIndicator, name: e.target.value })
+                  setNewIndicator((prev) => ({ ...prev, name: e.target.value }))
                 }
                 className="p-2 rounded-md"
               />
@@ -285,27 +419,189 @@ export default function AddIndicator({
           {selectedIndicators.map((indicator) => (
             <li
               key={indicator.indicator_id}
-              className="flex flex-col gap-2 bg-gray-100 p-4 rounded-lg"
+              className="w-full flex flex-col gap-4 bg-gray-100 p-4 rounded-lg"
             >
               <input
                 type="text"
-                className="bg-transparent font-semibold"
+                className="w-full text-wrap bg-transparent font-semibold"
                 value={indicator.name}
-                readOnly
-              />
-
-              <input
-                type="number"
-                className="w-1/3 p-2 text-xs border rounded-md"
-                placeholder="Target"
-                value={indicator.target ?? ""}
                 onChange={(e) =>
-                  handleUpdateIndicatorValues(
+                  handleEditIndicatorName(
                     indicator.indicator_id,
-                    Number(e.target.value),
+                    e.target.value,
                   )
                 }
               />
+
+              <div className="w-full flex items-center gap-10">
+                <div className="w-fit flex flex-col items-start gap-1">
+                  <label className="text-sm font-bold text-gray-500">
+                    2030 Target
+                  </label>
+                  <input
+                    type="number"
+                    className="w-fit p-2 text-xs border rounded-md"
+                    placeholder="Target"
+                    value={indicator.global_target_value}
+                    onChange={(e) =>
+                      handleUpdateIndicatorValues(
+                        indicator.indicator_id,
+                        "global_target_value",
+                        Number(e.target.value),
+                      )
+                    }
+                  />
+                </div>
+                <div className="w-fit flex flex-col items-start gap-1">
+                  <label className="text-sm font-bold text-gray-500">
+                    Baseline
+                  </label>
+                  <input
+                    type="number"
+                    className="w-fit p-2 text-xs border rounded-md"
+                    placeholder="Target"
+                    value={indicator.global_baseline_value}
+                    onChange={(e) =>
+                      handleUpdateIndicatorValues(
+                        indicator.indicator_id,
+                        "global_baseline_value",
+                        Number(e.target.value),
+                      )
+                    }
+                  />
+                </div>
+              </div>
+              <div className="w-full bg-gray-300 p-4 flex flex-col gap-2 rounded-md">
+                <p>
+                  Identify the data to be collected. Select or Create a new one.
+                </p>
+
+                {/* Dropdown for selecting required data */}
+                <div className="w-full">
+                  <select
+                    className="w-full p-2 border rounded-md"
+                    onChange={(e) => {
+                      const requiredDataId = Number(e.target.value);
+                      if (!requiredDataId) return;
+
+                      // Find the selected required data
+                      const selectedData = requiredData.find(
+                        (data) => data.required_data_id === requiredDataId,
+                      );
+
+                      if (selectedData) {
+                        setIndicatorRequiredDataInputs((prev) => ({
+                          ...prev,
+                          [indicator.indicator_id]: [
+                            ...(prev[indicator.indicator_id] || []),
+                            {
+                              requiredDataId: selectedData.required_data_id,
+                              name: selectedData.name,
+                            },
+                          ],
+                        }));
+                      }
+
+                      // Reset dropdown value
+                      e.target.value = "";
+                    }}
+                  >
+                    <option value="">-- Select data --</option>
+                    {requiredData
+                      .filter(
+                        (data) =>
+                          !(
+                            indicatorRequiredDataInputs[
+                              indicator.indicator_id
+                            ] || []
+                          ).some(
+                            (d) => d.requiredDataId === data.required_data_id,
+                          ),
+                      )
+                      .map((data) => (
+                        <option
+                          key={data.required_data_id}
+                          value={data.required_data_id}
+                        >
+                          {data.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* Input field for adding new required data */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Required Data Name"
+                    className="p-2 border rounded-md flex-grow"
+                    value={indicatorRequiredDataName}
+                    onChange={(e) =>
+                      setIndicatorRequiredDataName(e.target.value)
+                    }
+                  />
+
+                  <button
+                    className="bg-blue-500 text-white px-3 py-2 rounded-md"
+                    onClick={() => {
+                      // Normalize the input (lowercase + trim)
+                      const normalizedInput = indicatorRequiredDataName
+                        .trim()
+                        .toLowerCase();
+
+                      // Check if the name already exists in `requiredData`
+                      const isDuplicate = requiredData.some(
+                        (data) => data.name.toLowerCase() === normalizedInput,
+                      );
+
+                      if (isDuplicate) {
+                        alert(
+                          "This required data already exists! Please select it instead.",
+                        );
+                        return;
+                      }
+
+                      handleCreateIndicatorRequiredData(
+                        indicator.indicator_id,
+                        indicatorRequiredDataName,
+                      );
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+                {/* List of selected required data */}
+                <ul className="w-full  bg-white rounded-md flex flex-col gap-4">
+                  {(
+                    indicatorRequiredDataInputs[indicator.indicator_id] || []
+                  ).map((data) => (
+                    <li
+                      key={data.requiredDataId}
+                      className="w-full rounded-md flex flex-col items-start gap-2"
+                    >
+                      <div className="w-full flex items-center justify-between">
+                        {data.name}
+                        <button
+                          className="text-red-500"
+                          onClick={() => {
+                            setIndicatorRequiredDataInputs((prev) => ({
+                              ...prev,
+                              [indicator.indicator_id]: prev[
+                                indicator.indicator_id
+                              ].filter(
+                                (d) => d.requiredDataId !== data.requiredDataId,
+                              ),
+                            }));
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <hr className="w-full border border-gray-300" />
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
               {/* Sub-Indicator Selection & Creation */}
               <div className="w-full p-4 flex flex-col gap-4 bg-gray-300 rounded-md">
@@ -334,7 +630,8 @@ export default function AddIndicator({
                           {
                             sub_indicator_id: subIndicator.sub_indicator_id, // Ensure ID exists
                             name: subIndicator.name,
-                            target: 0,
+                            global_target_value: 0,
+                            global_baseline_value: 0,
                           },
                         ],
                       }));
@@ -385,26 +682,205 @@ export default function AddIndicator({
                     <ul className="mt-2 space-y-2">
                       {subIndicatorInputs[indicator.indicator_id].map(
                         (sub, index) => (
-                          <li key={index} className="flex items-center gap-2">
-                            <span className="flex-grow">{sub.name}</span>
-                            <input
-                              type="number"
-                              className="p-1 border rounded-md w-20"
-                              value={sub.target}
-                              onChange={(e) => {
-                                const updatedTarget = Number(e.target.value);
-                                setSubIndicatorInputs((prev) => ({
-                                  ...prev,
-                                  [indicator.indicator_id]: prev[
-                                    indicator.indicator_id
-                                  ].map((s, i) =>
-                                    i === index
-                                      ? { ...s, target: updatedTarget }
-                                      : s,
-                                  ),
-                                }));
-                              }}
-                            />
+                          <li
+                            key={index}
+                            className="flex flex-col items-center gap-2"
+                          >
+                            <span className="w-full bg-green-200">
+                              {sub.name}
+                            </span>
+                            <div className="w-full flex items-center gap-10">
+                              <div className="w-fit flex flex-col items-start gap-1">
+                                <label className="text-sm font-bold text-gray-500">
+                                  2030 Target
+                                </label>
+                                <input
+                                  type="number"
+                                  className="w-fit p-2 text-xs border rounded-md"
+                                  placeholder="Target"
+                                  value={sub.global_target_value}
+                                  onChange={(e) =>
+                                    handleUpdateSubIndicatorValue(
+                                      indicator.indicator_id,
+                                      sub.sub_indicator_id,
+                                      "global_target_value",
+                                      Number(e.target.value),
+                                    )
+                                  }
+                                />
+                              </div>
+                              <div className="w-fit flex flex-col items-start gap-1">
+                                <label className="text-sm font-bold text-gray-500">
+                                  Baseline
+                                </label>
+                                <input
+                                  type="number"
+                                  className="w-fit p-2 text-xs border rounded-md"
+                                  placeholder="Target"
+                                  value={sub.global_baseline_value}
+                                  onChange={(e) =>
+                                    handleUpdateSubIndicatorValue(
+                                      indicator.indicator_id,
+                                      sub.sub_indicator_id,
+                                      "global_baseline_value",
+                                      Number(e.target.value),
+                                    )
+                                  }
+                                />
+                              </div>
+                            </div>
+                            <div className="w-full bg-gray-300 p-4 flex flex-col gap-2 rounded-md">
+                              <p>
+                                Identify the data to be collected for this
+                                sub-indicator. Select or Create a new one.
+                              </p>
+
+                              {/* Dropdown for selecting required data */}
+                              <div className="w-full">
+                                <select
+                                  className="w-full p-2 border rounded-md"
+                                  onChange={(e) => {
+                                    const requiredDataId = Number(
+                                      e.target.value,
+                                    );
+                                    if (!requiredDataId) return;
+
+                                    // Find the selected required data
+                                    const selectedData = requiredData.find(
+                                      (data) =>
+                                        data.required_data_id ===
+                                        requiredDataId,
+                                    );
+
+                                    if (selectedData) {
+                                      setSubIndicatorRequiredDataInputs(
+                                        (prev) => ({
+                                          ...prev,
+                                          [sub.sub_indicator_id]: [
+                                            ...(prev[sub.sub_indicator_id] ||
+                                              []),
+                                            {
+                                              requiredDataId:
+                                                selectedData.required_data_id,
+                                              name: selectedData.name,
+                                            },
+                                          ],
+                                        }),
+                                      );
+                                    }
+
+                                    // Reset dropdown value
+                                    e.target.value = "";
+                                  }}
+                                >
+                                  <option value="">-- Select data --</option>
+                                  {requiredData
+                                    .filter(
+                                      (data) =>
+                                        !(
+                                          subIndicatorRequiredDataInputs[
+                                            sub.sub_indicator_id
+                                          ] || []
+                                        ).some(
+                                          (d) =>
+                                            d.requiredDataId ===
+                                            data.required_data_id,
+                                        ),
+                                    )
+                                    .map((data) => (
+                                      <option
+                                        key={data.required_data_id}
+                                        value={data.required_data_id}
+                                      >
+                                        {data.name}
+                                      </option>
+                                    ))}
+                                </select>
+                              </div>
+
+                              {/* Input field for adding new required data to sub-indicator */}
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="Required Data Name"
+                                  className="p-2 border rounded-md flex-grow"
+                                  onChange={(e) =>
+                                    setSubIndicatorRequiredDataName(
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+
+                                <button
+                                  className="bg-blue-500 text-white px-3 py-2 rounded-md"
+                                  onClick={() => {
+                                    // Normalize the input (lowercase + trim)
+                                    const normalizedInput =
+                                      subIndicatorRequiredDataName
+                                        .trim()
+                                        .toLowerCase();
+
+                                    // Check if the name already exists in `requiredData`
+                                    const isDuplicate = requiredData.some(
+                                      (data) =>
+                                        data.name.toLowerCase() ===
+                                        normalizedInput,
+                                    );
+
+                                    if (isDuplicate) {
+                                      alert(
+                                        "This required data already exists! Please select it instead.",
+                                      );
+                                      return;
+                                    }
+
+                                    handleCreateSubIndicatorRequiredData(
+                                      sub.sub_indicator_id,
+                                      subIndicatorRequiredDataName,
+                                    );
+                                  }}
+                                >
+                                  Add
+                                </button>
+                              </div>
+                              {/* List of selected required data */}
+                              <ul className="w-full p-4 bg-white rounded-md flex flex-col gap-4">
+                                {(
+                                  subIndicatorRequiredDataInputs[
+                                    sub.sub_indicator_id
+                                  ] || []
+                                ).map((data) => (
+                                  <li
+                                    key={data.requiredDataId}
+                                    className="w-full rounded-md flex flex-col items-start gap-2"
+                                  >
+                                    <div className="w-full flex items-center justify-between">
+                                      {data.name}
+                                      <button
+                                        className="text-red-500"
+                                        onClick={() => {
+                                          setIndicatorRequiredDataInputs(
+                                            (prev) => ({
+                                              ...prev,
+                                              [sub.sub_indicator_id]: prev[
+                                                sub.sub_indicator_id
+                                              ].filter(
+                                                (d) =>
+                                                  d.requiredDataId !==
+                                                  data.requiredDataId,
+                                              ),
+                                            }),
+                                          );
+                                        }}
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                    <hr className="w-full border border-gray-300" />
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                             <button
                               className="text-red-500 hover:text-red-700"
                               onClick={() =>
