@@ -276,7 +276,21 @@ export default function AddIndicator({
     }));
   };
 
-  const [requiredDataMessage, setRequiredDataMessage] = useState<string>("");
+  const handleUpdateSubIndicatorValue = (
+    indicatorId: number,
+    subIndicatorId: number,
+    field: "global_target_value" | "global_baseline_value",
+    value: number,
+  ) => {
+    setSubIndicatorInputs((prev) => ({
+      ...prev,
+      [indicatorId]: prev[indicatorId].map((sub) =>
+        sub.sub_indicator_id === subIndicatorId
+          ? { ...sub, [field]: value }
+          : sub,
+      ),
+    }));
+  };
 
   return (
     <div className="z-0 w-full p-10 flex flex-col gap-10 rounded-xl drop-shadow-md">
@@ -643,6 +657,14 @@ export default function AddIndicator({
                                   className="w-fit p-2 text-xs border rounded-md"
                                   placeholder="Target"
                                   value={sub.global_target_value}
+                                  onChange={(e) =>
+                                    handleUpdateSubIndicatorValue(
+                                      indicator.indicator_id,
+                                      sub.sub_indicator_id,
+                                      "global_target_value",
+                                      Number(e.target.value),
+                                    )
+                                  }
                                 />
                               </div>
                               <div className="w-fit flex flex-col items-start gap-1">
@@ -654,6 +676,14 @@ export default function AddIndicator({
                                   className="w-fit p-2 text-xs border rounded-md"
                                   placeholder="Target"
                                   value={sub.global_baseline_value}
+                                  onChange={(e) =>
+                                    handleUpdateSubIndicatorValue(
+                                      indicator.indicator_id,
+                                      sub.sub_indicator_id,
+                                      "global_baseline_value",
+                                      Number(e.target.value),
+                                    )
+                                  }
                                 />
                               </div>
                             </div>

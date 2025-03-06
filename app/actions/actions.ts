@@ -231,8 +231,8 @@ export async function createIndicatorsBatch(formData: FormData) {
           create: {
             goal_indicator_id: goalIndicatorId,
             sub_indicator_id: subIndicatorId,
-            global_target_value: subIndicator.target ?? 0,
-            global_baseline_value: subIndicator.baseline ?? 0,
+            global_target_value: subIndicator.global_target_value ?? 0,
+            global_baseline_value: subIndicator.global_baseline_valule ?? 0,
           },
         });
       }
