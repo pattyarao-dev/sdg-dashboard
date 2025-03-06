@@ -53,9 +53,20 @@ export default function AddIndicator({
   const [indicatorRequiredDataName, setIndicatorRequiredDataName] =
     useState("");
 
+  const [subIndicatorRequiredDataName, setSubIndicatorRequiredDataName] =
+    useState("");
+
   const [indicatorRequiredDataInputs, setIndicatorRequiredDataInputs] =
     useState<{
       [indicatorId: number]: {
+        requiredDataId: number;
+        name: string;
+      }[];
+    }>({});
+
+  const [subIndicatorRequiredDataInputs, setSubIndicatorRequiredDataInputs] =
+    useState<{
+      [subIndicatorId: number]: {
         requiredDataId: number;
         name: string;
       }[];
@@ -235,6 +246,23 @@ export default function AddIndicator({
     setIndicatorRequiredDataName(""); // Clear input field after adding
   };
 
+  const handleCreateSubIndicatorRequiredData = (
+    subIndicatorId: number,
+    name: string,
+  ) => {
+    if (!name.trim()) return;
+
+    setSubIndicatorRequiredDataInputs((prev) => ({
+      ...prev,
+      [subIndicatorId]: [
+        ...(prev[subIndicatorId] || []),
+        { requiredDataId: -Date.now(), name }, // Use negative ID
+      ],
+    }));
+
+    setSubIndicatorRequiredDataName("");
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -242,7 +270,14 @@ export default function AddIndicator({
       ...indicator,
       // Only use the sub-indicators from subIndicatorInputs
       required_data: indicatorRequiredDataInputs[indicator.indicator_id] || [],
-      sub_indicators: subIndicatorInputs[indicator.indicator_id] || [],
+      sub_indicators: (subIndicatorInputs[indicator.indicator_id] || []).map(
+        (subIndicator) => ({
+          ...subIndicator,
+          required_data:
+            subIndicatorRequiredDataInputs?.[subIndicator.sub_indicator_id] ||
+            [],
+        }),
+      ),
     }));
 
     const formData = new FormData();
@@ -266,15 +301,15 @@ export default function AddIndicator({
     );
   };
 
-  const handleRemoveIndicatorRequiredData = (
-    indicatorId: number,
-    index: number,
-  ) => {
-    setIndicatorRequiredDataInputs((prev) => ({
-      ...prev,
-      [indicatorId]: prev[indicatorId].filter((_, i) => i !== index),
-    }));
-  };
+  // const handleRemoveIndicatorRequiredData = (
+  //   indicatorId: number,
+  //   index: number,
+  // ) => {
+  //   setIndicatorRequiredDataInputs((prev) => ({
+  //     ...prev,
+  //     [indicatorId]: prev[indicatorId].filter((_, i) => i !== index),
+  //   }));
+  // };
 
   const handleUpdateSubIndicatorValue = (
     indicatorId: number,
@@ -702,28 +737,117 @@ export default function AddIndicator({
 
                               {/* Dropdown for selecting required data */}
                               <div className="w-full">
-                                <select className="w-full p-2 border rounded-md">
+                                <select
+                                  className="w-full p-2 border rounded-md"
+                                  onChange={(e) => {
+                                    const requiredDataId = Number(
+                                      e.target.value,
+                                    );
+                                    if (!requiredDataId) return;
+
+                                    // Find the selected required data
+                                    const selectedData = requiredData.find(
+                                      (data) =>
+                                        data.required_data_id ===
+                                        requiredDataId,
+                                    );
+
+                                    if (selectedData) {
+                                      setSubIndicatorRequiredDataInputs(
+                                        (prev) => ({
+                                          ...prev,
+                                          [sub.sub_indicator_id]: [
+                                            ...(prev[sub.sub_indicator_id] ||
+                                              []),
+                                            {
+                                              requiredDataId:
+                                                selectedData.required_data_id,
+                                              name: selectedData.name,
+                                            },
+                                          ],
+                                        }),
+                                      );
+                                    }
+
+                                    // Reset dropdown value
+                                    e.target.value = "";
+                                  }}
+                                >
                                   <option value="">-- Select data --</option>
+                                  {requiredData
+                                    .filter(
+                                      (data) =>
+                                        !(
+                                          subIndicatorRequiredDataInputs[
+                                            sub.sub_indicator_id
+                                          ] || []
+                                        ).some(
+                                          (d) =>
+                                            d.requiredDataId ===
+                                            data.required_data_id,
+                                        ),
+                                    )
+                                    .map((data) => (
+                                      <option
+                                        key={data.required_data_id}
+                                        value={data.required_data_id}
+                                      >
+                                        {data.name}
+                                      </option>
+                                    ))}
                                 </select>
                               </div>
 
-                              {/* Input field for adding new required data */}
+                              {/* Input field for adding new required data to sub-indicator */}
                               <div className="flex gap-2">
                                 <input
                                   type="text"
                                   placeholder="Required Data Name"
                                   className="p-2 border rounded-md flex-grow"
+                                  onChange={(e) =>
+                                    setSubIndicatorRequiredDataName(
+                                      e.target.value,
+                                    )
+                                  }
                                 />
 
-                                <button className="bg-blue-500 text-white px-3 py-2 rounded-md">
+                                <button
+                                  className="bg-blue-500 text-white px-3 py-2 rounded-md"
+                                  onClick={() => {
+                                    // Normalize the input (lowercase + trim)
+                                    const normalizedInput =
+                                      subIndicatorRequiredDataName
+                                        .trim()
+                                        .toLowerCase();
+
+                                    // Check if the name already exists in `requiredData`
+                                    const isDuplicate = requiredData.some(
+                                      (data) =>
+                                        data.name.toLowerCase() ===
+                                        normalizedInput,
+                                    );
+
+                                    if (isDuplicate) {
+                                      alert(
+                                        "This required data already exists! Please select it instead.",
+                                      );
+                                      return;
+                                    }
+
+                                    handleCreateSubIndicatorRequiredData(
+                                      sub.sub_indicator_id,
+                                      subIndicatorRequiredDataName,
+                                    );
+                                  }}
+                                >
                                   Add
                                 </button>
                               </div>
                               {/* List of selected required data */}
                               <ul className="w-full p-4 bg-white rounded-md flex flex-col gap-4">
                                 {(
-                                  indicatorRequiredDataInputs[
-                                    indicator.indicator_id
+                                  subIndicatorRequiredDataInputs[
+                                    sub.sub_indicator_id
                                   ] || []
                                 ).map((data) => (
                                   <li
@@ -738,8 +862,8 @@ export default function AddIndicator({
                                           setIndicatorRequiredDataInputs(
                                             (prev) => ({
                                               ...prev,
-                                              [indicator.indicator_id]: prev[
-                                                indicator.indicator_id
+                                              [sub.sub_indicator_id]: prev[
+                                                sub.sub_indicator_id
                                               ].filter(
                                                 (d) =>
                                                   d.requiredDataId !==

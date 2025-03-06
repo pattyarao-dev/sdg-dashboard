@@ -19,7 +19,7 @@ export interface ISubIndicator {
   global_target_value: number;
   global_baseline_value: number;
   description?: string | null;
-  //required_data: IRequiredData[];
+  //subindicator_required_data: IRequiredData[];
 }
 
 export interface IRequiredData {
