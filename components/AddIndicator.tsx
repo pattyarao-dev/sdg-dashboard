@@ -436,7 +436,7 @@ export default function AddIndicator({
                   />
                 </div>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="w-full bg-gray-300 p-4 flex flex-col gap-2 rounded-md">
                 <p>
                   Identify the data to be collected. Select or Create a new one.
                 </p>
@@ -494,35 +494,6 @@ export default function AddIndicator({
                   </select>
                 </div>
 
-                {/* List of selected required data */}
-                <ul className="list-disc pl-5">
-                  {(
-                    indicatorRequiredDataInputs[indicator.indicator_id] || []
-                  ).map((data) => (
-                    <li
-                      key={data.requiredDataId}
-                      className="flex items-center gap-2"
-                    >
-                      {data.name}
-                      <button
-                        className="text-red-500"
-                        onClick={() => {
-                          setIndicatorRequiredDataInputs((prev) => ({
-                            ...prev,
-                            [indicator.indicator_id]: prev[
-                              indicator.indicator_id
-                            ].filter(
-                              (d) => d.requiredDataId !== data.requiredDataId,
-                            ),
-                          }));
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-
                 {/* Input field for adding new required data */}
                 <div className="flex gap-2">
                   <input
@@ -564,6 +535,37 @@ export default function AddIndicator({
                     Add
                   </button>
                 </div>
+                {/* List of selected required data */}
+                <ul className="w-full  bg-white rounded-md flex flex-col gap-4">
+                  {(
+                    indicatorRequiredDataInputs[indicator.indicator_id] || []
+                  ).map((data) => (
+                    <li
+                      key={data.requiredDataId}
+                      className="w-full rounded-md flex flex-col items-start gap-2"
+                    >
+                      <div className="w-full flex items-center justify-between">
+                        {data.name}
+                        <button
+                          className="text-red-500"
+                          onClick={() => {
+                            setIndicatorRequiredDataInputs((prev) => ({
+                              ...prev,
+                              [indicator.indicator_id]: prev[
+                                indicator.indicator_id
+                              ].filter(
+                                (d) => d.requiredDataId !== data.requiredDataId,
+                              ),
+                            }));
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <hr className="w-full border border-gray-300" />
+                    </li>
+                  ))}
+                </ul>
               </div>
 
               {/* Sub-Indicator Selection & Creation */}
@@ -645,8 +647,13 @@ export default function AddIndicator({
                     <ul className="mt-2 space-y-2">
                       {subIndicatorInputs[indicator.indicator_id].map(
                         (sub, index) => (
-                          <li key={index} className="flex items-center gap-2">
-                            <span className="flex-grow">{sub.name}</span>
+                          <li
+                            key={index}
+                            className="flex flex-col items-center gap-2"
+                          >
+                            <span className="w-full bg-green-200">
+                              {sub.name}
+                            </span>
                             <div className="w-full flex items-center gap-10">
                               <div className="w-fit flex flex-col items-start gap-1">
                                 <label className="text-sm font-bold text-gray-500">
@@ -686,6 +693,69 @@ export default function AddIndicator({
                                   }
                                 />
                               </div>
+                            </div>
+                            <div className="w-full bg-gray-300 p-4 flex flex-col gap-2 rounded-md">
+                              <p>
+                                Identify the data to be collected for this
+                                sub-indicator. Select or Create a new one.
+                              </p>
+
+                              {/* Dropdown for selecting required data */}
+                              <div className="w-full">
+                                <select className="w-full p-2 border rounded-md">
+                                  <option value="">-- Select data --</option>
+                                </select>
+                              </div>
+
+                              {/* Input field for adding new required data */}
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="Required Data Name"
+                                  className="p-2 border rounded-md flex-grow"
+                                />
+
+                                <button className="bg-blue-500 text-white px-3 py-2 rounded-md">
+                                  Add
+                                </button>
+                              </div>
+                              {/* List of selected required data */}
+                              <ul className="w-full p-4 bg-white rounded-md flex flex-col gap-4">
+                                {(
+                                  indicatorRequiredDataInputs[
+                                    indicator.indicator_id
+                                  ] || []
+                                ).map((data) => (
+                                  <li
+                                    key={data.requiredDataId}
+                                    className="w-full rounded-md flex flex-col items-start gap-2"
+                                  >
+                                    <div className="w-full flex items-center justify-between">
+                                      {data.name}
+                                      <button
+                                        className="text-red-500"
+                                        onClick={() => {
+                                          setIndicatorRequiredDataInputs(
+                                            (prev) => ({
+                                              ...prev,
+                                              [indicator.indicator_id]: prev[
+                                                indicator.indicator_id
+                                              ].filter(
+                                                (d) =>
+                                                  d.requiredDataId !==
+                                                  data.requiredDataId,
+                                              ),
+                                            }),
+                                          );
+                                        }}
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                    <hr className="w-full border border-gray-300" />
+                                  </li>
+                                ))}
+                              </ul>
                             </div>
                             <button
                               className="text-red-500 hover:text-red-700"
