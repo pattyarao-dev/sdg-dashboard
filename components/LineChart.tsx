@@ -12,7 +12,7 @@ interface LineChartProps {
   onClick: (event: any) => void; // Add onClick prop to handle the clicked year
 }
 
-const LineChart: React.FC<LineChartProps> = ({ data, target, onClick }) => {
+const LineChart: React.FC<LineChartProps> = ({ data, onClick }) => {
   if (!data || data.length === 0 || !data[0]?.x) return null;
 
   // Create the target line data
@@ -43,7 +43,7 @@ const LineChart: React.FC<LineChartProps> = ({ data, target, onClick }) => {
 
   return (
     <Plot
-      data={[...data, targetLine]}
+      data={[...data]}
       layout={layout}
       onClick={onClick}
     />
