@@ -43,6 +43,18 @@ export async function getGoalsInformation() {
           td_goal_sub_indicator: {
             include: {
               md_sub_indicator: true, // Get only sub-indicators applicable to the goal
+              td_goal_sub_indicator_required_data: {
+                // Fetch sub-indicator required data
+                include: {
+                  ref_required_data: true,
+                },
+              },
+            },
+          },
+          td_goal_indicator_required_data: {
+            // Fetch indicator required data
+            include: {
+              ref_required_data: true,
             },
           },
         },
@@ -50,15 +62,27 @@ export async function getGoalsInformation() {
     },
   });
 
+  // Transform data for easier frontend use
   const processedGoals = goals.map((goal) => ({
     goalId: goal.goal_id,
     goalName: goal.name,
     indicators: goal.td_goal_indicator.map((gi) => ({
       indicatorId: gi.md_indicator.indicator_id,
       indicatorName: gi.md_indicator.name,
+
+      requiredData: gi.td_goal_indicator_required_data.map((rd) => ({
+        requiredDataId: rd.ref_required_data.required_data_id,
+        requiredDataName: rd.ref_required_data.name, // Ensure this name field is correct
+      })),
+
       subIndicators: gi.td_goal_sub_indicator.map((gs) => ({
         subIndicatorId: gs.md_sub_indicator.sub_indicator_id,
         subIndicatorName: gs.md_sub_indicator.name,
+
+        requiredData: gs.td_goal_sub_indicator_required_data.map((rd) => ({
+          requiredDataId: rd.ref_required_data.required_data_id,
+          requiredDataName: rd.ref_required_data.name, // Ensure this name field is correct
+        })),
       })),
     })),
   }));

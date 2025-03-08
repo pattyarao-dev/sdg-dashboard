@@ -3,15 +3,23 @@
 import { updateValues } from "@/app/actions/actions";
 import { useState, useEffect } from "react";
 
+interface RequiredData {
+  requiredDataId: number;
+  requiredDataName: string;
+  requiredDataValue: number;
+}
+
 interface SubIndicator {
   subIndicatorId: number;
   subIndicatorName: string;
+  requiredData: RequiredData[];
 }
 
 interface Indicator {
   indicatorId: number;
   indicatorName: string;
   subIndicators: SubIndicator[];
+  requiredData: RequiredData[];
 }
 
 interface Goal {
@@ -38,7 +46,9 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
         const geoJson = await response.json();
 
         // Extract the location names from GeoJSON (NAME_3)
-        const locations = geoJson.features.map((feature: any) => feature.properties.NAME_3);
+        const locations = geoJson.features.map(
+          (feature: any) => feature.properties.NAME_3,
+        );
         setLocationOptions(locations);
       } catch (error) {
         console.error("Error loading GeoJSON:", error);
@@ -106,7 +116,10 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full border-2 border-black p-4 rounded-md">
+    <form
+      onSubmit={handleSubmit}
+      className="w-full border-2 border-black p-4 rounded-md"
+    >
       {/* Date & Location Fields */}
       <div className="mb-6 flex flex-col gap-4">
         <div className="flex items-center gap-4">
@@ -139,44 +152,89 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
       </div>
 
       {goals.map((goal) => (
-        <div key={goal.goalId} className="w-full p-4 flex flex-col gap-4 border-b">
+        <div
+          key={goal.goalId}
+          className="w-full p-4 flex flex-col gap-4 border-b"
+        >
           <h2 className="w-full p-4 bg-gradient-to-br from-green-50 to-orange-50 rounded-md drop-shadow text-gray-600 text-lg font-bold">
             {goal.goalName}
           </h2>
 
           {goal.indicators.map((indicator) => (
-            <div key={indicator.indicatorId} className="w-full flex flex-col gap-4">
-              <div className="w-full px-4 py-2 flex items-center justify-between gap-10 bg-orange-50 rounded-md">
-                <h3 className="text-md font-semibold">{indicator.indicatorName}</h3>
-                <div className="flex items-center gap-4">
-                  <label htmlFor={`indicator-${indicator.indicatorId}`}>
-                    Indicator Current Value:
-                  </label>
-                  <input
-                    className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
-                    name={`indicator-${indicator.indicatorId}`}
-                    type="number"
-                    onChange={handleInputChange}
-                  />
+            <div
+              key={indicator.indicatorId}
+              className="w-full flex flex-col gap-4"
+            >
+              {/* Indicator Name and Input */}
+              <div className="w-full px-4 py-2 flex flex-col gap-2 bg-orange-50 rounded-md">
+                <div className="flex items-center justify-between gap-10">
+                  <h3 className="text-md font-semibold">
+                    {indicator.indicatorName}
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    <label htmlFor={`indicator-${indicator.indicatorId}`}>
+                      Indicator Current Value:
+                    </label>
+                    <input
+                      className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
+                      name={`indicator-${indicator.indicatorId}`}
+                      type="number"
+                      onChange={handleInputChange}
+                    />
+                  </div>
                 </div>
+
+                {/* Indicator Required Data */}
+                {indicator.requiredData.length > 0 && (
+                  <div className="text-sm text-gray-600 pl-4">
+                    <p className="font-semibold">Required Data:</p>
+                    <ul className="list-disc pl-5">
+                      {indicator.requiredData.map((data) => (
+                        <li key={data.requiredDataId}>
+                          {data.requiredDataName}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
+              {/* Sub-Indicators */}
               <div className="w-full p-4 flex flex-col gap-4">
                 {indicator.subIndicators.length > 0 ? (
                   indicator.subIndicators.map((sub) => (
-                    <div key={sub.subIndicatorId} className="w-full flex items-center justify-between">
-                      <p className="text-sm">{sub.subIndicatorName}</p>
-                      <div className="flex items-center gap-4 text-sm">
-                        <label htmlFor={`subindicator-${sub.subIndicatorId}`}>
-                          Sub-Indicator Current Value:
-                        </label>
-                        <input
-                          className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
-                          name={`subindicator-${sub.subIndicatorId}`}
-                          type="number"
-                          onChange={handleInputChange}
-                        />
+                    <div
+                      key={sub.subIndicatorId}
+                      className="w-full flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm">{sub.subIndicatorName}</p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <label htmlFor={`subindicator-${sub.subIndicatorId}`}>
+                            Sub-Indicator Current Value:
+                          </label>
+                          <input
+                            className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
+                            name={`subindicator-${sub.subIndicatorId}`}
+                            type="number"
+                            onChange={handleInputChange}
+                          />
+                        </div>
                       </div>
+
+                      {/* Sub-Indicator Required Data */}
+                      {sub.requiredData.length > 0 && (
+                        <div className="text-sm text-gray-600 pl-4">
+                          <p className="font-semibold">Required Data:</p>
+                          <ul className="list-disc pl-5">
+                            {sub.requiredData.map((data) => (
+                              <li key={data.requiredDataId}>
+                                {data.requiredDataName}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
