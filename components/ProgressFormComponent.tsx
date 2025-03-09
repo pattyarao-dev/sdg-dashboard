@@ -171,7 +171,7 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
                   <h3 className="text-md font-semibold">
                     {indicator.indicatorName}
                   </h3>
-                  <div className="flex items-center gap-4">
+                  {/* <div className="flex items-center gap-4">
                     <label htmlFor={`indicator-${indicator.indicatorId}`}>
                       Indicator Current Value:
                     </label>
@@ -181,26 +181,43 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
                       type="number"
                       onChange={handleInputChange}
                     />
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Indicator Required Data */}
                 {indicator.requiredData.length > 0 && (
-                  <div className="text-sm text-gray-600 pl-4">
+                  <div className="w-full flex flex-col gap-4">
                     <p className="font-semibold">Required Data:</p>
-                    <ul className="list-disc pl-5">
+                    {/* <ul className="w-full flex flex-col gap-2">
                       {indicator.requiredData.map((data) => (
-                        <li key={data.requiredDataId}>
-                          {data.requiredDataName}
+                        <li
+                          key={data.requiredDataId}
+                          className={`w-full flex p-2 items-center justify-between border-[0.5px] border-black rounded-lg`}
+                        >
+                          <p>{data.requiredDataName}</p>
+                          <div className="flex items-center gap-2">
+                            <label
+                              htmlFor={`requiredData-${data.requiredDataName}`}
+                            >
+                              Reqiored Data Current Value:
+                            </label>
+                            <input
+                              className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
+                              name={`requiredData-${data.requiredDataName}`}
+                              type="number"
+                              onChange={handleInputChange}
+                            />
+                          </div>
                         </li>
                       ))}
-                    </ul>
+                    </ul> */}
                   </div>
                 )}
               </div>
 
               {/* Sub-Indicators */}
               <div className="w-full p-4 flex flex-col gap-4">
+                <h1>Sub-Indicators for {indicator.indicatorName}:</h1>
                 {indicator.subIndicators.length > 0 ? (
                   indicator.subIndicators.map((sub) => (
                     <div
@@ -208,28 +225,46 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
                       className="w-full flex flex-col gap-2"
                     >
                       <div className="flex items-center justify-between">
-                        <p className="text-sm">{sub.subIndicatorName}</p>
+                        <p className="text-lg font-black uppercase text-green-900">
+                          {sub.subIndicatorName}
+                        </p>
                         <div className="flex items-center gap-4 text-sm">
-                          <label htmlFor={`subindicator-${sub.subIndicatorId}`}>
+                          {/* <label htmlFor={`subindicator-${sub.subIndicatorId}`}>
                             Sub-Indicator Current Value:
-                          </label>
-                          <input
+                          </label> */}
+                          {/* <input
                             className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
                             name={`subindicator-${sub.subIndicatorId}`}
                             type="number"
                             onChange={handleInputChange}
-                          />
+                          /> */}
                         </div>
                       </div>
 
                       {/* Sub-Indicator Required Data */}
                       {sub.requiredData.length > 0 && (
-                        <div className="text-sm text-gray-600 pl-4">
+                        <div className="w-full flex flex-col gap-4">
                           <p className="font-semibold">Required Data:</p>
-                          <ul className="list-disc pl-5">
+                          <ul className="w-full flex flex-col gap-2">
                             {sub.requiredData.map((data) => (
-                              <li key={data.requiredDataId}>
-                                {data.requiredDataName}
+                              <li
+                                key={data.requiredDataId}
+                                className={`w-full flex p-2 items-center justify-between border-[0.5px] border-black rounded-lg`}
+                              >
+                                <p>{data.requiredDataName}</p>
+                                <div className="flex items-center gap-2">
+                                  <label
+                                    htmlFor={`requiredData-${data.requiredDataName}`}
+                                  >
+                                    Required Data Current Value:
+                                  </label>
+                                  <input
+                                    className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
+                                    name={`requiredData-${data.requiredDataName}`}
+                                    type="number"
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
                               </li>
                             ))}
                           </ul>
