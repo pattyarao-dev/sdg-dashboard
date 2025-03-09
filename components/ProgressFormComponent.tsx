@@ -3,15 +3,23 @@
 import { updateValues } from "@/app/actions/actions";
 import { useState } from "react";
 
+interface RequiredData {
+  requiredDataId: number;
+  requiredDataName: string;
+  requiredDataValue: number;
+}
+
 interface SubIndicator {
   subIndicatorId: number;
   subIndicatorName: string;
+  requiredData: RequiredData[];
 }
 
 interface Indicator {
   indicatorId: number;
   indicatorName: string;
   subIndicators: SubIndicator[];
+  requiredData: RequiredData[];
 }
 
 interface Goal {
@@ -95,44 +103,96 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
               key={indicator.indicatorId}
               className="w-full flex flex-col gap-4"
             >
-              <div className="w-full px-4 py-2 flex items-center justify-between gap-10 bg-orange-50 rounded-md">
-                <h3 className="text-md font-semibold">
-                  {indicator.indicatorName}
-                </h3>
-                <div className="flex items-center gap-4">
-                  <label htmlFor={`indicator-${indicator.indicatorId}`}>
-                    Indicator Current Value:
-                  </label>
-                  <input
-                    className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
-                    name={`indicator-${indicator.indicatorId}`}
-                    type="number"
-                    onChange={handleInputChange}
-                  />
+              <div className="w-full p-6 flex flex-col gap-6 bg-orange-50 rounded-md">
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-md font-semibold">
+                    {indicator.indicatorName}
+                  </h3>
+                  <hr />
+                </div>
+                <div className="pl-4">
+                  {indicator.requiredData.length > 0 ? (
+                    <div className="flex flex-col gap-1">
+                      <p className="font-semibold text-sm">Required Data:</p>
+                      <div className="flex flex-col gap-2">
+                        {indicator.requiredData.map((data) => (
+                          <div
+                            key={data.requiredDataId}
+                            className="flex flex-col gap-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm">{data.requiredDataName}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm">
+                                  {data.requiredDataName} current value:
+                                </p>
+                                <input
+                                  type="number"
+                                  className="w-[100px] border border-gray-700"
+                                />
+                              </div>
+                            </div>
+                            <hr />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic">No required data</p>
+                  )}
                 </div>
               </div>
 
               <div className="w-full p-4 flex flex-col gap-4">
                 {indicator.subIndicators.length > 0 ? (
-                  indicator.subIndicators.map((sub) => (
-                    <div
-                      key={sub.subIndicatorId}
-                      className="w-full flex items-center justify-between"
-                    >
-                      <p className="text-sm">{sub.subIndicatorName}</p>
-                      <div className="flex items-center gap-4 text-sm">
-                        <label htmlFor={`subindicator-${sub.subIndicatorId}`}>
-                          Sub-Indicator Current Value:
-                        </label>
-                        <input
-                          className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
-                          name={`subindicator-${sub.subIndicatorId}`}
-                          type="number"
-                          onChange={handleInputChange}
-                        />
+                  <div className="flex flex-col gap-4">
+                    <p>Sub-Indicators:</p>
+                    {indicator.subIndicators.map((sub) => (
+                      <div
+                        key={sub.subIndicatorId}
+                        className="w-full flex flex-col gap-2"
+                      >
+                        <p className="font-bold">{sub.subIndicatorName}</p>
+                        <div>
+                          {sub.requiredData.length > 0 ? (
+                            <div className="flex flex-col gap-2">
+                              <p className="font-semibold text-sm">
+                                Required Data:
+                              </p>
+                              <div className="w-full flex flex-col gap-4">
+                                {sub.requiredData.map((data) => (
+                                  <div
+                                    key={data.requiredDataId}
+                                    className="flex flex-col gap-2"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-sm">
+                                        {data.requiredDataName}
+                                      </p>
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-sm">
+                                          {data.requiredDataName} current value:
+                                        </p>
+                                        <input
+                                          type="number"
+                                          className="w-[100px] border border-gray-700"
+                                        />
+                                      </div>
+                                    </div>
+                                    <hr />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 italic">
+                              No required data
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 ) : (
                   <p className="pl-6 text-gray-500 italic">No sub-indicators</p>
                 )}
