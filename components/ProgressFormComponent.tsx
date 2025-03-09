@@ -26,6 +26,7 @@ interface Goal {
   goalId: number;
   goalName: string;
   indicators: Indicator[];
+  //indicatorsRequired: Indicator[];
 }
 
 interface ProgressFormProps {
@@ -116,11 +117,8 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="w-full border-2 border-black p-4 rounded-md"
-    >
-      {/* Date & Location Fields */}
+    <form onSubmit={handleSubmit} className="w-full rounded-md">
+      {/* {/* Date & Location Fields *
       <div className="mb-6 flex flex-col gap-4">
         <div className="flex items-center gap-4">
           <label className="font-semibold">Measurement Date:</label>
@@ -149,12 +147,20 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
             ))}
           </select>
         </div>
+      </div> */}
+
+      <div className="z-30 sticky top-[72px] w-full h-fit p-6 bg-white/80 backdrop-blur border-b-2 border-gray-400">
+        <div>Date and Location area</div>
+        <div>
+          Computation Area
+          <textarea name="formula" />
+        </div>
       </div>
 
       {goals.map((goal) => (
         <div
           key={goal.goalId}
-          className="w-full p-4 flex flex-col gap-4 border-b"
+          className="w-full p-10 flex flex-col gap-4 border-b"
         >
           <h2 className="w-full p-4 bg-gradient-to-br from-green-50 to-orange-50 rounded-md drop-shadow text-gray-600 text-lg font-bold">
             {goal.goalName}
@@ -188,7 +194,7 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
                 {indicator.requiredData.length > 0 && (
                   <div className="w-full flex flex-col gap-4">
                     <p className="font-semibold">Required Data:</p>
-                    {/* <ul className="w-full flex flex-col gap-2">
+                    <ul className="w-full flex flex-col gap-2">
                       {indicator.requiredData.map((data) => (
                         <li
                           key={data.requiredDataId}
@@ -199,7 +205,7 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
                             <label
                               htmlFor={`requiredData-${data.requiredDataName}`}
                             >
-                              Reqiored Data Current Value:
+                              Required Data Current Value:
                             </label>
                             <input
                               className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
@@ -210,7 +216,7 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
                           </div>
                         </li>
                       ))}
-                    </ul> */}
+                    </ul>
                   </div>
                 )}
               </div>
@@ -228,17 +234,6 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
                         <p className="text-lg font-black uppercase text-green-900">
                           {sub.subIndicatorName}
                         </p>
-                        <div className="flex items-center gap-4 text-sm">
-                          {/* <label htmlFor={`subindicator-${sub.subIndicatorId}`}>
-                            Sub-Indicator Current Value:
-                          </label> */}
-                          {/* <input
-                            className="w-[100px] p-1 focus:outline-none border border-gray-700 rounded-md"
-                            name={`subindicator-${sub.subIndicatorId}`}
-                            type="number"
-                            onChange={handleInputChange}
-                          /> */}
-                        </div>
                       </div>
 
                       {/* Sub-Indicator Required Data */}
