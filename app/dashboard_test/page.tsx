@@ -3,8 +3,16 @@
 import React, { useEffect, useState } from "react";
 import GaugeChart from "@/components/GaugeChart";
 import LineChart from "@/components/LineChart";
-import { ProgressBarChart, ProgressBarList } from "@/components/ProgressBarChart"; // Import both components
-import { transformSDGData, DashboardSDG } from "@/utils/transformSDGData";
+import { ProgressBarChart, ProgressBarList } from "@/components/ProgressBarChart";
+import ScoreCard from "@/components/ScoreCard";
+import { 
+  transformSDGData, 
+  DashboardSDG, 
+  calculateSummaryMetrics, 
+  calculateOverallProgress, 
+  getMostRecentValue, 
+  getAllIndicatorsData 
+} from "@/utils/transformSDGData";
 
 const sdgColors: { [key: string]: string } = {
   "No Poverty": "#E5243B",
@@ -26,29 +34,12 @@ const sdgColors: { [key: string]: string } = {
   "Partnerships for the Goals": "#19486A",
 };
 
-// Scorecard component for summary metrics
-interface ScoreCardProps {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  icon?: React.ReactNode;
-  color?: string;
-}
-
-const ScoreCard: React.FC<ScoreCardProps> = ({ title, value, subtitle, icon, color = "blue" }) => {
-  return (
-    <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: color }}>
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="text-gray-500 text-sm font-medium">{title}</h3>
-          <p className="text-2xl font-bold mt-1">{value}</p>
-          {subtitle && <p className="text-gray-500 text-xs mt-1">{subtitle}</p>}
-        </div>
-        {icon && <div className="text-gray-400">{icon}</div>}
-      </div>
-    </div>
-  );
-};
+// Array of distinct colors for indicators
+const indicatorColors = [
+  "#E5243B", "#26BDE2", "#4C9F38", "#FD6925", "#FF3A21", "#FCC30B",
+  "#A21942", "#DD1367", "#56C02B", "#00689D", "#3F7E44", "#0A97D9",
+  "#BF8B2E", "#FD9D24", "#DDA63A", "#C5192D", "#19486A"
+];
 
 const Dashboard: React.FC = () => {
   const [sdgData, setSdgData] = useState<DashboardSDG[]>([]);
@@ -74,174 +65,10 @@ const Dashboard: React.FC = () => {
   }, []);
 
   const selectedGoalData = sdgData.find((goal) => goal.goal_id === selectedGoalId) || null;
-
-  // Helper function to get the most recent value from date-based data
-  const getMostRecentValue = (data: { date: string; value: number }[] | { date: string; current: number }[]): number => {
-    if (!data || data.length === 0) return 0;
-    
-    // Sort by date descending to get the most recent first
-    const sortedData = [...data].sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-    
-    // Return the value of the most recent entry
-    // Handle both data structure types
-    return 'value' in sortedData[0] ? sortedData[0].value : sortedData[0].current;
-  };
   
-  // Calculate summary metrics for scorecards (for all goals or selected goal)
-  const calculateSummaryMetrics = (allData: DashboardSDG[], selectedGoal: DashboardSDG | null) => {
-    // If a goal is selected, use its data; otherwise, aggregate data from all goals
-    const dataToProcess = selectedGoal ? [selectedGoal] : allData;
-    
-    // Get all indicators across all goals or just the selected goal
-    const allIndicators = dataToProcess.flatMap(goal => goal.indicators);
-    
-    // Count total indicators and sub-indicators
-    const totalIndicators = allIndicators.length;
-    const totalSubIndicators = allIndicators.reduce(
-      (sum, ind) => sum + (ind.sub_indicators?.length || 0), 
-      0
-    );
-    
-    // Find indicators that are on track (>= 75% of target)
-    const onTrackIndicators = allIndicators.filter(
-      ind => ind.achievement_percentage >= 75
-    ).length;
-    
-    // Find indicators that need attention (< 50% of target)
-    const atRiskIndicators = allIndicators.filter(
-      ind => ind.achievement_percentage < 50
-    ).length;
-    
-    // Calculate year-over-year growth rate for indicators
-    let avgYoyGrowth = 0;
-    let indicatorsWithGrowth = 0;
-    
-    allIndicators.forEach(ind => {
-      if (ind.current.length < 2) return;
-      
-      // Sort current values by date
-      const sortedValues = [...ind.current].sort((a, b) => 
-        new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
-      
-      // Need at least 2 values to calculate growth
-      if (sortedValues.length >= 2) {
-        const oldestValue = 'value' in sortedValues[0] ? sortedValues[0].value : sortedValues[0].current;
-        const latestValue = 'value' in sortedValues[sortedValues.length - 1] 
-          ? sortedValues[sortedValues.length - 1].value 
-          : sortedValues[sortedValues.length - 1].current;
-        
-        if (oldestValue > 0) {
-          const growth = ((latestValue - oldestValue) / oldestValue) * 100;
-          avgYoyGrowth += growth;
-          indicatorsWithGrowth++;
-        }
-      }
-    });
-    
-    avgYoyGrowth = indicatorsWithGrowth > 0 ? avgYoyGrowth / indicatorsWithGrowth : 0;
-    
-    // Find most and least improved indicators
-    let mostImprovedIndicator = { name: "N/A", improvement: 0, goalTitle: "N/A" };
-    let leastImprovedIndicator = { name: "N/A", improvement: 0, goalTitle: "N/A" };
-    
-    dataToProcess.forEach(goal => {
-      goal.indicators.forEach(ind => {
-        if (ind.current.length < 2) return;
-        
-        // Sort current values by date
-        const sortedValues = [...ind.current].sort((a, b) => 
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-        
-        // Need at least 2 values to calculate improvement
-        if (sortedValues.length >= 2) {
-          const oldestValue = 'value' in sortedValues[0] ? sortedValues[0].value : sortedValues[0].current;
-          const latestValue = 'value' in sortedValues[sortedValues.length - 1] 
-            ? sortedValues[sortedValues.length - 1].value 
-            : sortedValues[sortedValues.length - 1].current;
-          
-          if (oldestValue > 0) {
-            const improvement = ((latestValue - oldestValue) / oldestValue) * 100;
-            
-            if (improvement > mostImprovedIndicator.improvement) {
-              mostImprovedIndicator = { 
-                name: ind.name, 
-                improvement,
-                goalTitle: goal.title
-              };
-            }
-            
-            if (leastImprovedIndicator.name === "N/A" || improvement < leastImprovedIndicator.improvement) {
-              leastImprovedIndicator = { 
-                name: ind.name, 
-                improvement,
-                goalTitle: goal.title
-              };
-            }
-          }
-        }
-      });
-    });
-    
-    // Calculate overall progress across all goals or for the selected goal
-    const overallProgress = calculateOverallProgressAcrossGoals(dataToProcess);
-    
-    return {
-      totalIndicators,
-      totalSubIndicators,
-      onTrackIndicators,
-      atRiskIndicators,
-      avgYoyGrowth: avgYoyGrowth.toFixed(1),
-      mostImprovedIndicator,
-      leastImprovedIndicator,
-      overallProgress
-    };
-  };
-  
-  // Calculate overall progress for a single goal
-  function calculateOverallProgress(goalData: DashboardSDG): number {
-    if (!goalData.indicators.length) return 0;
-    
-    const totalAchievement = goalData.indicators.reduce(
-      (sum, indicator) => sum + indicator.achievement_percentage, 
-      0
-    );
-    
-    return Math.round(totalAchievement / goalData.indicators.length);
-  }
-  
-  // Calculate overall progress across multiple goals
-  function calculateOverallProgressAcrossGoals(goalsData: DashboardSDG[]): number {
-    if (!goalsData.length) return 0;
-    
-    const allIndicators = goalsData.flatMap(goal => goal.indicators);
-    if (!allIndicators.length) return 0;
-    
-    const totalAchievement = allIndicators.reduce(
-      (sum, indicator) => sum + indicator.achievement_percentage, 
-      0
-    );
-    
-    return Math.round(totalAchievement / allIndicators.length);
-  }
-  
-  // Get aggregate data for all indicators across all goals
-  const getAllIndicatorsData = () => {
-    return sdgData.flatMap(goal => 
-      goal.indicators.map(indicator => ({
-        ...indicator,
-        goalId: goal.goal_id,
-        goalTitle: goal.title,
-        goalColor: sdgColors[goal.title] || "blue"
-      }))
-    );
-  };
-  
+  // Get summary metrics and all indicators using imported functions
   const summaryMetrics = calculateSummaryMetrics(sdgData, selectedGoalData);
-  const allIndicatorsData = getAllIndicatorsData();
+  const allIndicatorsData = getAllIndicatorsData(sdgData, sdgColors);
 
   // Handle gauge click to select a goal
   const handleGaugeClick = (goalId: number) => {
@@ -355,7 +182,17 @@ const Dashboard: React.FC = () => {
               <h3 className="text-lg font-semibold mb-3">Indicators</h3>
               {selectedGoalData && (
                 <ProgressBarList 
-                  items={convertToProgressBarItems(selectedGoalData.indicators)}
+                  items={selectedGoalData.indicators.map((indicator, index) => {
+                    // Assign a color from the indicatorColors array based on the index
+                    const colorIndex = index % indicatorColors.length;
+                    return {
+                      label: indicator.name,
+                      progress: getMostRecentValue(indicator.current),
+                      target: typeof indicator.target === "number" ? indicator.target : indicator.target[0],
+                      onClick: () => setSelectedIndicator(indicator.name),
+                      color: indicatorColors[colorIndex] // Apply unique color to each indicator
+                    };
+                  })}
                 />
               )}
             </div>
@@ -365,19 +202,22 @@ const Dashboard: React.FC = () => {
               <h3 className="text-lg font-semibold mb-3">Achievement Level Over Time</h3>
               {selectedGoalData && (
                 <LineChart
-                  data={selectedGoalData.indicators.map((indicator) => ({
-                    x: indicator.current.map(item => item.date),
-                    y: indicator.current.map(item => 'value' in item ? item.value : item.current),
-                    type: "scatter",
-                    mode: "lines+markers",
-                    marker: { color: sdgColors[selectedGoalData.title] || "blue" },
-                    line: { color: sdgColors[selectedGoalData.title] || "blue" },
-                    name: indicator.name,
-                  }))}
+                  data={selectedGoalData.indicators.map((indicator, index) => {
+                    // Assign a color from the indicatorColors array based on the index
+                    const colorIndex = index % indicatorColors.length;
+                    return {
+                      x: indicator.current.map(item => item.date),
+                      y: indicator.current.map(item => 'value' in item ? item.value : item.current),
+                      type: "scatter",
+                      mode: "lines+markers",
+                      marker: { color: indicatorColors[colorIndex] },
+                      line: { color: indicatorColors[colorIndex] },
+                      name: indicator.name,
+                    };
+                  })}
                 />
               )}
             </div>
-
           </div>
 
           {/* Sub-indicators section (if an indicator is selected) - Full width below the two columns */}
@@ -388,9 +228,19 @@ const Dashboard: React.FC = () => {
                 .find((ind) => ind.name === selectedIndicator)
                 ?.sub_indicators && (
                   <ProgressBarList 
-                    items={convertToProgressBarItems(
-                      selectedGoalData.indicators.find((ind) => ind.name === selectedIndicator)?.sub_indicators || []
-                    )}
+                    items={
+                      (selectedGoalData.indicators.find((ind) => ind.name === selectedIndicator)?.sub_indicators || [])
+                      .map((sub, index) => {
+                        // Assign a color from the indicatorColors array based on the index
+                        const colorIndex = index % indicatorColors.length;
+                        return {
+                          label: sub.name,
+                          progress: getMostRecentValue(sub.current),
+                          target: typeof sub.target === "number" ? sub.target : sub.target[0],
+                          color: indicatorColors[colorIndex] // Apply unique color to each sub-indicator
+                        };
+                      })
+                    }
                   />
                 )}
             </div>
@@ -420,11 +270,16 @@ const Dashboard: React.FC = () => {
                   items={allIndicatorsData
                     .sort((a, b) => b.achievement_percentage - a.achievement_percentage)
                     .slice(0, 5)
-                    .map((indicator) => ({
-                      label: `${indicator.name} (SDG ${indicator.goalId})`,
-                      progress: getMostRecentValue(indicator.current),
-                      target: typeof indicator.target === "number" ? indicator.target : indicator.target[0],
-                    }))}
+                    .map((indicator, index) => {
+                      // Assign a color from the indicatorColors array based on the index
+                      const colorIndex = index % indicatorColors.length;
+                      return {
+                        label: `${indicator.name} (SDG ${indicator.goalId})`,
+                        progress: getMostRecentValue(indicator.current),
+                        target: typeof indicator.target === "number" ? indicator.target : indicator.target[0],
+                        color: indicatorColors[colorIndex] // Apply unique color to each indicator
+                      };
+                    })}
                 />
               </div>
               
@@ -435,11 +290,16 @@ const Dashboard: React.FC = () => {
                   items={allIndicatorsData
                     .sort((a, b) => a.achievement_percentage - b.achievement_percentage)
                     .slice(0, 5)
-                    .map((indicator) => ({
-                      label: `${indicator.name} (SDG ${indicator.goalId})`,
-                      progress: getMostRecentValue(indicator.current),
-                      target: typeof indicator.target === "number" ? indicator.target : indicator.target[0],
-                    }))}
+                    .map((indicator, index) => {
+                      // Assign a color from the indicatorColors array based on the index
+                      const colorIndex = index % indicatorColors.length;
+                      return {
+                        label: `${indicator.name} (SDG ${indicator.goalId})`,
+                        progress: getMostRecentValue(indicator.current),
+                        target: typeof indicator.target === "number" ? indicator.target : indicator.target[0],
+                        color: indicatorColors[colorIndex] // Apply unique color to each indicator
+                      };
+                    })}
                 />
               </div>
             </div>
@@ -448,7 +308,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h2 className="text-lg font-semibold mb-3">Overall SDG Progress Over Time</h2>
               <LineChart
-                data={sdgData.map((goal) => {
+                data={sdgData.map((goal, index) => {
                   // For each goal, calculate the average achievement percentage by year
                   const allDates = goal.indicators.flatMap(ind => 
                     ind.current.map(item => item.date.split('-')[0]) // Extract year
@@ -469,20 +329,21 @@ const Dashboard: React.FC = () => {
                       : 0;
                   });
                   
+                  // Use the predefined color for the goal
+                  const goalColor = sdgColors[goal.title] || indicatorColors[index % indicatorColors.length];
+                  
                   return {
                     x: uniqueYears,
                     y: yearlyAverages,
                     type: "scatter",
                     mode: "lines+markers",
-                    marker: { color: sdgColors[goal.title] || "blue" },
-                    line: { color: sdgColors[goal.title] || "blue" },
+                    marker: { color: goalColor },
+                    line: { color: goalColor },
                     name: `SDG ${goal.goal_id}: ${goal.title}`,
                   };
                 })}
               />
             </div>
-            
-            
           </div>
         </>
       )}

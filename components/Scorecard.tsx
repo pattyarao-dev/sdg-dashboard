@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import React from "react";
 
 interface ScoreCardProps {
@@ -11,7 +10,13 @@ interface ScoreCardProps {
   color?: string;
 }
 
-const ScoreCard: React.FC<ScoreCardProps> = ({ title, value, subtitle, icon, color = "blue" }) => {
+const ScoreCard: React.FC<ScoreCardProps> = ({ 
+  title, 
+  value, 
+  subtitle, 
+  icon, 
+  color = "blue" 
+}) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: color }}>
       <div className="flex justify-between items-start">
