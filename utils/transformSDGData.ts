@@ -52,6 +52,7 @@ interface SDGGoal {
 
 // For your function parameters
 interface RawIndicatorValue {
+  td_indicator_value: never[];
   measurement_date: string;
   value: number;
 }
@@ -91,6 +92,8 @@ export const transformSDGData = async (): Promise<DashboardSDG[]> => {
             const target = gsi.global_target_value || 0;
             
             // Get latest value for achievement calculation
+
+            // TODO: value for achievement (inverse)
             const latestValue = current.length > 0 
               ? current.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].value
               : 0;
