@@ -1,7 +1,7 @@
 generator client_python {
   provider             = "prisma-client-py"
-  recursive_type_depth = "5"
   interface            = "asyncio"
+  recursive_type_depth = "5"
 }
 
 generator client_js {
@@ -27,7 +27,6 @@ model md_indicator {
   status               status
   md_sub_indicator     md_sub_indicator[]
   td_goal_indicator    td_goal_indicator[]
-  td_indicator_value   td_indicator_value[]
   td_project_indicator td_project_indicator[]
 }
 
@@ -40,7 +39,6 @@ model md_sub_indicator {
   md_indicator             md_indicator               @relation(fields: [parent_indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_goal_sub_indicator    td_goal_sub_indicator[]
   td_project_sub_indicator td_project_sub_indicator[]
-  td_sub_indicator_value   td_sub_indicator_value[]
 }
 
 model md_user {
@@ -108,7 +106,6 @@ model td_indicator_value {
   value_id             Int                   @id @default(autoincrement())
   goal_indicator_id    Int?
   project_indicator_id Int?
-  indicator_id         Int
   value                Float
   measurement_date     DateTime              @default(now()) @db.Timestamp(6)
   location             String?               @db.VarChar(255)
@@ -116,7 +113,6 @@ model td_indicator_value {
   created_by           Int
   md_user              md_user               @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   td_goal_indicator    td_goal_indicator?    @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-  md_indicator         md_indicator          @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_project_indicator td_project_indicator? @relation(fields: [project_indicator_id], references: [project_indicator_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
@@ -164,7 +160,6 @@ model td_sub_indicator_value {
   value_id                 Int                       @id @default(autoincrement())
   goal_sub_indicator_id    Int?
   project_sub_indicator_id Int?
-  sub_indicator_id         Int
   value                    Float
   measurement_date         DateTime                  @default(now()) @db.Timestamp(6)
   location                 String?                   @db.VarChar(255)
@@ -173,7 +168,6 @@ model td_sub_indicator_value {
   md_user                  md_user                   @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   td_goal_sub_indicator    td_goal_sub_indicator?    @relation(fields: [goal_sub_indicator_id], references: [goal_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_project_sub_indicator td_project_sub_indicator? @relation(fields: [project_sub_indicator_id], references: [project_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-  md_sub_indicator         md_sub_indicator          @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model ref_required_data {

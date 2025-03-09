@@ -8,7 +8,6 @@ import SlicerChart from "@/components/SlicerChart";
 import ProgressBarChart from "@/components/ProgressBarChart";
 import DonutChart from "@/components/DonutChart";
 import StackedBarChart from "@/components/StackedBarChart";
-import Scorecard from "@/components/Scorecard";
 import ChoroplethMap from "@/components/ChoroplethMap";
 import PaceBarChart from "@/components/PaceBarChart";
 import dummySDGData from "../dummydata/dummySDGData";

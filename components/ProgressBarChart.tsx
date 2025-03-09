@@ -11,37 +11,51 @@ interface ProgressBarChartProps {
   progress: number; // Current progress (in %)
   target: number; // Target value (in %)
   onClick?: () => void;
-  
 }
 
+interface ProgressBarListProps {
+  items: ProgressBarChartProps[];
+}
+
+// Single Progress Bar Component
 const ProgressBarChart: React.FC<ProgressBarChartProps> = ({ label, progress, target, onClick }) => {
   const data: Data[] = [
     {
       x: [progress], // Progress value
-      y: [label], // Indicator name
+      y: [""], // Empty y value since we're showing label above
       type: "bar",
       orientation: "h",
       marker: { color: "#1e90ff" }, // Blue for progress
+      width: 0.6, // Control bar height
     },
     {
       x: [100 - progress], // Empty space to 100%
-      y: [label], // Same label
+      y: [""], // Empty y value
       type: "bar",
       orientation: "h",
       marker: { color: "#d3d3d3" }, // Light gray for remaining space
+      width: 0.6, // Control bar height
     },
   ];
 
   const layout: Partial<Layout> = {
-    height: 50, // Adjust height to make bars thinner
-    margin: { l: 150, r: 10, t: 10, b: 20 }, // Left margin for labels
+    height: 60, // Reduced height for more compact display
+    margin: {
+      l: 10, // Reduced left margin
+      r: 10, // Reduced right margin
+      t: 25, // Still need some space for label
+      b: 10, // Reduced bottom margin
+    },
     barmode: "stack", // Stack progress and empty space
     showlegend: false, // Hide legend for cleaner look
-    xaxis: { range: [0, 100], showgrid: false }, // Always scale from 0-100%
-    yaxis: { 
-      tickmode: "array", // Ensure labels don't shift
-      automargin: true, // Auto space labels correctly
-      side: "left", // Force labels to align left
+    xaxis: {
+      range: [0, 100],
+      showgrid: false,
+      fixedrange: true, // Prevent zooming on x-axis
+    },
+    yaxis: {
+      showticklabels: false, // Hide y-axis labels
+      fixedrange: true, // Prevent zooming on y-axis
     },
     shapes: [
       {
@@ -52,19 +66,68 @@ const ProgressBarChart: React.FC<ProgressBarChartProps> = ({ label, progress, ta
         y1: 0.5,
         line: {
           color: "red", // Target marker color
-          width: 3,
-          dash: "solid", // Makes it a dashed line
+          width: 2, // Slightly thinner line
+          dash: "solid",
         },
       },
     ],
+    annotations: [
+      {
+        x: 0, // Position at the start of the bar
+        y: 0, // Position at the center of the bar
+        xanchor: "left",
+        yanchor: "top",
+        text: label,
+        showarrow: false,
+        font: {
+          family: "Arial, sans-serif",
+          size: 11, // Slightly smaller font
+        },
+      }
+    ]
   };
 
   return (
-    <div onClick={onClick}> {/* Wrap the chart in a div to handle onClick */}
-      <Plot data={data} layout={layout} />
+    <div 
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+    >
+      <Plot
+        data={data}
+        layout={layout}
+        config={{ 
+          displayModeBar: false, // Hide the plotly toolbar
+          responsive: true
+        }}
+      />
     </div>
   );
-
 };
 
-export default ProgressBarChart;
+// Container Component for the list of progress bars
+const ProgressBarList: React.FC<ProgressBarListProps> = ({ items }) => {
+  const maxVisibleItems = 5;
+  const needsScrolling = items.length > maxVisibleItems;
+    
+  return (
+    <div 
+      className="overflow-y-auto" 
+      style={{ 
+        maxHeight: needsScrolling ? `${maxVisibleItems * 60}px` : 'auto'
+      }}
+    >
+      {items.map((item, index) => (
+        <ProgressBarChart
+          key={index}
+          label={item.label}
+          progress={item.progress}
+          target={item.target}
+          onClick={item.onClick}
+        />
+      ))}
+    </div>
+  );
+};
+
+export { ProgressBarChart, ProgressBarList };
+export default ProgressBarList;

@@ -3,86 +3,27 @@
 import dynamic from "next/dynamic";
 import React from "react";
 
-// Import Plotly, if you need charts later on
-const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
-
-interface Indicator {
-  name: string;
-  // hasData: boolean;
-  // inProject: boolean;
-  sub_indicators: SubIndicator[];
-}
-
-interface SubIndicator {
-  name: string;
-  // hasData: boolean;
-  // inProject: boolean;
-}
-
-interface Sdgs {
+interface ScoreCardProps {
   title: string;
-  indicators: Indicator[];
+  value: string | number;
+  subtitle?: string;
+  icon?: React.ReactNode;
+  color?: string;
 }
 
-interface ScorecardProps {
-  sdgData: Sdgs[];
-}
-
-const Scorecard: React.FC<ScorecardProps> = ({ sdgData }) => {
-  const sdgScores = sdgData.map(sdg => {
-    let totalIndicators = 0;
-    let indicatorsWithData = 0;
-    let indicatorsInProject = 0;
-
-    sdg.indicators.forEach(indicator => {
-      // Count total indicators (including sub-indicators)
-      totalIndicators++;
-      // if (indicator.hasData) indicatorsWithData++;
-      // if (indicator.inProject) indicatorsInProject++;
-
-      indicator.sub_indicators.forEach(subIndicator => {
-        totalIndicators++;
-        // if (subIndicator.hasData) indicatorsWithData++;
-        // if (subIndicator.inProject) indicatorsInProject++;
-      });
-    });
-
-    return {
-      title: sdg.title,
-      totalIndicators,
-      // indicatorsWithData,
-      // indicatorsInProject,
-    };
-  });
-
-  // Sort SDGs by totalIndicators in descending order
-  sdgScores.sort((a, b) => b.totalIndicators - a.totalIndicators);
-
+const ScoreCard: React.FC<ScoreCardProps> = ({ title, value, subtitle, icon, color = "blue" }) => {
   return (
-    <div className="scorecard">
-      <h2>SDG Scorecard</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>SDG Title</th>
-            <th>Total Indicators</th>
-            {/* <th>Indicators with Data</th>
-            <th>Indicators in Projects</th> */}
-          </tr>
-        </thead>
-        <tbody>
-          {sdgScores.map((sdg, index) => (
-            <tr key={index}>
-              <td>{sdg.title}</td>
-              <td>{sdg.totalIndicators}</td>
-              {/* <td>{sdg.indicatorsWithData}</td>
-              <td>{sdg.indicatorsInProject}</td> */}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: color }}>
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="text-gray-500 text-sm font-medium">{title}</h3>
+          <p className="text-2xl font-bold mt-1">{value}</p>
+          {subtitle && <p className="text-gray-500 text-xs mt-1">{subtitle}</p>}
+        </div>
+        {icon && <div className="text-gray-400">{icon}</div>}
+      </div>
     </div>
   );
 };
 
-export default Scorecard;
+export default ScoreCard;

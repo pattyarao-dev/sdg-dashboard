@@ -21,9 +21,19 @@ export async function getGoals() {
       td_goal_indicator: {
         include: {
           md_indicator: true, // Get the indicator details
+          td_indicator_value: true, 
+          md_computation_rule: true,
           td_goal_sub_indicator: {
             include: {
               md_sub_indicator: true, // Get only sub-indicators applicable to the goal
+              td_sub_indicator_value: true, 
+              md_computation_rule: true,
+              td_goal_sub_indicator_required_data: {
+                include: {
+                  ref_required_data: true,
+                },
+              },
+              td_required_data_value: true,
             },
           },
         },
@@ -326,12 +336,11 @@ export async function updateValues(formData: FormData) {
   const indicatorEntries = formData.getAll("indicatorValues") as string[];
   const indicatorPromises = indicatorEntries.map(async (entry) => {
     try {
-      const { indicator_id, value, notes } = JSON.parse(entry);
+      const { goal_indicator_id, value, notes } = JSON.parse(entry);
 
       return prisma.td_indicator_value.create({
         data: {
           goal_indicator_id,
-          indicator_id,
           value: parseFloat(value),
           measurement_date: new Date(),
           notes,
@@ -347,19 +356,18 @@ export async function updateValues(formData: FormData) {
   const subIndicatorEntries = formData.getAll("subIndicatorValues") as string[];
   const subIndicatorPromises = subIndicatorEntries.map(async (entry) => {
     try {
-      const { sub_indicator_id, value, notes } = JSON.parse(entry);
+      const { goal_sub_indicator_id, value, notes } = JSON.parse(entry);
 
       const goalSubIndicator = await prisma.td_goal_sub_indicator.findFirst({
         where: {
-          goal_indicator_id,
-          sub_indicator_id,
+          goal_sub_indicator_id,
         },
         select: { goal_sub_indicator_id: true },
       });
 
       if (!goalSubIndicator) {
         console.warn(
-          `No goal_sub_indicator found for sub_indicator_id: ${sub_indicator_id}`,
+          `No goal_sub_indicator found for sub_indicator_id: ${goal_sub_indicator_id}`,
         );
         return null;
       }
@@ -367,7 +375,6 @@ export async function updateValues(formData: FormData) {
       return prisma.td_sub_indicator_value.create({
         data: {
           goal_sub_indicator_id: goalSubIndicator.goal_sub_indicator_id,
-          sub_indicator_id,
           value: parseFloat(value),
           measurement_date: new Date(),
           notes,

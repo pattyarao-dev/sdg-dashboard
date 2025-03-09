@@ -3,21 +3,29 @@
 import dynamic from "next/dynamic";
 import * as React from "react";
 import { Data, Layout } from "plotly.js";
-import { useRouter } from "next/navigation"; // Use useRouter instead of redirect
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
 interface GaugeChartProps {
   title: string;
   value: number;
-  sdgNumber: number; // New prop for SDG number
+  sdgNumber?: number; // Optional SDG number
+  color?: string;    // Optional custom color
+  onClick?: (sdgNumber: number) => void; // Optional click handler for filtering
 }
 
-const GaugeChart: React.FC<GaugeChartProps> = ({ title, value, sdgNumber }) => {
-  const router = useRouter(); // Initialize router
-
+const GaugeChart: React.FC<GaugeChartProps> = ({ 
+  title, 
+  value, 
+  sdgNumber, 
+  color,
+  onClick 
+}) => {
   const handleOnClick = () => {
-    router.push(`/projectdashboard/${sdgNumber}/projects`); // Redirect dynamically
+    // If onClick is provided and sdgNumber exists, call the handler
+    if (onClick && sdgNumber !== undefined) {
+      onClick(sdgNumber);
+    }
   };
 
   const getGaugeColor = (percentage: number) => {
@@ -26,7 +34,8 @@ const GaugeChart: React.FC<GaugeChartProps> = ({ title, value, sdgNumber }) => {
     return "#4CAF50"; // Green (80-100%)
   };
 
-  const color = getGaugeColor(value);
+  // Use provided color or determine by value
+  const gaugeColor = color || getGaugeColor(value);
 
   const data: Data[] = [
     {
@@ -37,7 +46,7 @@ const GaugeChart: React.FC<GaugeChartProps> = ({ title, value, sdgNumber }) => {
       title: { text: `${title}`, font: { size: 12 } },
       gauge: {
         axis: { range: [0, 100] },
-        bar: { color },
+        bar: { color: gaugeColor },
       },
     },
   ];
@@ -49,8 +58,12 @@ const GaugeChart: React.FC<GaugeChartProps> = ({ title, value, sdgNumber }) => {
   };
 
   return (
-    <div onClick={handleOnClick} style={{ cursor: "pointer" }}>
-      <Plot data={data} layout={layout} />
+    <div 
+      onClick={handleOnClick} 
+      style={{ cursor: onClick ? "pointer" : "default" }}
+      className="transition-all duration-200 hover:opacity-90"
+    >
+      <Plot data={data} layout={layout} config={{ displayModeBar: false }} />
     </div>
   );
 };
