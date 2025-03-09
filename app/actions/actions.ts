@@ -266,17 +266,33 @@ export async function createIndicatorsBatch(formData: FormData) {
               requiredDataId = newRequiredData.required_data_id; // Use the generated ID
             }
 
+            const goalSubIndicator =
+              await prisma.td_goal_sub_indicator.findFirst({
+                where: {
+                  goal_indicator_id: goalIndicatorId, // Ensure it's linked to the correct goal-indicator
+                  sub_indicator_id: subIndicatorId,
+                },
+                select: { goal_sub_indicator_id: true },
+              });
+
+            if (!goalSubIndicator) {
+              console.warn(
+                `No goal_sub_indicator found for sub_indicator_id: ${subIndicatorId}`,
+              );
+              continue;
+            }
+
             // Link Required Data to Sub-Indicator
             await prisma.td_goal_sub_indicator_required_data.upsert({
               where: {
                 goal_sub_indicator_id_required_data_id: {
-                  goal_sub_indicator_id: subIndicatorId, // Reference sub-indicator
+                  goal_sub_indicator_id: goalSubIndicator.goal_sub_indicator_id, // Reference sub-indicator
                   required_data_id: requiredDataId,
                 },
               },
               update: {}, // No update needed if it already exists
               create: {
-                goal_sub_indicator_id: subIndicatorId,
+                goal_sub_indicator_id: goalSubIndicator.goal_sub_indicator_id,
                 required_data_id: requiredDataId,
               },
             });

@@ -327,6 +327,19 @@ export default function AddIndicator({
     }));
   };
 
+  const handleRemoveSubIndicatorRequiredData = (
+    subIndicatorId: number,
+    requiredDataIndex: number,
+  ) => {
+    setSubIndicatorRequiredDataInputs((prev) => ({
+      ...prev,
+      [subIndicatorId]:
+        prev[subIndicatorId]?.filter(
+          (_, index) => index !== requiredDataIndex,
+        ) || [], // Ensure we don't set undefined
+    }));
+  };
+
   return (
     <div className="z-0 w-full p-10 flex flex-col gap-10 rounded-xl drop-shadow-md">
       <div>Create Indicators for {goalName}</div>
@@ -849,7 +862,7 @@ export default function AddIndicator({
                                   subIndicatorRequiredDataInputs[
                                     sub.sub_indicator_id
                                   ] || []
-                                ).map((data) => (
+                                ).map((data, index: number) => (
                                   <li
                                     key={data.requiredDataId}
                                     className="w-full rounded-md flex flex-col items-start gap-2"
@@ -859,17 +872,9 @@ export default function AddIndicator({
                                       <button
                                         className="text-red-500"
                                         onClick={() => {
-                                          setIndicatorRequiredDataInputs(
-                                            (prev) => ({
-                                              ...prev,
-                                              [sub.sub_indicator_id]: prev[
-                                                sub.sub_indicator_id
-                                              ].filter(
-                                                (d) =>
-                                                  d.requiredDataId !==
-                                                  data.requiredDataId,
-                                              ),
-                                            }),
+                                          handleRemoveSubIndicatorRequiredData(
+                                            sub.sub_indicator_id,
+                                            index,
                                           );
                                         }}
                                       >
