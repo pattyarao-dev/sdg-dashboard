@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import GaugeChart from "@/components/GaugeChart";
 import LineChart from "@/components/LineChart";
 import { ProgressBarChart, ProgressBarList } from "@/components/ProgressBarChart";
-import ScoreCard from "@/components/ScoreCard";
+import ScoreCard from "@/components/Scorecard";
 import { 
   transformSDGData, 
   DashboardSDG, 
