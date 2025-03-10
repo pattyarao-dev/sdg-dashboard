@@ -7,6 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model indicator_var {
+  currval BigInt?
+
+  @@ignore
+}
+
+model md_computation_rule {
+  rule_id               Int                    @id @default(autoincrement())
+  goal_indicator_id     Int?
+  goal_sub_indicator_id Int?
+  formula               String
+  td_goal_indicator     td_goal_indicator?     @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_goal_indicator")
+  td_goal_sub_indicator td_goal_sub_indicator? @relation(fields: [goal_sub_indicator_id], references: [goal_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_goal_sub_indicator")
+}
+
 model md_goal {
   goal_id           Int                 @id @default(autoincrement())
   name              String              @unique @db.VarChar(100)
@@ -21,7 +37,6 @@ model md_indicator {
   status               status
   md_sub_indicator     md_sub_indicator[]
   td_goal_indicator    td_goal_indicator[]
-  td_indicator_value   td_indicator_value[]
   td_project_indicator td_project_indicator[]
 }
 
@@ -34,7 +49,6 @@ model md_sub_indicator {
   md_indicator             md_indicator               @relation(fields: [parent_indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_goal_sub_indicator    td_goal_sub_indicator[]
   td_project_sub_indicator td_project_sub_indicator[]
-  td_sub_indicator_value   td_sub_indicator_value[]
 }
 
 model md_user {
@@ -78,6 +92,7 @@ model td_goal_indicator {
   indicator_id                    Int
   global_target_value             Float?
   global_baseline_value           Float?
+  md_computation_rule             md_computation_rule[]
   md_goal                         md_goal                           @relation(fields: [goal_id], references: [goal_id], onDelete: Cascade, onUpdate: NoAction)
   md_indicator                    md_indicator                      @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_goal_indicator_required_data td_goal_indicator_required_data[]
@@ -105,6 +120,7 @@ model td_goal_sub_indicator {
   sub_indicator_id                    Int
   global_target_value                 Float?
   global_baseline_value               Float?
+  md_computation_rule                 md_computation_rule[]
   td_goal_indicator                   td_goal_indicator                     @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   md_sub_indicator                    md_sub_indicator                      @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_goal_sub_indicator_required_data td_goal_sub_indicator_required_data[]
@@ -128,7 +144,6 @@ model td_indicator_value {
   value_id             Int                   @id @default(autoincrement())
   goal_indicator_id    Int?
   project_indicator_id Int?
-  indicator_id         Int
   value                Float
   measurement_date     DateTime              @default(now()) @db.Timestamp(6)
   location             String?               @db.VarChar(255)
@@ -136,7 +151,6 @@ model td_indicator_value {
   created_by           Int
   md_user              md_user               @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   td_goal_indicator    td_goal_indicator?    @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-  md_indicator         md_indicator          @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_project_indicator td_project_indicator? @relation(fields: [project_indicator_id], references: [project_indicator_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
@@ -203,7 +217,6 @@ model td_sub_indicator_value {
   value_id                 Int                       @id @default(autoincrement())
   goal_sub_indicator_id    Int?
   project_sub_indicator_id Int?
-  sub_indicator_id         Int
   value                    Float
   measurement_date         DateTime                  @default(now()) @db.Timestamp(6)
   location                 String?                   @db.VarChar(255)
@@ -212,7 +225,6 @@ model td_sub_indicator_value {
   md_user                  md_user                   @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   td_goal_sub_indicator    td_goal_sub_indicator?    @relation(fields: [goal_sub_indicator_id], references: [goal_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_project_sub_indicator td_project_sub_indicator? @relation(fields: [project_sub_indicator_id], references: [project_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-  md_sub_indicator         md_sub_indicator          @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 enum project_status {

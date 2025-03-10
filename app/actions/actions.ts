@@ -67,6 +67,7 @@ export async function getGoalsInformation() {
     goalId: goal.goal_id,
     goalName: goal.name,
     indicators: goal.td_goal_indicator.map((gi) => ({
+      goalIndicatorId: gi.goal_indicator_id,
       indicatorId: gi.md_indicator.indicator_id,
       indicatorName: gi.md_indicator.name,
 
@@ -76,6 +77,7 @@ export async function getGoalsInformation() {
       })),
 
       subIndicators: gi.td_goal_sub_indicator.map((gs) => ({
+        goalSubIndicatorId: gs.goal_sub_indicator_id,
         subIndicatorId: gs.md_sub_indicator.sub_indicator_id,
         subIndicatorName: gs.md_sub_indicator.name,
 
@@ -88,6 +90,52 @@ export async function getGoalsInformation() {
   }));
 
   return processedGoals;
+}
+
+export async function updateIndicatorComputationRule(
+  goalIndicatorId: number,
+  formula: string,
+) {
+  try {
+    const formulaTable = await prisma.md_computation_rule
+      .create({
+        data: {
+          formula,
+          goal_indicator_id: goalIndicatorId,
+        },
+      })
+      .then()
+      .catch((error) => {
+        console.error(error);
+      });
+    return formulaTable;
+  } catch (error) {
+    const err = error as Error;
+    console.log(err.message);
+  }
+}
+
+export async function updateSubIndicatorComputationRule(
+  goalSubIndicatorId: number,
+  formula: string,
+) {
+  try {
+    const formulaTable = await prisma.md_computation_rule
+      .create({
+        data: {
+          formula,
+          goal_sub_indicator_id: goalSubIndicatorId,
+        },
+      })
+      .then()
+      .catch((error) => {
+        console.error(error);
+      });
+    return formulaTable;
+  } catch (error) {
+    const err = error as Error;
+    console.log(err.message);
+  }
 }
 
 export async function getUserRoles() {
