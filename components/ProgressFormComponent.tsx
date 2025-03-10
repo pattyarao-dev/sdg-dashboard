@@ -10,11 +10,17 @@ interface RequiredData {
   requiredDataValue: number;
 }
 
+interface ComputationRule {
+  ruleId: number;
+  ruleFormula: string;
+}
+
 export interface SubIndicator {
   goalSubIndicatorId: number;
   subIndicatorId: number;
   subIndicatorName: string;
   requiredData: RequiredData[];
+  subIndicatorComputationRule: ComputationRule[];
 }
 
 export interface Indicator {
@@ -23,6 +29,7 @@ export interface Indicator {
   indicatorName: string;
   subIndicators: SubIndicator[];
   requiredData: RequiredData[];
+  computationRule: ComputationRule[];
 }
 
 interface Goal {
@@ -36,15 +43,15 @@ interface ProgressFormProps {
 }
 
 const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
-  const [formValues, setFormValues] = useState<Record<string, number>>({});
+  // const [formValues, setFormValues] = useState<Record<string, number>>({});
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormValues((prev) => ({
-      ...prev,
-      [name]: parseFloat(value) || 0, // Ensure numeric input
-    }));
-  };
+  // const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const { name, value } = e.target;
+  //   setFormValues((prev) => ({
+  //     ...prev,
+  //     [name]: parseFloat(value) || 0, // Ensure numeric input
+  //   }));
+  // };
 
   // const handleUpdateValuesSubmit = async (e: React.FormEvent) => {
   //   e.preventDefault();
@@ -88,34 +95,28 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
   // };
 
   return (
-    <div
-      // onSubmit={handleUpdateValuesSubmit}
-      className="w-full border-2 border-black p-4"
-    >
+    <div className="w-full flex flex-col gap-24">
       {goals.map((goal) => (
-        <div
-          key={goal.goalId}
-          className="w-full p-4 flex flex-col gap-4 border-b"
-        >
-          <h2 className="w-full p-4 bg-gradient-to-br from-green-50 to-orange-50 rounded-md drop-shadow text-gray-600 text-lg font-bold">
-            {goal.goalName}
-          </h2>
+        <div key={goal.goalId} className="w-full flex flex-col gap-6 border-b">
+          <div className="w-full p-6 flex flex-col gap-1 bg-gradient-to-br from-green-50 to-orange-50 rounded-md drop-shadow ">
+            <p className="text-gray-600 text-4xl font-bold uppercase">
+              {goal.goalName}
+            </p>
+            <p className="text-sm text-gray-500 italic">
+              SDG Goal # {goal.goalId}
+            </p>
+          </div>
 
-          {goal.indicators.map((indicator) => (
-            <EditIndicatorValues
-              indicator={indicator}
-              key={indicator.indicatorId}
-            />
-          ))}
+          <div className="w-full flex flex-col gap-10">
+            {goal.indicators.map((indicator) => (
+              <EditIndicatorValues
+                indicator={indicator}
+                key={indicator.indicatorId}
+              />
+            ))}
+          </div>
         </div>
       ))}
-
-      {/* <button
-        className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
-        type="submit"
-      >
-        Submit
-      </button> */}
     </div>
   );
 };

@@ -2,7 +2,6 @@ import {
   updateIndicatorComputationRule,
   updateSubIndicatorComputationRule,
 } from "@/app/actions/actions";
-import prisma from "@/utils/prisma";
 import { useState } from "react";
 
 const useCreateFormula = () => {

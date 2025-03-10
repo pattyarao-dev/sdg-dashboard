@@ -49,6 +49,7 @@ export async function getGoalsInformation() {
                   ref_required_data: true,
                 },
               },
+              md_computation_rule: true,
             },
           },
           td_goal_indicator_required_data: {
@@ -57,6 +58,7 @@ export async function getGoalsInformation() {
               ref_required_data: true,
             },
           },
+          md_computation_rule: true,
         },
       },
     },
@@ -85,6 +87,16 @@ export async function getGoalsInformation() {
           requiredDataId: rd.ref_required_data.required_data_id,
           requiredDataName: rd.ref_required_data.name, // Ensure this name field is correct
         })),
+
+        subIndicatorComputationRule: gs.md_computation_rule.map((scr) => ({
+          ruleId: scr.rule_id,
+          ruleFormula: scr.formula,
+        })),
+      })),
+
+      computationRule: gi.md_computation_rule.map((cr) => ({
+        ruleId: cr.rule_id,
+        ruleFormula: cr.formula,
       })),
     })),
   }));
@@ -132,6 +144,54 @@ export async function updateSubIndicatorComputationRule(
         console.error(error);
       });
     return formulaTable;
+  } catch (error) {
+    const err = error as Error;
+    console.log(err.message);
+  }
+}
+
+export async function updateIndicatorRequiredDataValue(
+  indicatorRequiredDataValues: Array<{
+    goalIndicatorId: number;
+    requiredDataId: number;
+    value: number;
+    createdBy: number;
+  }>,
+) {
+  try {
+    const updatedValues = await prisma.td_required_data_value.createMany({
+      data: indicatorRequiredDataValues.map((data) => ({
+        goal_indicator_id: data.goalIndicatorId,
+        required_data_id: data.requiredDataId,
+        value: data.value,
+        created_by: data.createdBy,
+      })),
+    });
+    return updatedValues;
+  } catch (error) {
+    const err = error as Error;
+    console.log(err.message);
+  }
+}
+
+export async function updateSubIndicatorRequiredDataValue(
+  subIndicatorRequiredDataValues: Array<{
+    goalIndicatorId: number;
+    requiredDataId: number;
+    value: number;
+    createdBy: number;
+  }>,
+) {
+  try {
+    const updatedValues = await prisma.td_required_data_value.createMany({
+      data: subIndicatorRequiredDataValues.map((data) => ({
+        goal_sub_indicator_id: data.goalIndicatorId,
+        required_data_id: data.requiredDataId,
+        value: data.value,
+        created_by: data.createdBy,
+      })),
+    });
+    return updatedValues;
   } catch (error) {
     const err = error as Error;
     console.log(err.message);
