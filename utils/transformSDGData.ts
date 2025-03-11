@@ -6,7 +6,7 @@ export interface DashboardSDG {
   global_current_value: { date: string; current: number }[];
   indicators: {
     name: string;
-    description?: string | null; // Allow null
+    description?: string | null;
     current: {
       current?: number; 
       date: string; 
@@ -14,12 +14,14 @@ export interface DashboardSDG {
     }[];
     target: number | number[];
     achievement_percentage: number;
+    latestValue: number; // Pre-computed latest value
     sub_indicators?: {
       name: string;
-      description?: string | null; // Allow null
+      description?: string | null;
       current: { date: string; value: number }[];
       target: number | number[];
       achievement_percentage: number;
+      latestValue: number; // Pre-computed latest value
     }[];
   }[];
 }
@@ -50,48 +52,13 @@ interface TemporalValue {
   current?: number;
 }
 
-interface SubIndicator {
-  name: string;
-  description: string | null;
-  current: TemporalValue[];
-  target: number;
-  achievement_percentage: number;
-}
-
-interface Indicator {
-  name: string;
-  description: string | null;
-  current: TemporalValue[];
-  target: number;
-  achievement_percentage: number;
-  sub_indicators?: SubIndicator[];
-}
-
-interface SDGGoal {
-  goal_id: number;
-  title: string;
-  global_current_value: TemporalValue[];
-  indicators: Indicator[];
-}
-
-// For your function parameters
-interface RawIndicatorValue {
-  value: number;
-  measurement_date: Date | string;
-  value_id?: number;
-  location?: string | null;
-  notes?: string | null;
-  created_by?: number;
-  goal_indicator_id?: number | null;
-  project_indicator_id?: number | null;
-  goal_sub_indicator_id?: number | null;
-  project_sub_indicator_id?: number | null;
-}
-
 // Create a cache for expensive operations
 const dataCache = {
   sdgData: null as DashboardSDG[] | null,
   dateMap: new Map<string, Date>(),
+  summaryMetricsCache: new Map<string, SummaryMetrics>(),
+  indicatorsDataCache: new Map<string, any[]>(),
+  filteredDataCache: new Map<string, DashboardSDG[]>()
 };
 
 // Helper function to get or create cached Date objects
@@ -122,6 +89,68 @@ export const getMostRecentValue = (data: TemporalValue[]): number => {
   return mostRecent.value !== undefined ? mostRecent.value : (mostRecent.current || 0);
 };
 
+// Generate a cache key for filtered data
+const getFilterCacheKey = (filters: any): string => {
+  return JSON.stringify(filters);
+};
+
+// Filter SDG data based on criteria and use cache
+export const filterSDGData = (
+  allData: DashboardSDG[], 
+  filters: any
+): DashboardSDG[] => {
+  const cacheKey = getFilterCacheKey(filters);
+  
+  // Check if we already have this result cached
+  if (dataCache.filteredDataCache.has(cacheKey)) {
+    return dataCache.filteredDataCache.get(cacheKey)!;
+  }
+  
+  // If no filters are applied, return the original data
+  if (!filters || Object.keys(filters).length === 0) {
+    return allData;
+  }
+  
+  // Perform the filtering
+  const filteredData = allData.filter(goal => {
+    // Apply goal-level filters
+    if (filters.goalId && goal.goal_id !== filters.goalId) {
+      return false;
+    }
+    
+    // Create a new goal object with filtered indicators
+    const filteredGoal = {
+      ...goal,
+      indicators: goal.indicators.filter(indicator => {
+        // Apply indicator-level filters
+        if (filters.indicatorName && !indicator.name.includes(filters.indicatorName)) {
+          return false;
+        }
+        
+        if (filters.minProgress && indicator.achievement_percentage < filters.minProgress) {
+          return false;
+        }
+        
+        if (filters.maxProgress && indicator.achievement_percentage > filters.maxProgress) {
+          return false;
+        }
+        
+        // More filters can be added here
+        
+        return true;
+      })
+    };
+    
+    // Only include goals that have at least one indicator after filtering
+    return filteredGoal.indicators.length > 0;
+  });
+  
+  // Cache the result
+  dataCache.filteredDataCache.set(cacheKey, filteredData);
+  
+  return filteredData;
+};
+
 // Calculate overall progress for a single goal - optimized for speed
 export function calculateOverallProgress(goalData: DashboardSDG): number {
   const indicators = goalData.indicators;
@@ -135,9 +164,17 @@ export function calculateOverallProgress(goalData: DashboardSDG): number {
   return Math.round(totalAchievement / indicators.length);
 }
 
-// Calculate overall progress across multiple goals - optimized for speed
+// Calculate overall progress across multiple goals with cache
 export function calculateOverallProgressAcrossGoals(goalsData: DashboardSDG[]): number {
   if (!goalsData.length) return 0;
+  
+  // Create a cache key based on the goal IDs included
+  const cacheKey = goalsData.map(g => g.goal_id).sort().join('-');
+  
+  // Check for cached calculation
+  if (dataCache.summaryMetricsCache.has(`progress-${cacheKey}`)) {
+    return (dataCache.summaryMetricsCache.get(`progress-${cacheKey}`) as any).overallProgress;
+  }
   
   let totalAchievement = 0;
   let indicatorCount = 0;
@@ -149,7 +186,12 @@ export function calculateOverallProgressAcrossGoals(goalsData: DashboardSDG[]): 
     }
   }
   
-  return indicatorCount > 0 ? Math.round(totalAchievement / indicatorCount) : 0;
+  const result = indicatorCount > 0 ? Math.round(totalAchievement / indicatorCount) : 0;
+  
+  // Store in cache
+  dataCache.summaryMetricsCache.set(`progress-${cacheKey}`, { overallProgress: result });
+  
+  return result;
 }
 
 // Optimized helper function to calculate achievement percentage with bounds
@@ -159,10 +201,26 @@ function calculateAchievementPercentage(current: number, target: number): number
   return Math.min(Math.max(Math.round(percentage), 0), 100); // Clamp between 0-100 and round
 }
 
-// Calculate summary metrics for scorecards - optimized for performance
-export const calculateSummaryMetrics = (allData: DashboardSDG[], selectedGoal: DashboardSDG | null): SummaryMetrics => {
-  // If a goal is selected, use its data; otherwise, aggregate data from all goals
-  const dataToProcess = selectedGoal ? [selectedGoal] : allData;
+// Calculate summary metrics with caching
+export const calculateSummaryMetrics = (
+  allData: DashboardSDG[], 
+  selectedGoal: DashboardSDG | null,
+  filters?: any
+): SummaryMetrics => {
+  // Create a cache key based on selected goal and filters
+  const selectedGoalId = selectedGoal ? selectedGoal.goal_id : 'all';
+  const filtersKey = filters ? JSON.stringify(filters) : 'none';
+  const cacheKey = `metrics-${selectedGoalId}-${filtersKey}`;
+  
+  // Check if we have cached results
+  if (dataCache.summaryMetricsCache.has(cacheKey)) {
+    return dataCache.summaryMetricsCache.get(cacheKey)!;
+  }
+  
+  // If filters are provided, use the filtered data
+  const dataToProcess = filters 
+    ? filterSDGData(selectedGoal ? [selectedGoal] : allData, filters)
+    : (selectedGoal ? [selectedGoal] : allData);
   
   let totalIndicators = 0;
   let totalSubIndicators = 0;
@@ -194,7 +252,7 @@ export const calculateSummaryMetrics = (allData: DashboardSDG[], selectedGoal: D
       
       // Calculate growth only if there are at least 2 values
       if (indicator.current.length >= 2) {
-        // Sort current values by date - using a more efficient approach
+        // Use pre-computed values when possible
         const sortedValues = [...indicator.current];
         sortedValues.sort((a, b) => a.date.localeCompare(b.date));
         
@@ -237,10 +295,10 @@ export const calculateSummaryMetrics = (allData: DashboardSDG[], selectedGoal: D
   // Calculate average growth
   const calculatedAvgYoyGrowth = indicatorsWithGrowth > 0 ? avgYoyGrowth / indicatorsWithGrowth : 0;
   
-  // Calculate overall progress efficiently
+  // Get overall progress (this might use a cached value)
   const overallProgress = calculateOverallProgressAcrossGoals(dataToProcess);
   
-  return {
+  const result = {
     totalIndicators,
     totalSubIndicators,
     onTrackIndicators,
@@ -250,13 +308,34 @@ export const calculateSummaryMetrics = (allData: DashboardSDG[], selectedGoal: D
     leastImprovedIndicator,
     overallProgress
   };
+  
+  // Cache the result
+  dataCache.summaryMetricsCache.set(cacheKey, result);
+  
+  return result;
 };
 
-// Get aggregate data for all indicators across all goals - optimized
-export const getAllIndicatorsData = (sdgData: DashboardSDG[], sdgColors: { [key: string]: string }) => {
+// Get aggregate data for all indicators with caching
+export const getAllIndicatorsData = (
+  sdgData: DashboardSDG[], 
+  sdgColors: { [key: string]: string },
+  filters?: any
+) => {
+  // Create cache key
+  const filterKey = filters ? JSON.stringify(filters) : 'none';
+  const cacheKey = `indicators-${filterKey}`;
+  
+  // Check cache first
+  if (dataCache.indicatorsDataCache.has(cacheKey)) {
+    return dataCache.indicatorsDataCache.get(cacheKey);
+  }
+  
+  // Get filtered data if filters provided
+  const dataToProcess = filters ? filterSDGData(sdgData, filters) : sdgData;
+  
   const result = [];
   
-  for (const goal of sdgData) {
+  for (const goal of dataToProcess) {
     for (const indicator of goal.indicators) {
       result.push({
         ...indicator,
@@ -267,69 +346,11 @@ export const getAllIndicatorsData = (sdgData: DashboardSDG[], sdgColors: { [key:
     }
   }
   
+  // Cache the result
+  dataCache.indicatorsDataCache.set(cacheKey, result);
+  
   return result;
 };
-
-// Unified function to extract temporal values
-function extractTemporalValues(values: RawIndicatorValue[]): TemporalValue[] {
-  const result: TemporalValue[] = [];
-  
-  for (const val of values) {
-    // Handle both Date objects and string dates
-    const measurementDate = val.measurement_date instanceof Date 
-      ? val.measurement_date 
-      : new Date(val.measurement_date);
-    
-    const dateKey = `${measurementDate.getFullYear()}-${String(measurementDate.getMonth() + 1).padStart(2, '0')}`;
-    
-    result.push({
-      date: dateKey,
-      value: val.value
-    });
-  }
-  
-  return result.sort((a, b) => a.date.localeCompare(b.date));
-}
-
-// Optimized function to aggregate temporal values
-function aggregateTemporalValues(items: any[], type: "goal" | "indicator"): { date: string; current: number }[] {
-  const valuesMap = new Map<string, number[]>();
-
-  for (const item of items) {
-    const records = type === "goal" ? (item.td_indicator_value || []) : [item];
-    
-    for (const val of records) {
-      if (val.measurement_date) {
-        const measurementDate = val.measurement_date instanceof Date 
-          ? val.measurement_date 
-          : new Date(val.measurement_date);
-          
-        const dateKey = `${measurementDate.getFullYear()}-${String(measurementDate.getMonth() + 1).padStart(2, '0')}`;
-        
-        if (!valuesMap.has(dateKey)) {
-          valuesMap.set(dateKey, []);
-        }
-        valuesMap.get(dateKey)!.push(val.value);
-      }
-    }
-  }
-
-  const result: { date: string; current: number }[] = [];
-  
-  valuesMap.forEach((values, dateKey) => {
-    // Ensure we always have a value
-    const average = values.length > 0 
-      ? values.reduce((sum, val) => sum + val, 0) / values.length
-      : 0;
-      
-    result.push({ 
-      date: dateKey, 
-      current: average 
-    });
-  });
-  
-  return result.sort((a, b) => a.date.localeCompare(b.date));
-}
 
 // Main transformation function with optimizations
 export const transformSDGData = async (): Promise<DashboardSDG[]> => {
@@ -387,7 +408,8 @@ export const transformSDGData = async (): Promise<DashboardSDG[]> => {
             description: subInd.description,
             current: subCurrent,
             target,
-            achievement_percentage
+            achievement_percentage,
+            latestValue // Pre-compute and store this value
           });
         }
       }
@@ -398,6 +420,7 @@ export const transformSDGData = async (): Promise<DashboardSDG[]> => {
         current,
         target,
         achievement_percentage,
+        latestValue, // Pre-compute and store this value
         sub_indicators: sub_indicators.length > 0 ? sub_indicators : undefined
       });
     }
@@ -410,6 +433,94 @@ export const transformSDGData = async (): Promise<DashboardSDG[]> => {
     });
   }
   
+  // Clear any existing caches when we load fresh data
+  dataCache.filteredDataCache.clear();
+  dataCache.summaryMetricsCache.clear();
+  dataCache.indicatorsDataCache.clear();
+  
+  // Cache the full dataset
   dataCache.sdgData = result;
   return result;
+};
+
+// Unified function to extract temporal values
+function extractTemporalValues(values: any[]): TemporalValue[] {
+  const result: TemporalValue[] = [];
+  
+  for (const val of values) {
+    // Handle both Date objects and string dates
+    const measurementDate = val.measurement_date instanceof Date 
+      ? val.measurement_date 
+      : new Date(val.measurement_date);
+    
+    // Include day in the date key
+    const dateKey = `${measurementDate.getFullYear()}-${
+      String(measurementDate.getMonth() + 1).padStart(2, '0')
+    }-${
+      String(measurementDate.getDate()).padStart(2, '0')
+    }`;
+    
+    result.push({
+      date: dateKey,
+      value: val.value
+    });
+  }
+  
+  return result.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Update the aggregateTemporalValues function 
+function aggregateTemporalValues(items: any[], type: "goal" | "indicator", includeDay: boolean = true): { date: string; current: number }[] {
+  const valuesMap = new Map<string, number[]>();
+
+  for (const item of items) {
+    const records = type === "goal" ? (item.td_indicator_value || []) : [item];
+    
+    for (const val of records) {
+      if (val.measurement_date) {
+        const measurementDate = val.measurement_date instanceof Date 
+          ? val.measurement_date 
+          : new Date(val.measurement_date);
+          
+        const dateKey = includeDay 
+          ? `${measurementDate.getFullYear()}-${
+              String(measurementDate.getMonth() + 1).padStart(2, '0')
+            }-${
+              String(measurementDate.getDate()).padStart(2, '0')
+            }`
+          : `${measurementDate.getFullYear()}-${
+              String(measurementDate.getMonth() + 1).padStart(2, '0')
+            }`;
+        
+        if (!valuesMap.has(dateKey)) {
+          valuesMap.set(dateKey, []);
+        }
+        valuesMap.get(dateKey)!.push(val.value);
+      }
+    }
+  }
+
+  const result: { date: string; current: number }[] = [];
+  
+  valuesMap.forEach((values, dateKey) => {
+    // Ensure we always have a value
+    const average = values.length > 0 
+      ? values.reduce((sum, val) => sum + val, 0) / values.length
+      : 0;
+      
+    result.push({ 
+      date: dateKey, 
+      current: average 
+    });
+  });
+  
+  return result.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Cache invalidation function - call when data changes
+export const invalidateDataCache = () => {
+  dataCache.sdgData = null;
+  dataCache.filteredDataCache.clear();
+  dataCache.summaryMetricsCache.clear();
+  dataCache.indicatorsDataCache.clear();
 };
