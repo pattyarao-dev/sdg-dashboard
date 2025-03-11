@@ -35,7 +35,6 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
 
   const userId = 1; // Replace with actual user ID from your auth system
 
-  // Handle input change for a specific required data
   const handleValueChange = (requiredDataId: number, value: string) => {
     const numericValue = value === "" ? 0 : parseFloat(value);
 
@@ -44,7 +43,6 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
     );
 
     if (existingIndex >= 0) {
-      // Update existing entry
       const updatedValues = [...newValues];
       updatedValues[existingIndex] = {
         ...updatedValues[existingIndex],
@@ -52,7 +50,6 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
       };
       setNewValues(updatedValues);
     } else {
-      // Add new entry
       setNewValues([
         ...newValues,
         {
@@ -66,7 +63,6 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
   };
 
   const submitNewValues = async () => {
-    // Filter out entries with null values
     const validValues = newValues.filter((item) => item.value !== null);
 
     if (validValues.length === 0) {
@@ -76,7 +72,6 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
 
     try {
       await updateValues(validValues, "indicator");
-      // Clear form on success
       setNewValues([]);
     } catch (error) {
       console.error("Failed to save values:", error);

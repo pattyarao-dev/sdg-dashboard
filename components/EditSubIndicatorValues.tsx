@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SubIndicator } from "./ProgressFormComponent";
 import useCreateFormula from "@/hooks/useCreateFormula";
+import useUpdateValues from "@/hooks/useUpdateValues";
 
 const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
   console.log(sub);
@@ -13,12 +14,76 @@ const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
       createFormula(formula, sub.goalSubIndicatorId, "indicator");
     }
   };
+
+  const {
+    success: subIndicatorValueSuccess,
+    loading: subIndicatorValueLoading,
+    updateValues,
+  } = useUpdateValues();
+
+  const [newValues, setNewValues] = useState<
+    Array<{
+      goalIndicatorId: number;
+      requiredDataId: number;
+      value: number;
+      createdBy: number;
+    }>
+  >([]);
+
+  const userId = 1; // Replace with actual user ID from your auth system
+
+  const handleValueChange = (requiredDataId: number, value: string) => {
+    const numericValue = value === "" ? 0 : parseFloat(value);
+
+    const existingIndex = newValues.findIndex(
+      (item) => item.requiredDataId === requiredDataId,
+    );
+
+    if (existingIndex >= 0) {
+      const updatedValues = [...newValues];
+      updatedValues[existingIndex] = {
+        ...updatedValues[existingIndex],
+        value: numericValue,
+      };
+      setNewValues(updatedValues);
+    } else {
+      setNewValues([
+        ...newValues,
+        {
+          goalIndicatorId: sub.goalSubIndicatorId,
+          requiredDataId: requiredDataId,
+          value: numericValue,
+          createdBy: userId,
+        },
+      ]);
+    }
+  };
+
+  const submitNewValues = async () => {
+    const validValues = newValues.filter((item) => item.value !== null);
+
+    if (validValues.length === 0) {
+      alert("Please enter at least one value");
+      return;
+    }
+
+    try {
+      await updateValues(validValues, "subIndicator");
+      setNewValues([]);
+    } catch (error) {
+      console.error("Failed to save values:", error);
+    }
+  };
+
   return (
     <div
       key={sub.subIndicatorId}
       className="w-full p-6 flex flex-col gap-4 bg-gray-100"
     >
-      <p className="text-lg font-bold">{sub.subIndicatorName}</p>
+      <p className="text-lg font-bold">
+        <span className="font-thin text-sm">{sub.goalSubIndicatorId}</span>{" "}
+        {sub.subIndicatorName}
+      </p>
       <div>
         {sub.requiredData.length > 0 ? (
           <div className="flex flex-col gap-10">
@@ -55,6 +120,18 @@ const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
                             </p>
                             <input
                               type="number"
+                              onChange={(e) =>
+                                handleValueChange(
+                                  data.requiredDataId,
+                                  parseFloat(e.target.value),
+                                )
+                              }
+                              value={
+                                newValues.find(
+                                  (v) =>
+                                    v.requiredDataId === data.requiredDataId,
+                                )?.value ?? ""
+                              }
                               className="w-[100px] border border-gray-700"
                             />
                           </div>
@@ -63,7 +140,10 @@ const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
                       </div>
                     ))}
                   </div>
-                  <button className="w-fit bg-orange-200 px-6 py-2 rounded-md">
+                  <button
+                    onClick={submitNewValues}
+                    className="w-fit bg-orange-200 px-6 py-2 rounded-md"
+                  >
                     Submit Sub-Indicator Required Data Values
                   </button>
                 </div>
