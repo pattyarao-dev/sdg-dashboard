@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import EditSubIndicatorValues from "./EditSubIndicatorValues";
 import { Indicator } from "./ProgressFormComponent";
 import useCreateFormula from "@/hooks/useCreateFormula";
 import useUpdateValues from "@/hooks/useUpdateValues";
+import useCalculateValue from "@/hooks/useCalculateValue";
+import { REM } from "next/font/google";
 
 const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
   // console.log(indicator);
-  const { success, loading, createFormula } = useCreateFormula();
+  const { success, loading, createFormula, successMessage } =
+    useCreateFormula();
 
   const [formula, setFormula] = useState("");
 
@@ -23,6 +26,12 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
     loading: indicatorValueLoading,
     updateValues,
   } = useUpdateValues();
+
+  const {
+    success: calculateIndicatorSuccess,
+    loading: calculateIndicatorLoading,
+    calculateValue,
+  } = useCalculateValue();
 
   const [newValues, setNewValues] = useState<
     Array<{
@@ -66,12 +75,46 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
     const validValues = newValues.filter((item) => item.value !== null);
 
     if (validValues.length === 0) {
-      alert("Please enter at least one value");
+      alert("Please input a value.");
       return;
     }
 
     try {
       await updateValues(validValues, "indicator");
+
+      if (indicator.computationRule && indicator.computationRule.length > 0) {
+        const rule = indicator.computationRule[0];
+
+        const valuesToCalculate: Array<{
+          requiredDataName: string;
+          requiredDataValue: number;
+        }> = [];
+        validValues.forEach((item) => {
+          const requiredData = indicator.requiredData.find(
+            (data) => data.requiredDataId === item.requiredDataId,
+          );
+
+          if (requiredData) {
+            const formattedName = requiredData.requiredDataName
+              .replace(/\s+/g, "_")
+              .toLowerCase();
+
+            if (formattedName.trim() !== "") {
+              valuesToCalculate.push({
+                requiredDataName: formattedName,
+                requiredDataValue: item.value,
+              });
+            }
+          }
+        });
+
+        await calculateValue(
+          rule.ruleId,
+          valuesToCalculate,
+          userId,
+          "indicator",
+        );
+      }
       setNewValues([]);
     } catch (error) {
       console.error("Failed to save values:", error);
@@ -150,28 +193,40 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
                       className="w-fit bg-orange-300 px-6 py-2 rounded-md font-semibold"
                       onClick={submitNewValues}
                     >
-                      Submit Indicator Required Data Values
+                      Submit Indicator Required Data Values and Compute
                     </button>
                   </div>
                 </>
               ) : (
-                <div className="w-full p-4 flex flex-col gap-2 bg-gray-100">
-                  <p className="text-sm font-semibold text-green-800">
-                    Input the computational formula for this indicator.
-                  </p>
-                  <div className="w-full flex items-center justify-center gap-4">
-                    <input
-                      type="text"
-                      className="grow p-2 border border-gray-300 rounded-md flex items-center"
-                      onChange={(e) => setFormula(e.target.value)}
-                      placeholder="Enter formula"
-                    />
-                    <button
-                      onClick={submitFormulaChange}
-                      className="w-fit py-2 px-4 bg-gradient-to-br from-green-200 to-orange-100 rounded-md"
-                    >
-                      Submit Formula
-                    </button>
+                <div className="w-full p-4 flex flex-col gap-2 bg-gray-100 gap-6">
+                  <div className="w-full flex flex-col gap-2">
+                    <p className="text-sm font-semibold text-green-800">
+                      Input the computational formula for this indicator.
+                    </p>
+                    <div className="w-full flex items-center justify-center gap-4">
+                      <input
+                        type="text"
+                        className="grow p-2 border border-gray-300 rounded-md flex items-center"
+                        onChange={(e) => setFormula(e.target.value)}
+                        placeholder="Enter formula"
+                      />
+                      <button
+                        onClick={submitFormulaChange}
+                        className="w-fit py-2 px-4 bg-gradient-to-br from-green-200 to-orange-100 rounded-md"
+                      >
+                        Submit Formula
+                      </button>
+                    </div>
+                  </div>
+                  <div className="w-full flex flex-col">
+                    <p className="w-full text-sm font-semibold text-green-800">
+                      Required Data:
+                    </p>
+                    <div className="w-full pl-3 flex flex-col">
+                      {indicator.requiredData.map((data) => (
+                        <p key={data.requiredDataId}>{data.requiredDataName}</p>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
