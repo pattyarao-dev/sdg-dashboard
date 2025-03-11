@@ -10,6 +10,17 @@ import { REM } from "next/font/google";
 
 const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
   // console.log(indicator);
+  //
+  function formatFormula(input: string): string {
+    return input.replace(/\b[a-zA-Z\s]+\b/g, (match) => {
+      // Only replace if it's not an operator/number
+      if (!/^\d+$/.test(match.trim())) {
+        return match.trim().replace(/\s+/g, "_").toLowerCase();
+      }
+      return match;
+    });
+  }
+
   const { success, loading, createFormula, successMessage } =
     useCreateFormula();
 
@@ -17,7 +28,8 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
 
   const submitFormulaChange = () => {
     if (indicator.goalIndicatorId) {
-      createFormula(formula, indicator.goalIndicatorId, "indicator");
+      const formattedFormula = formatFormula(formula);
+      createFormula(formattedFormula, indicator.goalIndicatorId, "indicator");
     }
   };
 
