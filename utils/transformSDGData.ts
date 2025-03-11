@@ -6,15 +6,17 @@ export interface DashboardSDG {
   global_current_value: { date: string; current: number }[];
   indicators: {
     name: string;
-    description?: string;
+    description?: string | null; // Allow null
     current: {
-      current: any; date: string; value: number 
+      current?: number; 
+      date: string; 
+      value?: number;
     }[];
     target: number | number[];
     achievement_percentage: number;
     sub_indicators?: {
       name: string;
-      description?: string;
+      description?: string | null; // Allow null
       current: { date: string; value: number }[];
       target: number | number[];
       achievement_percentage: number;
@@ -44,7 +46,8 @@ export interface SummaryMetrics {
 
 interface TemporalValue {
   date: string;
-  value: number;
+  value?: number;
+  current?: number;
 }
 
 interface SubIndicator {
@@ -53,7 +56,6 @@ interface SubIndicator {
   current: TemporalValue[];
   target: number;
   achievement_percentage: number;
-  subindicatorValues?: TemporalValue[];
 }
 
 interface Indicator {
@@ -62,7 +64,7 @@ interface Indicator {
   current: TemporalValue[];
   target: number;
   achievement_percentage: number;
-  subindicators?: SubIndicator[];
+  sub_indicators?: SubIndicator[];
 }
 
 interface SDGGoal {
@@ -74,150 +76,168 @@ interface SDGGoal {
 
 // For your function parameters
 interface RawIndicatorValue {
-  td_indicator_value: never[];
-  measurement_date: string;
   value: number;
+  measurement_date: Date | string;
+  value_id?: number;
+  location?: string | null;
+  notes?: string | null;
+  created_by?: number;
+  goal_indicator_id?: number | null;
+  project_indicator_id?: number | null;
+  goal_sub_indicator_id?: number | null;
+  project_sub_indicator_id?: number | null;
 }
 
-// Helper function to get the most recent value from date-based data
-export const getMostRecentValue = (data: { date: string; value: number }[] | { date: string; current: number }[]): number => {
-  if (!data || data.length === 0) return 0;
-  
-  // Sort by date descending to get the most recent first
-  const sortedData = [...data].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-  
-  // Return the value of the most recent entry
-  // Handle both data structure types
-  return 'value' in sortedData[0] ? sortedData[0].value : sortedData[0].current;
+// Create a cache for expensive operations
+const dataCache = {
+  sdgData: null as DashboardSDG[] | null,
+  dateMap: new Map<string, Date>(),
 };
 
-// Calculate overall progress for a single goal
+// Helper function to get or create cached Date objects
+const getCachedDate = (dateString: string): Date => {
+  if (!dataCache.dateMap.has(dateString)) {
+    dataCache.dateMap.set(dateString, new Date(dateString));
+  }
+  return dataCache.dateMap.get(dateString)!;
+};
+
+// Optimized to handle both data structures more efficiently
+export const getMostRecentValue = (data: TemporalValue[]): number => {
+  if (!data || data.length === 0) return 0;
+  
+  // Use a single pass to find the most recent entry
+  let mostRecent = data[0];
+  let mostRecentTime = getCachedDate(data[0].date).getTime();
+  
+  for (let i = 1; i < data.length; i++) {
+    const currentTime = getCachedDate(data[i].date).getTime();
+    if (currentTime > mostRecentTime) {
+      mostRecent = data[i];
+      mostRecentTime = currentTime;
+    }
+  }
+  
+  // Return the value, handling both data structure types
+  return mostRecent.value !== undefined ? mostRecent.value : (mostRecent.current || 0);
+};
+
+// Calculate overall progress for a single goal - optimized for speed
 export function calculateOverallProgress(goalData: DashboardSDG): number {
-  if (!goalData.indicators.length) return 0;
+  const indicators = goalData.indicators;
+  if (!indicators.length) return 0;
   
-  const totalAchievement = goalData.indicators.reduce(
-    (sum, indicator) => sum + indicator.achievement_percentage, 
-    0
-  );
+  let totalAchievement = 0;
+  for (let i = 0; i < indicators.length; i++) {
+    totalAchievement += indicators[i].achievement_percentage;
+  }
   
-  return Math.round(totalAchievement / goalData.indicators.length);
+  return Math.round(totalAchievement / indicators.length);
 }
 
-// Calculate overall progress across multiple goals
+// Calculate overall progress across multiple goals - optimized for speed
 export function calculateOverallProgressAcrossGoals(goalsData: DashboardSDG[]): number {
   if (!goalsData.length) return 0;
   
-  const allIndicators = goalsData.flatMap(goal => goal.indicators);
-  if (!allIndicators.length) return 0;
+  let totalAchievement = 0;
+  let indicatorCount = 0;
   
-  const totalAchievement = allIndicators.reduce(
-    (sum, indicator) => sum + indicator.achievement_percentage, 
-    0
-  );
+  for (const goal of goalsData) {
+    for (const indicator of goal.indicators) {
+      totalAchievement += indicator.achievement_percentage;
+      indicatorCount++;
+    }
+  }
   
-  return Math.round(totalAchievement / allIndicators.length);
+  return indicatorCount > 0 ? Math.round(totalAchievement / indicatorCount) : 0;
 }
 
-// Calculate summary metrics for scorecards (for all goals or selected goal)
+// Optimized helper function to calculate achievement percentage with bounds
+function calculateAchievementPercentage(current: number, target: number): number {
+  if (!target) return 0;
+  const percentage = (current / target) * 100;
+  return Math.min(Math.max(Math.round(percentage), 0), 100); // Clamp between 0-100 and round
+}
+
+// Calculate summary metrics for scorecards - optimized for performance
 export const calculateSummaryMetrics = (allData: DashboardSDG[], selectedGoal: DashboardSDG | null): SummaryMetrics => {
   // If a goal is selected, use its data; otherwise, aggregate data from all goals
   const dataToProcess = selectedGoal ? [selectedGoal] : allData;
   
-  // Get all indicators across all goals or just the selected goal
-  const allIndicators = dataToProcess.flatMap(goal => goal.indicators);
-  
-  // Count total indicators and sub-indicators
-  const totalIndicators = allIndicators.length;
-  const totalSubIndicators = allIndicators.reduce(
-    (sum, ind) => sum + (ind.sub_indicators?.length || 0), 
-    0
-  );
-  
-  // Find indicators that are on track (>= 75% of target)
-  const onTrackIndicators = allIndicators.filter(
-    ind => ind.achievement_percentage >= 75
-  ).length;
-  
-  // Find indicators that need attention (< 50% of target)
-  const atRiskIndicators = allIndicators.filter(
-    ind => ind.achievement_percentage < 50
-  ).length;
-  
-  // Calculate year-over-year growth rate for indicators
+  let totalIndicators = 0;
+  let totalSubIndicators = 0;
+  let onTrackIndicators = 0;
+  let atRiskIndicators = 0;
   let avgYoyGrowth = 0;
   let indicatorsWithGrowth = 0;
   
-  allIndicators.forEach(ind => {
-    if (ind.current.length < 2) return;
-    
-    // Sort current values by date
-    const sortedValues = [...ind.current].sort((a, b) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-    
-    // Need at least 2 values to calculate growth
-    if (sortedValues.length >= 2) {
-      const oldestValue = 'value' in sortedValues[0] ? sortedValues[0].value : sortedValues[0].current;
-      const latestValue = 'value' in sortedValues[sortedValues.length - 1] 
-        ? sortedValues[sortedValues.length - 1].value 
-        : sortedValues[sortedValues.length - 1].current;
-      
-      if (oldestValue > 0) {
-        const growth = ((latestValue - oldestValue) / oldestValue) * 100;
-        avgYoyGrowth += growth;
-        indicatorsWithGrowth++;
-      }
-    }
-  });
-  
-  avgYoyGrowth = indicatorsWithGrowth > 0 ? avgYoyGrowth / indicatorsWithGrowth : 0;
-  
-  // Find most and least improved indicators
+  // Initialize with defaults to avoid null checks later
   let mostImprovedIndicator = { name: "N/A", improvement: 0, goalTitle: "N/A" };
-  let leastImprovedIndicator = { name: "N/A", improvement: 0, goalTitle: "N/A" };
+  let leastImprovedIndicator = { name: "N/A", improvement: Infinity, goalTitle: "N/A" };
   
-  dataToProcess.forEach(goal => {
-    goal.indicators.forEach(ind => {
-      if (ind.current.length < 2) return;
+  // Process all indicators in a single pass
+  for (const goal of dataToProcess) {
+    for (const indicator of goal.indicators) {
+      totalIndicators++;
       
-      // Sort current values by date
-      const sortedValues = [...ind.current].sort((a, b) => 
-        new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
+      if (indicator.sub_indicators) {
+        totalSubIndicators += indicator.sub_indicators.length;
+      }
       
-      // Need at least 2 values to calculate improvement
-      if (sortedValues.length >= 2) {
-        const oldestValue = 'value' in sortedValues[0] ? sortedValues[0].value : sortedValues[0].current;
-        const latestValue = 'value' in sortedValues[sortedValues.length - 1] 
+      if (indicator.achievement_percentage >= 75) {
+        onTrackIndicators++;
+      }
+      
+      if (indicator.achievement_percentage < 50) {
+        atRiskIndicators++;
+      }
+      
+      // Calculate growth only if there are at least 2 values
+      if (indicator.current.length >= 2) {
+        // Sort current values by date - using a more efficient approach
+        const sortedValues = [...indicator.current];
+        sortedValues.sort((a, b) => a.date.localeCompare(b.date));
+        
+        const oldestValue = sortedValues[0].value !== undefined ? sortedValues[0].value : (sortedValues[0].current || 0);
+        const latestValue = sortedValues[sortedValues.length - 1].value !== undefined 
           ? sortedValues[sortedValues.length - 1].value 
-          : sortedValues[sortedValues.length - 1].current;
+          : (sortedValues[sortedValues.length - 1].current || 0);
         
         if (oldestValue > 0) {
           const improvement = ((latestValue - oldestValue) / oldestValue) * 100;
+          avgYoyGrowth += improvement;
+          indicatorsWithGrowth++;
           
+          // Track most/least improved
           if (improvement > mostImprovedIndicator.improvement) {
             mostImprovedIndicator = { 
-              name: ind.name, 
+              name: indicator.name, 
               improvement,
               goalTitle: goal.title
             };
           }
           
-          if (leastImprovedIndicator.name === "N/A" || improvement < leastImprovedIndicator.improvement) {
+          if (improvement < leastImprovedIndicator.improvement) {
             leastImprovedIndicator = { 
-              name: ind.name, 
+              name: indicator.name, 
               improvement,
               goalTitle: goal.title
             };
           }
         }
       }
-    });
-  });
+    }
+  }
   
-  // Calculate overall progress across all goals or for the selected goal
+  // Replace Infinity with 0 if no improvements were found
+  if (leastImprovedIndicator.improvement === Infinity) {
+    leastImprovedIndicator.improvement = 0;
+  }
+  
+  // Calculate average growth
+  const calculatedAvgYoyGrowth = indicatorsWithGrowth > 0 ? avgYoyGrowth / indicatorsWithGrowth : 0;
+  
+  // Calculate overall progress efficiently
   const overallProgress = calculateOverallProgressAcrossGoals(dataToProcess);
   
   return {
@@ -225,151 +245,171 @@ export const calculateSummaryMetrics = (allData: DashboardSDG[], selectedGoal: D
     totalSubIndicators,
     onTrackIndicators,
     atRiskIndicators,
-    avgYoyGrowth: avgYoyGrowth.toFixed(1),
+    avgYoyGrowth: calculatedAvgYoyGrowth.toFixed(1),
     mostImprovedIndicator,
     leastImprovedIndicator,
     overallProgress
   };
 };
 
-// Get aggregate data for all indicators across all goals
+// Get aggregate data for all indicators across all goals - optimized
 export const getAllIndicatorsData = (sdgData: DashboardSDG[], sdgColors: { [key: string]: string }) => {
-  return sdgData.flatMap(goal => 
-    goal.indicators.map(indicator => ({
-      ...indicator,
-      goalId: goal.goal_id,
-      goalTitle: goal.title,
-      goalColor: sdgColors[goal.title] || "blue"
-    }))
-  );
+  const result = [];
+  
+  for (const goal of sdgData) {
+    for (const indicator of goal.indicators) {
+      result.push({
+        ...indicator,
+        goalId: goal.goal_id,
+        goalTitle: goal.title,
+        goalColor: sdgColors[goal.title] || "blue"
+      });
+    }
+  }
+  
+  return result;
 };
 
-// Modified to use the actual structure of data returned by getGoals()
-export const transformSDGData = async (): Promise<DashboardSDG[]> => {
-  // Use the actual exported functions to get data
-  const goals = await getGoals();
+// Unified function to extract temporal values
+function extractTemporalValues(values: RawIndicatorValue[]): TemporalValue[] {
+  const result: TemporalValue[] = [];
   
-  return goals.map(goal => {
+  for (const val of values) {
+    // Handle both Date objects and string dates
+    const measurementDate = val.measurement_date instanceof Date 
+      ? val.measurement_date 
+      : new Date(val.measurement_date);
+    
+    const dateKey = `${measurementDate.getFullYear()}-${String(measurementDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    result.push({
+      date: dateKey,
+      value: val.value
+    });
+  }
+  
+  return result.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Optimized function to aggregate temporal values
+function aggregateTemporalValues(items: any[], type: "goal" | "indicator"): { date: string; current: number }[] {
+  const valuesMap = new Map<string, number[]>();
+
+  for (const item of items) {
+    const records = type === "goal" ? (item.td_indicator_value || []) : [item];
+    
+    for (const val of records) {
+      if (val.measurement_date) {
+        const measurementDate = val.measurement_date instanceof Date 
+          ? val.measurement_date 
+          : new Date(val.measurement_date);
+          
+        const dateKey = `${measurementDate.getFullYear()}-${String(measurementDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!valuesMap.has(dateKey)) {
+          valuesMap.set(dateKey, []);
+        }
+        valuesMap.get(dateKey)!.push(val.value);
+      }
+    }
+  }
+
+  const result: { date: string; current: number }[] = [];
+  
+  valuesMap.forEach((values, dateKey) => {
+    // Ensure we always have a value
+    const average = values.length > 0 
+      ? values.reduce((sum, val) => sum + val, 0) / values.length
+      : 0;
+      
+    result.push({ 
+      date: dateKey, 
+      current: average 
+    });
+  });
+  
+  return result.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Main transformation function with optimizations
+export const transformSDGData = async (): Promise<DashboardSDG[]> => {
+  // Check cached data
+  if (dataCache.sdgData) {
+    return dataCache.sdgData;
+  }
+  
+  const goals = await getGoals();
+  const result: DashboardSDG[] = [];
+  
+  for (const goal of goals) {
     const goalIndicators = goal.td_goal_indicator || [];
+    // Make sure global_current_value matches expected type
     const globalCurrentValue = aggregateTemporalValues(goalIndicators, "goal");
 
-    const indicators = goalIndicators
-      .map(gi => {
-        const indicator = gi.md_indicator;
-        if (!indicator) return null;
+    const indicators = [];
+    
+    for (const gi of goalIndicators) {
+      const indicator = gi.md_indicator;
+      if (!indicator) continue;
 
-        const indicatorValues = gi.td_indicator_value || [];
-        const current = extractTemporalIndicatorValues(indicatorValues);
-        const target = gi.global_target_value || 0;
-        
-        // Get latest value for achievement calculation
-        const latestValue = current.length > 0 
-          ? current.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].value 
-          : 0;
+      const indicatorValues = gi.td_indicator_value || [];
+      // Convert to the expected format
+      const current = extractTemporalValues(indicatorValues).map(item => ({
+        date: item.date,
+        current: item.value,
+        value: item.value
+      }));
+      
+      const target = gi.global_target_value || 0;
+      const latestValue = getMostRecentValue(current);
+      const achievement_percentage = calculateAchievementPercentage(latestValue, target);
+
+      const sub_indicators = [];
+      
+      if (gi.td_goal_sub_indicator && gi.td_goal_sub_indicator.length > 0) {
+        for (const gsi of gi.td_goal_sub_indicator) {
+          const subInd = gsi.md_sub_indicator;
+          if (!subInd) continue;
           
-        const achievement_percentage = calculateAchievementPercentage(latestValue, target);
+          const subIndValues = gsi.td_sub_indicator_value || [];
+          // Ensure sub-indicator current values have the correct format
+          const subCurrent = extractTemporalValues(subIndValues).map(item => ({
+            date: item.date,
+            value: item.value || 0 // Ensure value is defined
+          }));
+          
+          const target = gsi.global_target_value || 0;
+          const latestValue = getMostRecentValue(subCurrent);
+          const achievement_percentage = calculateAchievementPercentage(latestValue, target);
+          
+          sub_indicators.push({
+            name: subInd.name,
+            description: subInd.description,
+            current: subCurrent,
+            target,
+            achievement_percentage
+          });
+        }
+      }
 
-        const sub_indicators = gi.td_goal_sub_indicator
-          ?.map(gsi => {
-            const subInd = gsi.md_sub_indicator;
-            if (!subInd) return null;
-            
-            const subIndValues = gsi.td_sub_indicator_value || [];
-            const current = extractTemporalSubIndicatorValues(subIndValues);
-            const target = gsi.global_target_value || 0;
-            
-            // Get latest value for achievement calculation
+      indicators.push({
+        name: indicator.name,
+        description: indicator.description,
+        current,
+        target,
+        achievement_percentage,
+        sub_indicators: sub_indicators.length > 0 ? sub_indicators : undefined
+      });
+    }
 
-            // TODO: value for achievement (inverse)
-            const latestValue = current.length > 0 
-              ? current.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].value
-              : 0;
-              
-            const achievement_percentage = calculateAchievementPercentage(latestValue, target);
-            
-            return {
-              name: subInd.name,
-              description: subInd.description,
-              current,
-              target,
-              achievement_percentage
-            };
-          })
-          .filter(Boolean);
-
-        return {
-          name: indicator.name,
-          description: indicator.description,
-          current,
-          target,
-          achievement_percentage,
-          sub_indicators
-        };
-      })
-      .filter(Boolean);
-
-    return {
+    result.push({
       goal_id: goal.goal_id,
       title: goal.name,
       global_current_value: globalCurrentValue,
       indicators
-    };
-  });
-};
-
-// Helper functions updated to preserve date granularity to month level
-
-function calculateAchievementPercentage(current: number, target: number): number {
-  if (!target) return 0;
-  const percentage = (current / target) * 100;
-  return Math.min(Math.max(percentage, 0), 100); // Clamp between 0-100
-}
-
-function aggregateTemporalValues(items: any[], type: "goal" | "indicator"): TemporalValue[] {
-  const valuesMap = new Map<string, number[]>();
-
-  items.forEach(item => {
-    const records = type === "goal" ? (item.td_indicator_value || []) : [item];
-    records.forEach((val: RawIndicatorValue) => {
-      const measurementDate = new Date(val.measurement_date);
-      // Format to YYYY-MM (year-month granularity)
-      const dateKey = `${measurementDate.getFullYear()}-${String(measurementDate.getMonth() + 1).padStart(2, '0')}`;
-      
-      if (!valuesMap.has(dateKey)) valuesMap.set(dateKey, []);
-      valuesMap.get(dateKey)?.push(val.value);
     });
-  });
-
-  return Array.from(valuesMap.entries())
-    .map(([dateKey, values]) => ({
-      date: dateKey,
-      current: values.reduce((sum, val) => sum + val, 0) / values.length
-    }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-}
-
-function extractTemporalIndicatorValues(indicatorValues: RawIndicatorValue[]): TemporalValue[] {
-  return indicatorValues.map(val => {
-    const measurementDate = new Date(val.measurement_date);
-    // Format to YYYY-MM (year-month granularity)
-    const dateKey = `${measurementDate.getFullYear()}-${String(measurementDate.getMonth() + 1).padStart(2, '0')}`;
-    
-    return {
-      date: dateKey,
-      value: val.value
-    };
-  }).sort((a, b) => a.date.localeCompare(b.date));
-}
-
-function extractTemporalSubIndicatorValues(subIndicatorValues: RawIndicatorValue[]): TemporalValue[] {
-  return subIndicatorValues.map(val => {
-    const measurementDate = new Date(val.measurement_date);
-    // Format to YYYY-MM (year-month granularity)
-    const dateKey = `${measurementDate.getFullYear()}-${String(measurementDate.getMonth() + 1).padStart(2, '0')}`;
-    
-    return {
-      date: dateKey,
-      value: val.value
-    };
-  }).sort((a, b) => a.date.localeCompare(b.date));
-}
+  }
+  
+  dataCache.sdgData = result;
+  return result;
+};
