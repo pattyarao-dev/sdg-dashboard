@@ -21,9 +21,11 @@ export async function getGoals() {
       td_goal_indicator: {
         include: {
           md_indicator: true, // Get the indicator details
+          td_indicator_value: true,
           td_goal_sub_indicator: {
             include: {
               md_sub_indicator: true, // Get only sub-indicators applicable to the goal
+              td_sub_indicator_value: true
             },
           },
         },
