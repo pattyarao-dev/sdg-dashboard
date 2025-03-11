@@ -17,6 +17,7 @@ export async function getProjects() {
 
 export async function getGoals() {
   const goals = await prisma.md_goal.findMany({
+    orderBy: { goal_id: "asc" },
     include: {
       td_goal_indicator: {
         include: {
@@ -36,6 +37,7 @@ export async function getGoals() {
 
 export async function getGoalsInformation() {
   const goals = await prisma.md_goal.findMany({
+    orderBy: { goal_id: "asc" },
     include: {
       td_goal_indicator: {
         include: {
