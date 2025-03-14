@@ -1,6 +1,7 @@
 import { BiSolidComponent } from "react-icons/bi";
 import { RiDatabaseLine } from "react-icons/ri";
 import { FaRegListAlt } from "react-icons/fa";
+import { TbTargetArrow } from "react-icons/tb";
 import Link from "next/link";
 
 export default async function DataConsolidationHomepage() {
@@ -15,8 +16,8 @@ export default async function DataConsolidationHomepage() {
             href="/goalfactormanagement"
             className="w-[220px] h-[250px] p-4 flex flex-col justify-center items-center bg-white/70 rounded-lg drop-shadow-md gap-3"
           >
-            <BiSolidComponent className="text-7xl" />
-            <button>Add Goal Factors</button>
+            <TbTargetArrow className="text-7xl" />
+            <button>Add Yearly Targets</button>
           </Link>
           <Link
             href="/progressform"
