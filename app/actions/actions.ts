@@ -10,6 +10,10 @@ export async function getProjects() {
     select: {
       project_id: true,
       name: true,
+      description: true,
+      project_status: true,
+      start_date: true,
+      end_date: true,
     },
   });
   return projects;
@@ -25,7 +29,7 @@ export async function getGoals() {
           td_goal_sub_indicator: {
             include: {
               md_sub_indicator: true, // Get only sub-indicators applicable to the goal
-              td_sub_indicator_value: true
+              td_sub_indicator_value: true,
             },
           },
         },

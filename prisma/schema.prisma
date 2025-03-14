@@ -159,8 +159,8 @@ model td_project {
   name                 String                 @db.VarChar(100)
   description          String?
   project_status       project_status
-  start_date           DateTime               @db.Timestamp(6)
-  end_date             DateTime               @db.Timestamp(6)
+  start_date           DateTime?              @db.Date
+  end_date             DateTime?              @db.Date
   td_project_indicator td_project_indicator[]
 }
 
