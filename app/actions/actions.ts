@@ -7,6 +7,62 @@ import { authOptions } from "../api/auth/[...nextauth]/route";
 
 export async function getProjects() {
   const projects = await prisma.td_project.findMany({
+    include: {
+      td_project_indicator: {
+        include: {
+          td_goal_indicator: {
+            include: {
+              md_indicator: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          td_project_sub_indicator: {
+            include: {
+              md_sub_indicator: {
+                select: {
+                  sub_indicator_id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const processedProjects = projects.map((project) => ({
+    projectId: project.project_id,
+    name: project.name,
+    description: project.description,
+    status: project.project_status,
+    startDate: project.start_date,
+    endDate: project.end_date,
+
+    projectIndicators: project.td_project_indicator.map((pi) => ({
+      projectIndicatorId: pi.project_indicator_id,
+      goalIndicatorId: pi.td_goal_indicator?.goal_indicator_id,
+      indicatorName: pi.td_goal_indicator?.md_indicator.name,
+
+      projectSubIndicators: pi.td_project_sub_indicator.map((psi) => ({
+        projectSubIndicatorId: psi.project_sub_indicator_id,
+        subIndicatorId: psi.md_sub_indicator.sub_indicator_id,
+        subIndicatorName: psi.md_sub_indicator.name,
+      })),
+    })),
+  }));
+
+  return processedProjects;
+}
+
+export async function getProject(id: number) {
+  const project = await prisma.td_project.findUnique({
+    where: {
+      project_id: id,
+    },
     select: {
       project_id: true,
       name: true,
@@ -16,8 +72,12 @@ export async function getProjects() {
       end_date: true,
     },
   });
-  return projects;
+  return project;
 }
+
+// export async function getProjectIndicators(id: number){
+
+// }
 
 export async function getGoals() {
   const goals = await prisma.md_goal.findMany({
@@ -45,10 +105,10 @@ export async function getGoalsInformation() {
     include: {
       td_goal_indicator: {
         include: {
-          md_indicator: true, // Get the indicator details
+          md_indicator: true,
           td_goal_sub_indicator: {
             include: {
-              md_sub_indicator: true, // Get only sub-indicators applicable to the goal
+              md_sub_indicator: true,
               td_goal_sub_indicator_required_data: {
                 // Fetch sub-indicator required data
                 include: {

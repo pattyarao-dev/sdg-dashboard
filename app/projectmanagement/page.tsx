@@ -1,5 +1,6 @@
 import { IProject } from "@/types/project.types";
 import { getProjects } from "../actions/actions";
+import Link from "next/link";
 
 export default async function ProjectManagement() {
   const projectsList = await getProjects();
@@ -28,7 +29,7 @@ export default async function ProjectManagement() {
         {projectsList.map((project: IProject, index) => (
           <div
             key={index}
-            className="w-full p-6 border-2 border-gray-300 bg-white flex flex-col gap-4"
+            className="w-full p-6 border-2 border-gray-300 bg-white flex flex-col gap-10"
           >
             <div className="w-full flex items-start justify-between">
               <div className="flex flex-col gap-1">
@@ -44,7 +45,14 @@ export default async function ProjectManagement() {
                 {formatDate(project.end_date, "endDate")}
               </div>
             </div>
-            <div>Project indicators go here.</div>
+            <div className="w-full flex flex-col gap-2">
+              <div>Project indicators go here.</div>
+              <Link href={`/projectmanagement/${project.project_id}`}>
+                <button className="w-1/4 py-2 bg-gradient-to-br from-green-50 to-orange-50 rounded-lg">
+                  Add Project Indicator
+                </button>
+              </Link>
+            </div>
           </div>
         ))}
       </div>
