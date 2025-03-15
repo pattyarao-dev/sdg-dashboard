@@ -61,7 +61,7 @@ export async function getProjects() {
 export async function getProject(id: number) {
   const project = await prisma.td_project.findUnique({
     where: {
-      project_id: id,
+      project_id: Number(id),
     },
     select: {
       project_id: true,
@@ -75,9 +75,38 @@ export async function getProject(id: number) {
   return project;
 }
 
-// export async function getProjectIndicators(id: number){
+export async function getProjectIndicators(id: number) {
+  const indicators = await prisma.td_project_indicator.findMany({
+    include: {
+      td_goal_indicator: {
+        select: {
+          goal_indicator_id: true,
+          global_target_value: true,
+        },
+        include: {
+          md_indicator: true,
+        },
+      },
+    },
+  });
+  return indicators;
+}
 
-// }
+export async function getUnassignedIndicators(projectId: number) {
+  const unassignedIndicators = await prisma.td_goal_indicator.findMany({
+    where: {
+      td_project_indicator: projectId
+        ? { none: { project_id: projectId } }
+        : { none: {} },
+    },
+    include: {
+      md_indicator: true,
+    },
+    orderBy: { goal_indicator_id: "asc" },
+  });
+
+  return unassignedIndicators;
+}
 
 export async function getGoals() {
   const goals = await prisma.md_goal.findMany({
@@ -95,6 +124,7 @@ export async function getGoals() {
         },
       },
     },
+    orderBy: { goal_id: "asc" },
   });
 
   return goals;

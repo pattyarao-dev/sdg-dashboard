@@ -26,7 +26,7 @@ export default async function ProjectManagement() {
         <h1 className="text-2xl uppercase">Project Management</h1>
       </div>
       <div className="w-full flex flex-col gap-10">
-        {projectsList.map((project: IProject, index) => (
+        {projectsList.map((project, index) => (
           <div
             key={index}
             className="w-full p-6 border-2 border-gray-300 bg-white flex flex-col gap-10"
@@ -41,13 +41,13 @@ export default async function ProjectManagement() {
                 </p>
               </div>
               <div>
-                {formatDate(project.start_date, "startDate")} -{" "}
-                {formatDate(project.end_date, "endDate")}
+                {formatDate(project.startDate, "startDate")} -{" "}
+                {formatDate(project.endDate, "endDate")}
               </div>
             </div>
             <div className="w-full flex flex-col gap-2">
               <div>Project indicators go here.</div>
-              <Link href={`/projectmanagement/${project.project_id}`}>
+              <Link href={`/projectmanagement/${project.projectId}`}>
                 <button className="w-1/4 py-2 bg-gradient-to-br from-green-50 to-orange-50 rounded-lg">
                   Add Project Indicator
                 </button>
