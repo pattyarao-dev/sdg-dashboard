@@ -26,3 +26,31 @@ export interface IRequiredData {
   required_data_id: number;
   name: string;
 }
+
+export interface IIndicatorGoal extends IIndicator {
+  status: string;
+}
+
+export interface IGoalIndicator {
+  goal_indicator_id: number;
+  indicator: IIndicatorGoal;
+}
+
+export interface IGoalProjectIndicator {
+  goal_id: number;
+  goal_indicator: IGoalIndicator;
+}
+
+// For a single indicator record
+export interface IGoalIndicatorSimple {
+  goal_indicator_id: number;
+  indicator_name: string;
+  indicator_target: number | null;
+}
+
+// For a goal with its associated indicators
+export interface IGoalWithIndicators {
+  goal_id: number;
+  name: string;
+  indicators: IGoalIndicatorSimple[];
+}

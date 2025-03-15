@@ -3,6 +3,14 @@
 import prisma from "@/utils/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/route";
+import {
+  IGoalIndicator,
+  IIndicator,
+  IIndicatorGoal,
+  IGoalProjectIndicator,
+  IGoalWithIndicators,
+  IGoalIndicatorSimple,
+} from "@/types/indicator.types";
 // import { redirect } from "next/navigation";
 
 export async function getProjects() {
@@ -101,11 +109,56 @@ export async function getUnassignedIndicators(projectId: number) {
     },
     include: {
       md_indicator: true,
+      md_goal: {
+        select: {
+          goal_id: true,
+          name: true,
+        },
+      },
     },
-    orderBy: { goal_indicator_id: "asc" },
+    orderBy: { goal_id: "asc" },
   });
 
-  return unassignedIndicators;
+  const typedIndicator = unassignedIndicators.map((ui) => {
+    // const indicator = ui.md_indicator as IIndicatorGoal
+    return {
+      goal_indicator_id: ui.goal_indicator_id,
+      indicator: ui.md_indicator,
+      goal: ui.md_goal,
+    } as IGoalIndicator;
+  });
+
+  return typedIndicator;
+}
+
+export async function getUnassignedProjectGoalIndicators(projectId: number) {
+  const unassignedIndicators = await prisma.md_goal.findMany({
+    include: {
+      td_goal_indicator: {
+        where: {
+          td_project_indicator: projectId
+            ? { none: { project_id: projectId } }
+            : { none: {} },
+        },
+        include: {
+          md_indicator: true,
+        },
+      },
+    },
+    orderBy: { goal_id: "asc" },
+  });
+
+  const typedIndicator = unassignedIndicators.map((ui) => ({
+    goal_id: ui.goal_id,
+    name: ui.name,
+    indicators: ui.td_goal_indicator.map((ti) => ({
+      goal_indicator_id: ti.goal_indicator_id,
+      indicator_name: ti.md_indicator.name,
+      indicator_target: ti.global_target_value,
+    })),
+  }));
+
+  return typedIndicator as IGoalWithIndicators[];
 }
 
 export async function getGoals() {
@@ -668,3 +721,17 @@ export async function updateBaselineValues(formData: FormData) {
     console.error("Error in updateBaselineValues:", error);
   }
 }
+
+export const addProjectIndicators = async (
+  indicators: IGoalIndicatorSimple[],
+  projectId: number,
+) => {
+  const projectIndicators = await prisma.td_project_indicator.createMany({
+    data: indicators.map((indicator) => ({
+      project_id: projectId,
+      goal_indicator_id: indicator.goal_indicator_id,
+    })),
+  });
+
+  return projectIndicators;
+};

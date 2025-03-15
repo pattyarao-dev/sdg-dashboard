@@ -167,13 +167,13 @@ model td_project {
 model td_project_indicator {
   project_indicator_id     Int                        @id @default(autoincrement())
   project_id               Int
-  indicator_id             Int
-  goal_indicator_id        Int?
+  indicator_id             Int?
+  goal_indicator_id        Int
   project_target_value     Float?
   project_baseline_value   Float?
   td_indicator_value       td_indicator_value[]
-  td_goal_indicator        td_goal_indicator?         @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-  md_indicator             md_indicator               @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  td_goal_indicator        td_goal_indicator          @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  md_indicator             md_indicator?              @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_project               td_project                 @relation(fields: [project_id], references: [project_id], onDelete: Cascade, onUpdate: NoAction)
   td_project_sub_indicator td_project_sub_indicator[]
   td_required_data_value   td_required_data_value[]
