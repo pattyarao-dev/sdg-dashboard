@@ -34,6 +34,12 @@ const sdgColors = {
   "Partnerships for the Goals": "#19486A",
 };
 
+const projectStatusColors = {
+  "Completed": "#4C9F38", // Green
+  "In Progress": "#FCC30B", // Yellow
+  "At Risk": "#E5243B", // Red
+};
+
 // Move indicator colors
 const indicatorColors = [
   "#E5243B", "#26BDE2", "#4C9F38", "#FD6925", "#FF3A21", "#FCC30B",
@@ -104,6 +110,29 @@ const DateFilter = React.memo(({
         </span>
       </div>
     )}
+  </div>
+));
+
+const ProjectFilter = React.memo(({ 
+  availableProjects, 
+  selectedProject, 
+  onProjectChange
+}) => (
+  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+    <div>
+      <label htmlFor="project-filter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Project</label>
+      <select 
+        id="project-filter"
+        value={selectedProject || "all"} 
+        onChange={(e) => onProjectChange(e.target.value === "all" ? null : e.target.value)}
+        className="border border-gray-300 rounded-md p-2 bg-white"
+      >
+        <option value="all">All Projects</option>
+        {availableProjects.map(project => (
+          <option key={project.id} value={project.id}>{project.name}</option>
+        ))}
+      </select>
+    </div>
   </div>
 ));
 
@@ -662,7 +691,7 @@ const Dashboard: React.FC = () => {
               
               {/* Bottom Indicators */}
               <div className="mt-6">
-                <h2 className="text-lg font-semibold mb-3">Need Attention</h2>
+                <h2 className="text-lg font-semibold mb-3">Needs Attention</h2>
                 {needAttentionIndicators.length > 0 ? (
                   <IndicatorProgressBars 
                     indicators={needAttentionIndicators.map(indicator => ({
