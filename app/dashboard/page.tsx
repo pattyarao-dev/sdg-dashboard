@@ -467,17 +467,20 @@ const Dashboard: React.FC = () => {
     return filteredSdgData.map((goal, index) => {
       // Extract unique years and calculate averages
       const allDates = goal.indicators.flatMap(ind => 
-        ind.current.map(item => item.date.split('-')[0])
+        ind.current
+          .filter(item => item?.date) // Ensure item and item.date exist
+          .map(item => item.date.split('-')[0]) 
       );
-      
+  
       const uniqueYears = [...new Set(allDates)].sort();
-      
+  
       const yearlyAverages = uniqueYears.map(year => {
         const yearData = goal.indicators.flatMap(ind => 
-          ind.current.filter(item => item.date.startsWith(year))
-            .map(item => 'value' in item ? item.value : item.current)
+          ind.current
+            .filter(item => item?.date?.startsWith(year)) // Ensure date exists
+            .map(item => ('value' in item ? item.value : item.current))
         );
-        
+  
         return yearData.length > 0 
           ? yearData.reduce((sum, val) => sum + val, 0) / yearData.length 
           : 0;

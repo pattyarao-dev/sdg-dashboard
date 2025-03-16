@@ -515,36 +515,35 @@ export const calculateSummaryMetrics = (
       }
       
       // Calculate growth only if there are at least 2 values
-      if (indicator.current.length >= 2) {
-        // Use pre-computed values when possible
-        const sortedValues = [...(indicator.current || [])].filter(entry => entry?.date);
-        sortedValues.sort((a, b) => (a.date || "").localeCompare(b.date || ""))
-        
-        const oldestValue = sortedValues[0].value !== undefined ? sortedValues[0].value : (sortedValues[0].current || 0);
-        const latestValue = sortedValues[sortedValues.length - 1].value !== undefined 
-          ? sortedValues[sortedValues.length - 1].value 
-          : (sortedValues[sortedValues.length - 1].current || 0);
-        
-        if (oldestValue > 0) {
-          const improvement = ((latestValue - oldestValue) / oldestValue) * 100;
-          avgYoyGrowth += improvement;
-          indicatorsWithGrowth++;
-          
-          // Track most/least improved
-          if (improvement > mostImprovedIndicator.improvement) {
-            mostImprovedIndicator = { 
-              name: indicator.name, 
-              improvement,
-              goalTitle: goal.title
-            };
-          }
-          
-          if (improvement < leastImprovedIndicator.improvement) {
-            leastImprovedIndicator = { 
-              name: indicator.name, 
-              improvement,
-              goalTitle: goal.title
-            };
+      if (indicator.current && indicator.current.length >= 2) {
+        const sortedValues = [...indicator.current].filter(entry => entry?.date);
+        sortedValues.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+      
+        if (sortedValues.length >= 2) {
+          const oldestValue = sortedValues[0]?.value ?? sortedValues[0]?.current ?? 0;
+          const latestValue = sortedValues[sortedValues.length - 1]?.value ?? sortedValues[sortedValues.length - 1]?.current ?? 0;
+      
+          if (oldestValue > 0) {
+            const improvement = ((latestValue - oldestValue) / oldestValue) * 100;
+            avgYoyGrowth += improvement;
+            indicatorsWithGrowth++;
+      
+            // Track most/least improved
+            if (improvement > mostImprovedIndicator.improvement) {
+              mostImprovedIndicator = { 
+                name: indicator.name, 
+                improvement,
+                goalTitle: goal.title
+              };
+            }
+      
+            if (improvement < leastImprovedIndicator.improvement) {
+              leastImprovedIndicator = { 
+                name: indicator.name, 
+                improvement,
+                goalTitle: goal.title
+              };
+            }
           }
         }
       }
