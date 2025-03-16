@@ -25,6 +25,23 @@ export async function getProjects() {
                   name: true,
                 },
               },
+              td_goal_indicator_required_data: {
+                include: {
+                  ref_required_data: true,
+                },
+              },
+              md_computation_rule: true,
+              td_goal_sub_indicator: {
+                include: {
+                  md_sub_indicator: true,
+                  td_goal_sub_indicator_required_data: {
+                    include: {
+                      ref_required_data: true,
+                    },
+                  },
+                  md_computation_rule: true,
+                },
+              },
             },
           },
           td_project_sub_indicator: {
@@ -54,6 +71,17 @@ export async function getProjects() {
       projectIndicatorId: pi.project_indicator_id,
       goalIndicatorId: pi.td_goal_indicator?.goal_indicator_id,
       indicatorName: pi.td_goal_indicator?.md_indicator.name,
+      requiredData: pi.td_goal_indicator.td_goal_indicator_required_data.map(
+        (rd) => ({
+          requiredDataId: rd.ref_required_data.required_data_id,
+          requiredDataName: rd.ref_required_data.name,
+        }),
+      ),
+
+      computationRule: pi.td_goal_indicator.md_computation_rule.map((cr) => ({
+        ruleId: cr.rule_id,
+        ruleFormula: cr.formula,
+      })),
 
       projectSubIndicators: pi.td_project_sub_indicator.map((psi) => ({
         projectSubIndicatorId: psi.project_sub_indicator_id,
@@ -211,6 +239,7 @@ export async function getGoalsInformation() {
         },
       },
     },
+    orderBy: { goal_id: "asc" },
   });
 
   // Transform data for easier frontend use
@@ -344,6 +373,52 @@ export async function updateSubIndicatorRequiredDataValue(
   } catch (error) {
     const err = error as Error;
     console.log(err.message);
+  }
+}
+
+export async function updateProjectIndicatorRequiredDataValue(
+  projectIndicatorRequiredDataValues: Array<{
+    goalIndicatorId: number;
+    requiredDataId: number;
+    value: number;
+    createdBy: number;
+  }>,
+) {
+  try {
+    const updatedValues = await prisma.td_required_data_value.createMany({
+      data: projectIndicatorRequiredDataValues.map((data) => ({
+        project_indicator_id: data.goalIndicatorId,
+        required_data_id: data.requiredDataId,
+        value: data.value,
+        created_by: data.createdBy,
+      })),
+    });
+    return updatedValues;
+  } catch (error) {
+    const err = error as Error;
+    console.log(err.message);
+  }
+}
+
+export async function getProjectIndicatorId(
+  projectId: number,
+  goalIndicatorId: number,
+) {
+  try {
+    const projectIndicator = await prisma.td_project_indicator.findFirst({
+      where: {
+        project_id: projectId,
+        goal_indicator_id: goalIndicatorId,
+      },
+      select: {
+        project_indicator_id: true,
+      },
+    });
+
+    return projectIndicator?.project_indicator_id || null;
+  } catch (error) {
+    console.error("Error finding project indicator:", error);
+    return null;
   }
 }
 

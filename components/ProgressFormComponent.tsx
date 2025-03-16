@@ -43,57 +43,6 @@ interface ProgressFormProps {
 }
 
 const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
-  // const [formValues, setFormValues] = useState<Record<string, number>>({});
-
-  // const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const { name, value } = e.target;
-  //   setFormValues((prev) => ({
-  //     ...prev,
-  //     [name]: parseFloat(value) || 0, // Ensure numeric input
-  //   }));
-  // };
-
-  // const handleUpdateValuesSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-
-  //   const formData = new FormData();
-
-  //   goals.forEach((goal) => {
-  //     formData.append("goalIndicatorId", goal.goalId.toString());
-
-  //     goal.indicators.forEach((indicator) => {
-  //       const indicatorValue =
-  //         formValues[`indicator-${indicator.indicatorId}`] || 0;
-
-  //       formData.append(
-  //         "indicatorValues",
-  //         JSON.stringify({
-  //           indicator_id: indicator.indicatorId,
-  //           value: indicatorValue,
-  //           notes: "",
-  //         }),
-  //       );
-
-  //       indicator.subIndicators.forEach((sub) => {
-  //         const subIndicatorValue =
-  //           formValues[`subindicator-${sub.subIndicatorId}`] || 0;
-
-  //         formData.append(
-  //           "subIndicatorValues",
-  //           JSON.stringify({
-  //             sub_indicator_id: sub.subIndicatorId,
-  //             value: subIndicatorValue,
-  //             notes: "",
-  //           }),
-  //         );
-  //       });
-  //     });
-  //   });
-
-  //   console.log("Submitting FormData:", [...formData.entries()]); // Debugging
-  //   await updateValues(formData);
-  // };
-
   return (
     <div className="w-full flex flex-col gap-24">
       {goals.map((goal) => (

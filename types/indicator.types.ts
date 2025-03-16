@@ -54,3 +54,39 @@ export interface IGoalWithIndicators {
   name: string;
   indicators: IGoalIndicatorSimple[];
 }
+
+// divider
+
+interface RequiredData {
+  requiredDataId: number;
+  requiredDataName: string;
+  requiredDataValue: number;
+}
+
+interface ComputationRule {
+  ruleId: number;
+  ruleFormula: string;
+}
+
+export interface SubIndicator {
+  goalSubIndicatorId: number;
+  subIndicatorId: number;
+  subIndicatorName: string;
+  requiredData: RequiredData[];
+  subIndicatorComputationRule: ComputationRule[];
+}
+
+export interface Indicator {
+  goalIndicatorId: number;
+  indicatorId: number;
+  indicatorName: string;
+  subIndicators: SubIndicator[];
+  requiredData: RequiredData[];
+  computationRule: ComputationRule[];
+}
+
+interface Goal {
+  goalId: number;
+  goalName: string;
+  indicators: Indicator[];
+}

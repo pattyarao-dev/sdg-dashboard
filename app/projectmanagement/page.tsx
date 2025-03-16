@@ -20,8 +20,6 @@ export default async function ProjectManagement() {
     });
   };
 
-  const projectIndicators = await getProjectIndicators();
-
   return (
     <main className="w-full min-h-screen p-10 flex flex-col gap-10">
       <div className="w-full p-6 bg-gradient-to-br from-green-50 to-orange-50 rounded-lg drop-shadow-lg">
