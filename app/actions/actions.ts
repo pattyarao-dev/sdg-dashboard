@@ -3,16 +3,162 @@
 import prisma from "@/utils/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/route";
+import {
+  IGoalIndicator,
+  IIndicator,
+  IIndicatorGoal,
+  IGoalProjectIndicator,
+  IGoalWithIndicators,
+  IGoalIndicatorSimple,
+} from "@/types/indicator.types";
 // import { redirect } from "next/navigation";
 
 export async function getProjects() {
   const projects = await prisma.td_project.findMany({
+    include: {
+      td_project_indicator: {
+        include: {
+          td_goal_indicator: {
+            include: {
+              md_indicator: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          td_project_sub_indicator: {
+            include: {
+              md_sub_indicator: {
+                select: {
+                  sub_indicator_id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const processedProjects = projects.map((project) => ({
+    projectId: project.project_id,
+    name: project.name,
+    description: project.description,
+    status: project.project_status,
+    startDate: project.start_date,
+    endDate: project.end_date,
+
+    projectIndicators: project.td_project_indicator.map((pi) => ({
+      projectIndicatorId: pi.project_indicator_id,
+      goalIndicatorId: pi.td_goal_indicator?.goal_indicator_id,
+      indicatorName: pi.td_goal_indicator?.md_indicator.name,
+
+      projectSubIndicators: pi.td_project_sub_indicator.map((psi) => ({
+        projectSubIndicatorId: psi.project_sub_indicator_id,
+        subIndicatorId: psi.md_sub_indicator.sub_indicator_id,
+        subIndicatorName: psi.md_sub_indicator.name,
+      })),
+    })),
+  }));
+
+  return processedProjects;
+}
+
+export async function getProject(id: number) {
+  const project = await prisma.td_project.findUnique({
+    where: {
+      project_id: Number(id),
+    },
     select: {
       project_id: true,
       name: true,
+      description: true,
+      project_status: true,
+      start_date: true,
+      end_date: true,
     },
   });
-  return projects;
+  return project;
+}
+
+export async function getProjectIndicators() {
+  const indicators = await prisma.td_project_indicator.findMany({
+    include: {
+      td_goal_indicator: {
+        // select: {
+        //   goal_indicator_id: true,
+        //   global_target_value: true,
+        // },
+        include: {
+          md_indicator: true,
+        },
+      },
+    },
+  });
+  return indicators;
+}
+
+// export async function getUnassignedIndicators(projectId: number) {
+//   const unassignedIndicators = await prisma.td_goal_indicator.findMany({
+//     where: {
+//       td_project_indicator: projectId
+//         ? { none: { project_id: projectId } }
+//         : { none: {} },
+//     },
+//     include: {
+//       md_indicator: true,
+//       md_goal: {
+//         select: {
+//           goal_id: true,
+//           name: true,
+//         },
+//       },
+//     },
+//     orderBy: { goal_id: "asc" },
+//   });
+
+//   const typedIndicator = unassignedIndicators.map((ui) => {
+//     // const indicator = ui.md_indicator as IIndicatorGoal
+//     return {
+//       goal_indicator_id: ui.goal_indicator_id,
+//       indicator: ui.md_indicator,
+//       goal: ui.md_goal,
+//     } as IGoalIndicator;
+//   });
+
+//   return typedIndicator;
+// }
+
+export async function getUnassignedProjectGoalIndicators(projectId: number) {
+  const unassignedIndicators = await prisma.md_goal.findMany({
+    include: {
+      td_goal_indicator: {
+        where: {
+          td_project_indicator: projectId
+            ? { none: { project_id: projectId } }
+            : { none: {} },
+        },
+        include: {
+          md_indicator: true,
+        },
+      },
+    },
+    orderBy: { goal_id: "asc" },
+  });
+
+  const typedIndicator = unassignedIndicators.map((ui) => ({
+    goal_id: ui.goal_id,
+    name: ui.name,
+    indicators: ui.td_goal_indicator.map((ti) => ({
+      goal_indicator_id: ti.goal_indicator_id,
+      indicator_name: ti.md_indicator.name,
+      indicator_target: ti.global_target_value,
+    })),
+  }));
+
+  return typedIndicator as IGoalWithIndicators[];
 }
 
 export async function getGoals() {
@@ -25,12 +171,13 @@ export async function getGoals() {
           td_goal_sub_indicator: {
             include: {
               md_sub_indicator: true, // Get only sub-indicators applicable to the goal
-              td_sub_indicator_value: true
+              td_sub_indicator_value: true,
             },
           },
         },
       },
     },
+    orderBy: { goal_id: "asc" },
   });
 
   return goals;
@@ -41,10 +188,10 @@ export async function getGoalsInformation() {
     include: {
       td_goal_indicator: {
         include: {
-          md_indicator: true, // Get the indicator details
+          md_indicator: true,
           td_goal_sub_indicator: {
             include: {
-              md_sub_indicator: true, // Get only sub-indicators applicable to the goal
+              md_sub_indicator: true,
               td_goal_sub_indicator_required_data: {
                 // Fetch sub-indicator required data
                 include: {
@@ -452,88 +599,88 @@ export async function createIndicatorsBatch(formData: FormData) {
   };
 }
 
-export async function updateValues(formData: FormData) {
-  const auth = await getServerSession(authOptions);
+// export async function updateValues(formData: FormData) {
+//   const auth = await getServerSession(authOptions);
 
-  if (!auth?.user) {
-    throw new Error("Unauthorized");
-  }
+//   if (!auth?.user) {
+//     throw new Error("Unauthorized");
+//   }
 
-  const created_by = Number(auth.user.id);
-  const goal_indicator_id_raw = formData.get("goalIndicatorId");
+//   const created_by = Number(auth.user.id);
+//   const goal_indicator_id_raw = formData.get("goalIndicatorId");
 
-  if (!goal_indicator_id_raw) {
-    throw new Error("goalIndicatorId is missing from formData.");
-  }
+//   if (!goal_indicator_id_raw) {
+//     throw new Error("goalIndicatorId is missing from formData.");
+//   }
 
-  const goal_indicator_id = parseInt(goal_indicator_id_raw as string, 10);
+//   const goal_indicator_id = parseInt(goal_indicator_id_raw as string, 10);
 
-  if (isNaN(goal_indicator_id)) {
-    throw new Error("Invalid goalIndicatorId received.");
-  }
+//   if (isNaN(goal_indicator_id)) {
+//     throw new Error("Invalid goalIndicatorId received.");
+//   }
 
-  // ✅ Process Indicator Values
-  const indicatorEntries = formData.getAll("indicatorValues") as string[];
-  const indicatorPromises = indicatorEntries.map(async (entry) => {
-    try {
-      const { indicator_id, value, notes } = JSON.parse(entry);
+//   // ✅ Process Indicator Values
+//   const indicatorEntries = formData.getAll("indicatorValues") as string[];
+//   const indicatorPromises = indicatorEntries.map(async (entry) => {
+//     try {
+//       const { indicator_id, value, notes } = JSON.parse(entry);
 
-      return prisma.td_indicator_value.create({
-        data: {
-          goal_indicator_id,
-          indicator_id,
-          value: parseFloat(value),
-          measurement_date: new Date(),
-          notes,
-          created_by,
-        },
-      });
-    } catch (error) {
-      console.error("Error parsing indicator entry:", entry, error);
-    }
-  });
+//       return prisma.td_indicator_value.create({
+//         data: {
+//           goal_indicator_id,
+//           indicator_id,
+//           value: parseFloat(value),
+//           measurement_date: new Date(),
+//           notes,
+//           created_by,
+//         },
+//       });
+//     } catch (error) {
+//       console.error("Error parsing indicator entry:", entry, error);
+//     }
+//   });
 
-  // ✅ Process Sub-Indicator Values
-  const subIndicatorEntries = formData.getAll("subIndicatorValues") as string[];
-  const subIndicatorPromises = subIndicatorEntries.map(async (entry) => {
-    try {
-      const { sub_indicator_id, value, notes } = JSON.parse(entry);
+//   // ✅ Process Sub-Indicator Values
+//   const subIndicatorEntries = formData.getAll("subIndicatorValues") as string[];
+//   const subIndicatorPromises = subIndicatorEntries.map(async (entry) => {
+//     try {
+//       const { sub_indicator_id, value, notes } = JSON.parse(entry);
 
-      const goalSubIndicator = await prisma.td_goal_sub_indicator.findFirst({
-        where: {
-          goal_indicator_id,
-          sub_indicator_id,
-        },
-        select: { goal_sub_indicator_id: true },
-      });
+//       const goalSubIndicator = await prisma.td_goal_sub_indicator.findFirst({
+//         where: {
+//           goal_indicator_id,
+//           sub_indicator_id,
+//         },
+//         select: { goal_sub_indicator_id: true },
+//       });
 
-      if (!goalSubIndicator) {
-        console.warn(
-          `No goal_sub_indicator found for sub_indicator_id: ${sub_indicator_id}`,
-        );
-        return null;
-      }
+//       if (!goalSubIndicator) {
+//         console.warn(
+//           `No goal_sub_indicator found for sub_indicator_id: ${sub_indicator_id}`,
+//         );
+//         return null;
+//       }
 
-      return prisma.td_sub_indicator_value.create({
-        data: {
-          goal_sub_indicator_id: goalSubIndicator.goal_sub_indicator_id,
-          sub_indicator_id,
-          value: parseFloat(value),
-          measurement_date: new Date(),
-          notes,
-          created_by,
-        },
-      });
-    } catch (error) {
-      console.error("Error parsing sub-indicator entry:", entry, error);
-    }
-  });
+//       return prisma.td_sub_indicator_value.create({
+//         data: {
+//           goal_sub_indicator_id: goalSubIndicator.goal_sub_indicator_id,
+//           sub_indicator_id,
+//           value: parseFloat(value),
+//           measurement_date: new Date(),
+//           notes,
+//           created_by,
+//         },
+//       });
+//     } catch (error) {
+//       console.error("Error parsing sub-indicator entry:", entry, error);
+//     }
+//   });
 
-  // ✅ Run all operations concurrently for better performance
-  await Promise.all([...indicatorPromises, ...subIndicatorPromises]);
+//   // ✅ Run all operations concurrently for better performance
+//   await Promise.all([...indicatorPromises, ...subIndicatorPromises]);
 
-  console.log("Values updated successfully.");
-}
+//   console.log("Values updated successfully.");
+// }
 
 export async function updateBaselineValues(formData: FormData) {
   try {
@@ -574,3 +721,17 @@ export async function updateBaselineValues(formData: FormData) {
     console.error("Error in updateBaselineValues:", error);
   }
 }
+
+export const addProjectIndicators = async (
+  indicators: IGoalIndicatorSimple[],
+  projectId: number,
+) => {
+  const projectIndicators = await prisma.td_project_indicator.createMany({
+    data: indicators.map((indicator) => ({
+      project_id: projectId,
+      goal_indicator_id: indicator.goal_indicator_id,
+    })),
+  });
+
+  return projectIndicators;
+};
