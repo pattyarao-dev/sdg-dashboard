@@ -10,7 +10,10 @@ import {
   calculateSummaryMetrics, 
   calculateOverallProgress, 
   getMostRecentValue, 
-  getAllIndicatorsData 
+  getAllIndicatorsData,
+  // New utility functions
+  getProjectContributionToGoal,
+  getProjectContributionPercentage
 } from "@/utils/transformSDGData";
 
 // SDG colors
@@ -40,20 +43,92 @@ const projectStatusColors = {
   "At Risk": "#E5243B", // Red
 };
 
-// Move indicator colors
+// Indicator colors
 const indicatorColors = [
   "#E5243B", "#26BDE2", "#4C9F38", "#FD6925", "#FF3A21", "#FCC30B",
   "#A21942", "#DD1367", "#56C02B", "#00689D", "#3F7E44", "#0A97D9",
   "#BF8B2E", "#FD9D24", "#DDA63A", "#C5192D", "#19486A"
 ];
 
-// Month names array (moved outside component)
+// Month names array
 const monthNames = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
 
-// Date Filter Component (memoized)
+interface DashboardSDG {
+  goal_id: number;
+  title: string;
+  indicators: Array<{
+    name: string;
+    current: Array<{
+      date: string;
+      value?: number;
+      current?: number;
+    }>;
+    target: number | number[];
+    achievement_percentage?: number;
+    sub_indicators?: Array<{
+      name: string;
+      current: Array<{
+        date: string;
+        value?: number;
+        current?: number;
+      }>;
+      target: number;
+      achievement_percentage?: number;
+    }>;
+  }>;
+  global_current_value: Array<{
+    date: string;
+    value?: number;
+  }>;
+  projects?: Array<{
+    id: string;
+    name: string;
+  }>;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  status: string;
+  completion: number;
+  sdgContributions?: Array<{
+    goalId: number;
+    contribution: number;
+  }>;
+  indicators?: Array<{
+    name: string;
+    current: Array<{
+      date: string;
+      value: number;
+    }>;
+    progress?: number;
+    target?: number;
+    sub_indicators?: Array<{
+      name: string;
+      current: Array<{
+        date: string;
+        value: number;
+      }>;
+      progress?: number;
+      target?: number;
+    }>;
+  }>;
+}
+
+interface DateFilterProps {
+  availableYears: string[];
+  availableMonths: string[];
+  selectedYear: string | null;
+  selectedMonth: string | null;
+  onYearChange: (year: string | null) => void;
+  onMonthChange: (month: string | null) => void;
+  onResetFilters: () => void;
+}
+
+// Date Filter Component
 const DateFilter = React.memo(({ 
   availableYears, 
   availableMonths, 
@@ -62,7 +137,7 @@ const DateFilter = React.memo(({
   onYearChange, 
   onMonthChange, 
   onResetFilters 
-}) => (
+}: DateFilterProps) => (
   <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-6 p-4 bg-gray-50 rounded-lg">
     <div>
       <label htmlFor="year-filter" className="block text-sm font-medium text-gray-700 mb-1">Year</label>
@@ -90,7 +165,7 @@ const DateFilter = React.memo(({
       >
         <option value="all">All Months</option>
         {availableMonths.map(month => (
-          <option key={month} value={month}>{month}</option>
+          <option key={month} value={month}>{monthNames[parseInt(month) - 1]}</option>
         ))}
       </select>
     </div>
@@ -106,68 +181,231 @@ const DateFilter = React.memo(({
       <div className="mt-6 ml-auto py-2 px-4 bg-blue-50 border border-blue-200 rounded-md">
         <span className="text-sm text-blue-800">
           {!selectedMonth && selectedYear && `Showing data for ${selectedYear}`}
-          {selectedMonth && selectedYear && `Showing data for ${selectedMonth} ${selectedYear}`}
+          {selectedMonth && selectedYear && `Showing data for ${monthNames[parseInt(selectedMonth) - 1]} ${selectedYear}`}
         </span>
       </div>
     )}
   </div>
 ));
 
+// Project Filter Component
 const ProjectFilter = React.memo(({ 
   availableProjects, 
   selectedProject, 
-  onProjectChange
+  onProjectChange,
+  onClearProject
 }) => (
   <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-    <div>
-      <label htmlFor="project-filter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Project</label>
-      <select 
-        id="project-filter"
-        value={selectedProject || "all"} 
-        onChange={(e) => onProjectChange(e.target.value === "all" ? null : e.target.value)}
-        className="border border-gray-300 rounded-md p-2 bg-white"
-      >
-        <option value="all">All Projects</option>
-        {availableProjects.map(project => (
-          <option key={project.id} value={project.id}>{project.name}</option>
-        ))}
-      </select>
+    <div className="flex items-center">
+      <div className="flex-grow">
+        <label htmlFor="project-filter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Project</label>
+        <select 
+          id="project-filter"
+          value={selectedProject || "all"} 
+          onChange={(e) => onProjectChange(e.target.value === "all" ? null : e.target.value)}
+          className="w-full border border-gray-300 rounded-md p-2 bg-white"
+        >
+          <option value="all">All Projects</option>
+          {availableProjects.map(project => (
+            <option key={project.id} value={project.id}>{project.name}</option>
+          ))}
+        </select>
+      </div>
+      
+      {selectedProject && (
+        <button 
+          onClick={onClearProject}
+          className="ml-4 mt-6 px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+        >
+          Clear
+        </button>
+      )}
     </div>
   </div>
 ));
 
-// Memoized SDG Gauges component
-const SDGGauges = React.memo(({ sdgData, selectedGoalId, onGaugeClick }) => (
-  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-    {sdgData.map((goal) => (
-      <div 
-        key={goal.goal_id}
-        className={`cursor-pointer transition-all duration-200 ${selectedGoalId === goal.goal_id ? 'scale-110 shadow-lg' : 'hover:scale-105'}`}
-        onClick={() => onGaugeClick(goal.goal_id)}
-      >
-        <div className="text-center mb-2 font-medium text-sm">
-          SDG {goal.goal_id}: {goal.title}
+// SDG Gauges component
+const SDGGauges = React.memo(({ sdgData, selectedGoalId, onGaugeClick, selectedProject }) => {
+  // Filter goals based on selected project if applicable
+  const displayedGoals = selectedProject 
+    ? sdgData.filter(goal => goal.projects?.some(p => p.id === selectedProject))
+    : sdgData;
+  
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      {displayedGoals.map((goal) => {
+        // Calculate progress considering project filter if applicable
+        const progress = selectedProject 
+          ? calculateOverallProgress(goal, selectedProject) 
+          : calculateOverallProgress(goal);
+        
+        return (
+          <div 
+            key={goal.goal_id}
+            className={`cursor-pointer transition-all duration-200 ${selectedGoalId === goal.goal_id ? 'scale-110 shadow-lg' : 'hover:scale-105'}`}
+            onClick={() => onGaugeClick(goal.goal_id)}
+          >
+            <div className="text-center mb-2 font-medium text-sm">
+              SDG {goal.goal_id}: {goal.title}
+            </div>
+            <GaugeChart 
+              value={progress}
+              min={0}
+              max={100}
+              title=""
+              color={sdgColors[goal.title] || "blue"}
+            />
+            {selectedProject && (
+              <div className="text-center mt-1 text-xs text-gray-600">
+                Project contribution
+              </div>
+            )}
+          </div>
+        );
+      })}
+      
+      {displayedGoals.length === 0 && (
+        <div className="col-span-full text-center p-6 bg-gray-50 rounded-lg">
+          <p className="text-gray-500">No SDG data available for the selected project.</p>
         </div>
-        <GaugeChart 
-          value={calculateOverallProgress(goal)}
-          min={0}
-          max={100}
-          title=""
-          color={sdgColors[goal.title] || "blue"}
-        />
-      </div>
-    ))}
-  </div>
-));
+      )}
+    </div>
+  );
+});
 
-// Memoized Summary Cards component
-const SummaryCards = React.memo(({ summaryMetrics, selectedGoalId, selectedGoalData }) => (
+// Project List component with enhancement
+const ProjectList = React.memo(({ 
+  projects, 
+  onSelectProject, 
+  selectedProject, 
+  selectedGoalId = null,
+  projectFilters = {}
+}) => {
+  // Apply filters if provided
+  let displayProjects = [...projects];
+  
+  // Filter by status if specified
+  if (projectFilters.status) {
+    displayProjects = displayProjects.filter(p => p.status === projectFilters.status);
+  }
+  
+  // Filter by SDG if specified
+  if (projectFilters.sdgId && !selectedGoalId) {
+    displayProjects = displayProjects.filter(p => 
+      p.sdgContributions && p.sdgContributions.some(s => s.goalId === projectFilters.sdgId)
+    );
+  }
+  
+  // Sort by contribution percentage if viewing in SDG context
+  if (selectedGoalId) {
+    displayProjects.sort((a, b) => {
+      const aContrib = a.sdgContributions?.find(s => s.goalId === selectedGoalId)?.contribution || 0;
+      const bContrib = b.sdgContributions?.find(s => s.goalId === selectedGoalId)?.contribution || 0;
+      return bContrib - aContrib;
+    });
+  } else {
+    // Otherwise sort by overall completion
+    displayProjects.sort((a, b) => b.completion - a.completion);
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+        <h3 className="text-lg font-medium text-gray-900">
+          {selectedGoalId ? `Projects Contributing to SDG ${selectedGoalId}` : "Projects Overview"}
+        </h3>
+      </div>
+      <ul className="divide-y divide-gray-200">
+        {displayProjects.length > 0 ? (
+          displayProjects.map((project) => {
+            // Calculate contribution for this specific SDG if in SDG context
+            const contribution = selectedGoalId 
+              ? project.sdgContributions?.find(s => s.goalId === selectedGoalId)?.contribution || 0
+              : project.completion;
+            
+            const contributionLabel = selectedGoalId 
+              ? `Contribution to SDG ${selectedGoalId}: ${contribution.toFixed(1)}%`
+              : `Overall completion: ${contribution.toFixed(1)}%`;
+            
+            return (
+              <li 
+                key={project.id} 
+                className={`px-4 py-3 hover:bg-gray-50 cursor-pointer ${
+                  selectedProject === project.id ? 'bg-blue-50' : ''
+                }`}
+                onClick={() => onSelectProject(project.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center">
+                      <h4 className="text-sm font-medium">{project.name}</h4>
+                      <span 
+                        className="ml-2 px-2 py-1 text-xs rounded-full" 
+                        style={{ 
+                          backgroundColor: projectStatusColors[project.status] || "#ccc",
+                          color: project.status === "Completed" ? "white" : "black" 
+                        }}
+                      >
+                        {project.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">{contributionLabel}</p>
+                    
+                    {!selectedGoalId && project.sdgContributions && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {project.sdgContributions
+                          .sort((a, b) => b.contribution - a.contribution)
+                          .slice(0, 3)
+                          .map(sdg => (
+                            <span 
+                              key={sdg.goalId} 
+                              className="inline-block px-2 py-1 text-xs rounded-full text-white"
+                              style={{ backgroundColor: sdgColors[`SDG ${sdg.goalId}`] || "#777" }}
+                            >
+                              SDG {sdg.goalId}: {sdg.contribution.toFixed(0)}%
+                            </span>
+                          ))}
+                        {project.sdgContributions.length > 3 && (
+                          <span className="inline-block px-2 py-1 text-xs rounded-full bg-gray-200">
+                            +{project.sdgContributions.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div 
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: contribution > 70 ? '#4C9F38' : contribution > 30 ? '#FCC30B' : '#E5243B' }}
+                  ></div>
+                </div>
+              </li>
+            );
+          })
+        ) : (
+          <li className="px-4 py-3 text-sm text-gray-500">No projects found</li>
+        )}
+      </ul>
+    </div>
+  );
+});
+
+// Summary Cards component
+const SummaryCards = React.memo(({ 
+  summaryMetrics, 
+  selectedGoalId, 
+  selectedGoalData,
+  selectedProject = null
+}) => (
   <>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       <ScoreCard 
         title="Overall Progress" 
         value={`${summaryMetrics.overallProgress}%`}
-        subtitle={selectedGoalId ? `For SDG ${selectedGoalId}` : "All SDGs"}
+        subtitle={
+          selectedProject ? "For selected project" :
+          selectedGoalId ? `For SDG ${selectedGoalId}` : 
+          "All SDGs"
+        }
         color={selectedGoalData ? sdgColors[selectedGoalData.title] : "#19486A"}
       />
       <ScoreCard 
@@ -181,48 +419,106 @@ const SummaryCards = React.memo(({ summaryMetrics, selectedGoalId, selectedGoalD
         value={`${summaryMetrics.atRiskIndicators}/${summaryMetrics.totalIndicators}`}
         subtitle="< 50% of target achieved"
         color="#E5243B" // Red
-      />
-    </div>
+        />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <ScoreCard 
+            title="Total Metrics Tracked" 
+            value={summaryMetrics.totalIndicators + summaryMetrics.totalSubIndicators}
+            subtitle={`${summaryMetrics.totalIndicators} indicators, ${summaryMetrics.totalSubIndicators} sub-indicators`}
+            color="#19486A" // Dark blue
+          />
+          <ScoreCard 
+            title="Most Improved" 
+            value={summaryMetrics.mostImprovedIndicator.name}
+            subtitle={`+${summaryMetrics.mostImprovedIndicator.improvement.toFixed(1)}% (${summaryMetrics.mostImprovedIndicator.goalTitle})`}
+            color="#56C02B" // Green
+          />
+          <ScoreCard 
+            title="Needs Attention" 
+            value={summaryMetrics.leastImprovedIndicator.name}
+            subtitle={`${summaryMetrics.leastImprovedIndicator.improvement.toFixed(1)}% (${summaryMetrics.leastImprovedIndicator.goalTitle})`}
+            color="#FD9D24" // Orange
+          />
+        </div>
+      </>
+    ));
     
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <ScoreCard 
-        title="Total Metrics Tracked" 
-        value={summaryMetrics.totalIndicators + summaryMetrics.totalSubIndicators}
-        subtitle={`${summaryMetrics.totalIndicators} indicators, ${summaryMetrics.totalSubIndicators} sub-indicators`}
-        color="#19486A" // Dark blue
+    // Indicator Progress Bar List component
+    const IndicatorProgressBars = React.memo(({ 
+      indicators, 
+      onSelectIndicator, 
+      colorOffset = 0, 
+      selectedIndicator,
+      sourceProject = null
+    }) => (
+      <ProgressBarList 
+        items={indicators.map((indicator, index) => {
+          const colorIndex = (index + colorOffset) % indicatorColors.length;
+          
+          // Create label that includes project source if available
+          const projectLabel = sourceProject ? ` (${sourceProject})` : '';
+          const itemLabel = indicator.label || indicator.name;
+          const label = sourceProject ? `${itemLabel}${projectLabel}` : itemLabel;
+          
+          return {
+            label: label,
+            progress: indicator.progress || getMostRecentValue(indicator.current),
+            target: typeof indicator.target === "number" ? indicator.target : indicator.target[0],
+            onClick: onSelectIndicator ? () => onSelectIndicator(indicator.name) : undefined,
+            color: indicatorColors[colorIndex],
+            selected: selectedIndicator === indicator.name,
+            source: indicator.source || null // Keep track of data source (project)
+          };
+        })}
       />
-      <ScoreCard 
-        title="Most Improved" 
-        value={summaryMetrics.mostImprovedIndicator.name}
-        subtitle={`+${summaryMetrics.mostImprovedIndicator.improvement.toFixed(1)}% (${summaryMetrics.mostImprovedIndicator.goalTitle})`}
-        color="#56C02B" // Green
-      />
-      <ScoreCard 
-        title="Needs Attention" 
-        value={summaryMetrics.leastImprovedIndicator.name}
-        subtitle={`${summaryMetrics.leastImprovedIndicator.improvement.toFixed(1)}% (${summaryMetrics.leastImprovedIndicator.goalTitle})`}
-        color="#FD9D24" // Orange
-      />
-    </div>
-  </>
-));
-
-// Memoized Indicator Progress Bar List component
-const IndicatorProgressBars = React.memo(({ indicators, onSelectIndicator, colorOffset = 0, selectedIndicator }) => (
-  <ProgressBarList 
-    items={indicators.map((indicator, index) => {
-      const colorIndex = (index + colorOffset) % indicatorColors.length;
-      return {
-        label: indicator.label || indicator.name,
-        progress: indicator.progress || getMostRecentValue(indicator.current),
-        target: typeof indicator.target === "number" ? indicator.target : indicator.target[0],
-        onClick: onSelectIndicator ? () => onSelectIndicator(indicator.name) : undefined,
-        color: indicatorColors[colorIndex],
-        selected: selectedIndicator === indicator.name
-      };
-    })}
-  />
-));
+    ));
+    
+    // Project Contribution Chart component - NEW
+    const ProjectContributionChart = React.memo(({ 
+      projectContributions = [], 
+      goalTitle = "", 
+      goalId = null 
+    }) => {
+      if (!projectContributions || projectContributions.length === 0) {
+        return (
+          <div className="p-4 bg-gray-50 rounded-md text-gray-600">
+            No project contribution data available.
+          </div>
+        );
+      }
+    
+      // Sort contributions by percentage
+      const sortedContributions = [...projectContributions].sort((a, b) => b.contribution - a.contribution);
+      
+      return (
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-3">
+            {goalId ? `Project Contributions to SDG ${goalId}` : "Project Contributions by SDG"}
+          </h3>
+          
+          <div className="space-y-3">
+            {sortedContributions.map((item, index) => (
+              <div key={item.projectId || index} className="relative">
+                <div className="flex justify-between mb-1 text-sm">
+                  <span>{item.projectName}</span>
+                  <span>{item.contribution.toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="h-2.5 rounded-full" 
+                    style={{ 
+                      width: `${Math.min(item.contribution, 100)}%`,
+                      backgroundColor: goalId ? sdgColors[goalTitle] : indicatorColors[index % indicatorColors.length]
+                    }}></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    });
 
 // Helper function to extract all unique years and months from data
 const extractDateOptions = (sdgData) => {
@@ -236,10 +532,7 @@ const extractDateOptions = (sdgData) => {
           const [year, month] = dataPoint.date.split('-');
           years.add(year);
           if (month) {
-            const monthIndex = parseInt(month, 10) - 1;
-            if (monthIndex >= 0 && monthIndex < 12) {
-              months.add(monthNames[monthIndex]);
-            }
+            months.add(month);
           }
         }
       });
@@ -251,10 +544,7 @@ const extractDateOptions = (sdgData) => {
               const [year, month] = dataPoint.date.split('-');
               years.add(year);
               if (month) {
-                const monthIndex = parseInt(month, 10) - 1;
-                if (monthIndex >= 0 && monthIndex < 12) {
-                  months.add(monthNames[monthIndex]);
-                }
+                months.add(month);
               }
             }
           });
@@ -265,7 +555,7 @@ const extractDateOptions = (sdgData) => {
   
   return {
     years: Array.from(years).sort(),
-    months: Array.from(months)
+    months: Array.from(months).sort()
   };
 };
 
@@ -342,6 +632,8 @@ const Dashboard: React.FC = () => {
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
   const [selectedIndicator, setSelectedIndicator] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [selectedProjectIndicator, setSelectedProjectIndicator] = useState<string | null>(null);
   
   // Date filter states
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
@@ -420,6 +712,15 @@ const Dashboard: React.FC = () => {
     setSelectedMonth(null);
   }, []);
 
+  const handleProjectSelect = useCallback((projectId: string) => {
+    setSelectedProject(prev => prev === projectId ? null : projectId);
+    setSelectedProjectIndicator(null);
+  }, []);
+  
+  const handleProjectIndicatorSelect = useCallback((indicatorName) => {
+    setSelectedProjectIndicator(prev => prev === indicatorName ? null : indicatorName);
+  }, []);
+
   // Memoize filtered performance indicators
   const topPerformingIndicators = useMemo(() => 
     allIndicatorsData
@@ -434,6 +735,36 @@ const Dashboard: React.FC = () => {
       .slice(0, 5),
     [allIndicatorsData]
   );
+
+  // New memoized project data
+const projectData = useMemo(() => {
+  if (!selectedGoalId || !selectedProject) return null;
+  
+  return getProjectContributionToGoal(selectedGoalId)
+    .find(p => p.id === selectedProject);
+}, [selectedGoalId, selectedProject]);
+
+// Project level indicators
+const projectIndicators = useMemo(() => {
+  if (!projectData) return [];
+  return projectData.indicators.map(indicator => ({
+    ...indicator,
+    label: `${indicator.name} (Project: ${projectData.name})`
+  }));
+}, [projectData]);
+
+// Project sub-indicators
+const projectSubIndicators = useMemo(() => {
+  if (!projectData || !selectedProjectIndicator) return [];
+  
+  const indicator = projectData.indicators
+    .find(ind => ind.name === selectedProjectIndicator);
+  
+  return indicator?.sub_indicators?.map(subInd => ({
+    ...subInd,
+    label: `${subInd.name} (${projectData.name})`
+  })) || [];
+}, [projectData, selectedProjectIndicator]);
 
   // Memoize chart data
   const selectedGoalChartData = useMemo(() => {
@@ -529,6 +860,112 @@ const Dashboard: React.FC = () => {
     });
   }, [filteredSdgData]);
 
+  const renderProjectView = () => (
+    <div className="mt-6">
+      <div className="flex items-center gap-4 mb-6">
+        <h2 className="text-xl font-semibold">
+          Project: {projectData?.name}
+        </h2>
+        <button 
+          onClick={() => setSelectedProject(null)}
+          className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-md"
+        >
+          Clear Selection
+        </button>
+      </div>
+  
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Project Indicators */}
+        <div>
+          <h3 className="text-lg font-semibold mb-3">
+            Project Indicators
+            {selectedProjectIndicator && (
+              <button 
+                onClick={() => setSelectedProjectIndicator(null)}
+                className="ml-2 text-sm text-blue-600 hover:text-blue-800"
+              >
+                (Back to all indicators)
+              </button>
+            )}
+          </h3>
+          
+          {selectedProjectIndicator ? (
+            projectSubIndicators.length > 0 ? (
+              <IndicatorProgressBars 
+                indicators={projectSubIndicators}
+                colorOffset={3}
+              />
+            ) : (
+              <div className="p-4 bg-gray-50 rounded-md text-gray-600">
+                No sub-indicators available for this indicator.
+              </div>
+            )
+          ) : (
+            projectIndicators.length > 0 ? (
+              <IndicatorProgressBars 
+                indicators={projectIndicators}
+                onSelectIndicator={handleProjectIndicatorSelect}
+                selectedIndicator={selectedProjectIndicator}
+              />
+            ) : (
+              <div className="p-4 bg-gray-50 rounded-md text-gray-600">
+                No indicators available for this project.
+              </div>
+            )
+          )}
+        </div>
+  
+        {/* Project Charts */}
+        <div>
+          <h3 className="text-lg font-semibold mb-3">
+            {selectedProjectIndicator 
+              ? `${selectedProjectIndicator} Progress`
+              : 'Project Indicators Progress'}
+          </h3>
+          
+          <LineChart 
+            data={selectedProjectIndicator
+              ? projectSubIndicators.map((subInd, idx) => ({
+                  x: subInd.current.map(d => d.date),
+                  y: subInd.current.map(d => d.value),
+                  name: subInd.name,
+                  type: 'scatter',
+                  mode: 'lines+markers',
+                  marker: { color: indicatorColors[idx] },
+                  line: { color: indicatorColors[idx] }
+                }))
+              : projectIndicators.map((ind, idx) => ({
+                  x: ind.current.map(d => d.date),
+                  y: ind.current.map(d => d.value),
+                  name: ind.name,
+                  type: 'scatter',
+                  mode: 'lines+markers',
+                  marker: { color: indicatorColors[idx] },
+                  line: { color: indicatorColors[idx] }
+                }))
+            }
+          />
+        </div>
+      </div>
+  
+      {/* Project Contribution */}
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-3">
+          Project Contribution to SDG {selectedGoalId}
+        </h3>
+        <ProjectContributionChart 
+          projectContributions={[{
+            projectId: projectData.id,
+            projectName: projectData.name,
+            contribution: getProjectContributionPercentage(projectData.id, selectedGoalId)
+          }]}
+          goalTitle={selectedGoalData?.title}
+          goalId={selectedGoalId}
+        />
+      </div>
+    </div>
+  );
+
   if (loading) {
     return <div className="p-6">Loading SDG data...</div>;
   }
@@ -564,107 +1001,116 @@ const Dashboard: React.FC = () => {
           onGaugeClick={handleGaugeClick}
         />
       </div>
-
-      {/* Conditional rendering based on selection */}
+  
       {selectedGoalId ? (
-        // Detailed view for a selected SDG
         <>
           <h2 className="text-xl font-semibold mb-4">
             Details for SDG {selectedGoalId}: {selectedGoalData?.title}
             {selectedIndicator && ` → ${selectedIndicator}`}
           </h2>
           
-          {/* Filter context indication */}
-          {(selectedYear || selectedMonth) && (
-            <div className="mb-4 py-2 px-4 bg-blue-50 border border-blue-200 rounded-md inline-block">
-              <span className="text-sm text-blue-800">
-                {!selectedMonth && selectedYear && `Showing data for ${selectedYear}`}
-                {selectedMonth && selectedYear && `Showing data for ${selectedMonth} ${selectedYear}`}
-              </span>
-            </div>
-          )}
-          
-          {/* Two-column layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Indicators progress bars */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">
-                {selectedIndicator ? `${selectedIndicator} Sub-Indicators` : "Indicators"}
-                {selectedIndicator && (
-                  <button 
-                    onClick={() => setSelectedIndicator("")}
-                    className="ml-2 text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    (Back to all indicators)
-                  </button>
-                )}
-              </h3>
-              
-              {selectedIndicator ? (
-                // Show sub-indicators if an indicator is selected
-                selectedGoalData && 
-                selectedGoalData.indicators.find(ind => ind.name === selectedIndicator)?.sub_indicators &&
-                selectedGoalData.indicators.find(ind => ind.name === selectedIndicator)?.sub_indicators.length > 0 ? (
-                  <IndicatorProgressBars 
-                    indicators={selectedGoalData.indicators.find(ind => ind.name === selectedIndicator)?.sub_indicators || []}
-                    colorOffset={3}
-                  />
-                ) : (
-                  <div className="p-4 bg-gray-50 rounded-md text-gray-600">
-                    No sub-indicator data available for {selectedIndicator}.
-                  </div>
-                )
-              ) : (
-                // Show all indicators if no indicator is selected
-                selectedGoalData && selectedGoalData.indicators.length > 0 ? (
-                  <IndicatorProgressBars 
-                    indicators={selectedGoalData.indicators}
-                    onSelectIndicator={handleSelectIndicator}
-                    selectedIndicator={selectedIndicator}
-                  />
-                ) : (
-                  <div className="p-4 bg-gray-50 rounded-md text-gray-600">
-                    No indicator data available for the selected time period.
-                  </div>
-                )
-              )}
-            </div>
-            
-            {/* Line Chart */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">
-                {selectedIndicator 
-                  ? `${selectedIndicator} Achievement Level` 
-                  : "Indicators Achievement Level Over Time"}
-              </h3>
-              {selectedGoalData && selectedGoalChartData.length > 0 ? (
-                <LineChart data={selectedGoalChartData} />
-              ) : (
-                <div className="p-4 bg-gray-50 rounded-md text-gray-600">
-                  No time series data available for the selected time period.
+          {/* Add Project Filter */}
+          <div className="mb-6">
+            <ProjectFilter 
+              availableProjects={getProjectContributionToGoal(selectedGoalId)}
+              selectedProject={selectedProject}
+              onProjectChange={handleProjectSelect}
+              onClearProject={() => setSelectedProject(null)}
+            />
+          </div>
+  
+          {/* Render either project view or regular SDG view */}
+          {selectedProject ? renderProjectView() : (
+            <>
+              {/* Filter context indication */}
+              {(selectedYear || selectedMonth) && (
+                <div className="mb-4 py-2 px-4 bg-blue-50 border border-blue-200 rounded-md inline-block">
+                  <span className="text-sm text-blue-800">
+                    {!selectedMonth && selectedYear && `Showing data for ${selectedYear}`}
+                    {selectedMonth && selectedYear && `Showing data for ${selectedMonth} ${selectedYear}`}
+                  </span>
                 </div>
               )}
-
-              {/* Sub-indicators Chart section - Only show when an indicator is selected */}
-                {selectedIndicator && selectedSubIndicatorsChartData.length > 0 && (
-                    <div className="mt-6">
-                    <h3 className="text-lg font-semibold mb-3">Sub-indicators Achievement Level Over Time</h3>
-                    <LineChart data={selectedSubIndicatorsChartData} />
+                
+              {/* Two-column layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Indicators progress bars */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">
+                    {selectedIndicator ? `${selectedIndicator} Sub-Indicators` : "Indicators"}
+                    {selectedIndicator && (
+                      <button 
+                        onClick={() => setSelectedIndicator("")}
+                        className="ml-2 text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        (Back to all indicators)
+                      </button>
+                    )}
+                  </h3>
+                  
+                  {selectedIndicator ? (
+                    selectedGoalData && 
+                    selectedGoalData.indicators.find(ind => ind.name === selectedIndicator)?.sub_indicators?.length > 0 ? (
+                      <IndicatorProgressBars 
+                        indicators={selectedGoalData.indicators.find(ind => ind.name === selectedIndicator)?.sub_indicators || []}
+                        colorOffset={3}
+                      />
+                    ) : (
+                      <div className="p-4 bg-gray-50 rounded-md text-gray-600">
+                        No sub-indicator data available for {selectedIndicator}.
+                      </div>
+                    )
+                  ) : (
+                    selectedGoalData && selectedGoalData.indicators.length > 0 ? (
+                      <IndicatorProgressBars 
+                        indicators={selectedGoalData.indicators}
+                        onSelectIndicator={handleSelectIndicator}
+                        selectedIndicator={selectedIndicator}
+                      />
+                    ) : (
+                      <div className="p-4 bg-gray-50 rounded-md text-gray-600">
+                        No indicator data available for the selected time period.
+                      </div>
+                    )
+                  )}
+                </div>
+                
+                {/* Line Chart */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">
+                    {selectedIndicator 
+                      ? `${selectedIndicator} Achievement Level` 
+                      : "Indicators Achievement Level Over Time"}
+                  </h3>
+                  {selectedGoalData && selectedGoalChartData.length > 0 ? (
+                    <LineChart data={selectedGoalChartData} />
+                  ) : (
+                    <div className="p-4 bg-gray-50 rounded-md text-gray-600">
+                      No time series data available for the selected time period.
                     </div>
-                )}
-            </div>
-          </div>
-          
-          {/* Back button */}
-          <button 
-            onClick={() => {
-              setSelectedGoalId(null);
-              setSelectedIndicator("");
-            }}
-            className="mt-6 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
-          >
-            Back to Overview
-          </button>
+                  )}
+  
+                  {/* Sub-indicators Chart section */}
+                  {selectedIndicator && selectedSubIndicatorsChartData.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="text-lg font-semibold mb-3">Sub-indicators Achievement Level Over Time</h3>
+                      <LineChart data={selectedSubIndicatorsChartData} />
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => {
+                  setSelectedGoalId(null);
+                  setSelectedIndicator("");
+                }}
+                className="mt-6 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+              >
+                Back to Overview
+              </button>
+            </>
+          )}
         </>
       ) : (
         <>
@@ -723,7 +1169,6 @@ const Dashboard: React.FC = () => {
         </>
       )}
     </div>
-  );
-};
+  )};
 
-export default Dashboard;
+  export default Dashboard;

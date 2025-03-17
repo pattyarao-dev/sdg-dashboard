@@ -1098,6 +1098,38 @@ export const getProjectContributionToGoal = (
   };
 };
 
+// Get the overall contribution percentage for a project to a specific goal
+export const getProjectContributionPercentage = (
+  projectId: number,
+  goalId: number,
+  allData: DashboardSDG[]
+): number => {
+  // Find the goal in our data
+  const goal = allData.find(g => g.goal_id === goalId);
+  if (!goal) return 0;
+
+  let totalContribution = 0;
+  let totalIndicators = 0;
+
+  // Iterate through each indicator in the goal
+  for (const indicator of goal.indicators) {
+    // Find the project-specific contribution for this indicator
+    const projectIndicator = indicator.contributingProjects.find(p => p.project_id === projectId);
+    if (!projectIndicator) continue;
+
+    // Extract latest contribution value
+    const contribution = projectIndicator.latestContribution;
+    const target = indicator.global_target_value || 1; // Avoid division by zero
+    const contributionPercentage = (contribution / target) * 100;
+
+    totalContribution += contributionPercentage;
+    totalIndicators++;
+  }
+
+  // Return the average contribution percentage across all indicators
+  return totalIndicators ? totalContribution / totalIndicators : 0;
+};
+
 function findContributingProjects(projects: any[], goalIndicatorId: number): ProjectContribution[] {
   const contributingProjects: ProjectContribution[] = [];
   
