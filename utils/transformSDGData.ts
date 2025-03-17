@@ -1018,84 +1018,160 @@ function calculateGoalAchievementMetrics(indicators: any[]) {
   };
 }
 
-
-// Get detailed contribution data for a specific project to a goal
 export const getProjectContributionToGoal = (
+  projectId: number | string,
+  goalId: number,
+  allData: DashboardSDG[]
+): Project | null => {
+  try {
+    // Find the goal in our data
+    const goal = allData.find(g => g.goal_id === goalId);
+    if (!goal) return null;
+
+    let projectName = "Unknown Project";
+    let projectStatus = "In Progress";
+    let projectCompletion = 0;
+    
+    // Create indicators array that matches the expected format
+    const indicators: {
+      name: string;
+      current: Array<{date: string; value: number}>;
+      target: number;
+      progress?: number;
+      sub_indicators?: Array<{
+        name: string;
+        current: Array<{date: string; value: number}>;
+        target: number;
+        progress?: number;
+      }>;
+    }[] = [];
+
+    // Make sure indicators exist before iterating
+    if (!goal.indicators || !Array.isArray(goal.indicators)) {
+      return null;
+    }
+
+    // Iterate through each indicator in the goal
+    for (const indicator of goal.indicators) {
+      // Handle the case when contributingProjects is undefined
+      const contributingProjects = indicator.contributingProjects || [];
+      
+      // Find the project-specific contribution for this indicator
+      const projectIndicator = contributingProjects.find(
+        p => p && p.project_id.toString() === projectId.toString()
+      );
+      
+      if (!projectIndicator) continue;
+
+      projectName = projectIndicator.name || "Unknown Project";
+      projectStatus = projectIndicator.status || "In Progress";
+      
+      // Extract contribution value
+      const contribution = projectIndicator.latestContribution || 0;
+      
+      // Handle the case when target is an array
+      let targetValue: number;
+      if (Array.isArray(indicator.target)) {
+        targetValue = indicator.target.length > 0 ? indicator.target[0] : 1;
+      } else {
+        targetValue = indicator.target || 1;
+      }
+      
+      // Format the data points for the current indicator
+      // Use the project's data points if available, otherwise use the indicator's data points
+      const currentData = projectIndicator.data || indicator.current || [];
+      
+      // Format the data to match the expected structure
+      const formattedCurrent = currentData.map(dataPoint => ({
+        date: dataPoint.date,
+        value: dataPoint.value !== undefined ? dataPoint.value : 
+               dataPoint.current !== undefined ? dataPoint.current : 0
+      }));
+      
+      // Build the indicator object with sub-indicators
+      const formattedIndicator: any = {
+        name: indicator.name || "Unknown Indicator",
+        current: formattedCurrent,
+        target: targetValue,
+        progress: (contribution / targetValue) * 100,
+      };
+      
+      // Process sub-indicators if they exist
+      if (indicator.sub_indicators && Array.isArray(indicator.sub_indicators)) {
+        formattedIndicator.sub_indicators = indicator.sub_indicators
+          .filter(sub => {
+            // Find the project contribution for this sub-indicator
+            const subContributingProjects = sub.contributingProjects || [];
+            const subProjectIndicator = subContributingProjects.find(
+              p => p && p.project_id.toString() === projectId.toString()
+            );
+            return !!subProjectIndicator;
+          })
+          .map(sub => {
+            // Find the project contribution for this sub-indicator
+            const subContributingProjects = sub.contributingProjects || [];
+            const subProjectIndicator = subContributingProjects.find(
+              p => p && p.project_id.toString() === projectId.toString()
+            );
+            
+            const subContribution = subProjectIndicator?.latestContribution || 0;
+            const subTargetValue = Array.isArray(sub.target) ? 
+              (sub.target.length > 0 ? sub.target[0] : 1) : (sub.target || 1);
+              
+            // Format the data points for the sub-indicator
+            const subCurrentData = subProjectIndicator?.data || sub.current || [];
+            const formattedSubCurrent = subCurrentData.map(dataPoint => ({
+              date: dataPoint.date,
+              value: dataPoint.value !== undefined ? dataPoint.value : 
+                     dataPoint.current !== undefined ? dataPoint.current : 0
+            }));
+            
+            return {
+              name: sub.name || "Unknown Sub-indicator",
+              current: formattedSubCurrent,
+              target: subTargetValue,
+              progress: (subContribution / subTargetValue) * 100,
+            };
+          });
+      }
+      
+      indicators.push(formattedIndicator);
+    }
+
+    // Calculate overall project completion
+    if (indicators.length > 0) {
+      projectCompletion = indicators.reduce((sum, ind) => sum + (ind.progress || 0), 0) / indicators.length;
+    }
+
+    // Return the formatted project data
+    return {
+      id: projectId.toString(),
+      name: projectName,
+      status: projectStatus,
+      completion: projectCompletion,
+      indicators: indicators,
+    };
+  } catch (error) {
+    console.error("Error in getProjectContributionToGoal:", error);
+    return null;
+  }
+};
+
+// Get the overall contribution percentage for a project to a specific goal
+export const getProjectContributionPercentage = (
   projectId: number,
   goalId: number,
   allData: DashboardSDG[]
-): {
-  projectName: string;
-  goalName: string;
-  contributedIndicators: {
-    name: string;
-    contribution: number;
-    target: number;
-    contributionPercentage: number;
-    subIndicators?: {
-      name: string;
-      contribution: number;
-      target: number;
-      contributionPercentage: number;
-    }[];
-  }[];
-  overallContribution: number;
-} | null => {
-  // Find the goal in our data
-  const goal = allData.find(g => g.goal_id === goalId);
-  if (!goal) return null;
-
-  let projectName = "Unknown Project";
-  const contributedIndicators = [];
-  let totalContribution = 0;
-  let totalIndicators = 0;
-
-  // Iterate through each indicator in the goal
-  for (const indicator of goal.indicators) {
-    // Find the project-specific contribution for this indicator
-    const projectIndicator = indicator.contributingProjects.find(p => p.project_id === projectId);
-    if (!projectIndicator) continue;
-
-    projectName = projectIndicator.name; // Set project name
-
-    // Extract latest contribution value
-    const contribution = projectIndicator.latestContribution;
-    const target = indicator.global_target_value || 1; // Avoid division by zero
-    const contributionPercentage = (contribution / target) * 100;
-
-    // Handle sub-indicators
-    const subIndicators = indicator.sub_indicators?.map(sub => {
-      const subProjectIndicator = sub.contributingProjects.find(p => p.project_id === projectId);
-      if (!subProjectIndicator) return null;
-
-      const subContribution = subProjectIndicator.latestContribution;
-      const subTarget = sub.global_target_value || 1;
-      return {
-        name: sub.name,
-        contribution: subContribution,
-        target: subTarget,
-        contributionPercentage: (subContribution / subTarget) * 100
-      };
-    }).filter(Boolean); // Remove null values
-
-    contributedIndicators.push({
-      name: indicator.name,
-      contribution,
-      target,
-      contributionPercentage,
-      subIndicators
-    });
-
-    totalContribution += contributionPercentage;
-    totalIndicators++;
+): number => {
+  // Use the existing function that's causing errors, but with proper error handling
+  const contribution = getProjectContributionToGoal(projectId, goalId, allData);
+  
+  // If contribution data exists, return the overall contribution percentage
+  if (contribution) {
+    return contribution.overallContribution;
   }
-
-  return {
-    projectName,
-    goalName: goal.name,
-    contributedIndicators,
-    overallContribution: totalIndicators ? totalContribution / totalIndicators : 0
-  };
+  
+  return 0;
 };
 
 function findContributingProjects(projects: any[], goalIndicatorId: number): ProjectContribution[] {
