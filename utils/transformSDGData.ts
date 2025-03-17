@@ -1018,8 +1018,6 @@ function calculateGoalAchievementMetrics(indicators: any[]) {
   };
 }
 
-
-// Get detailed contribution data for a specific project to a goal
 export const getProjectContributionToGoal = (
   projectId: number,
   goalId: number,
@@ -1041,61 +1039,124 @@ export const getProjectContributionToGoal = (
   }[];
   overallContribution: number;
 } | null => {
-  // Find the goal in our data
-  const goal = allData.find(g => g.goal_id === goalId);
-  if (!goal) return null;
+  try {
+    // Find the goal in our data
+    const goal = allData.find(g => g.goal_id === goalId);
+    if (!goal) return null;
 
-  let projectName = "Unknown Project";
-  const contributedIndicators = [];
-  let totalContribution = 0;
-  let totalIndicators = 0;
+    let projectName = "Unknown Project";
+    const contributedIndicators: {
+      name: string;
+      contribution: number;
+      target: number;
+      contributionPercentage: number;
+      subIndicators?: {
+        name: string;
+        contribution: number;
+        target: number;
+        contributionPercentage: number;
+      }[];
+    }[] = [];
+    let totalContribution = 0;
+    let totalIndicators = 0;
 
-  // Iterate through each indicator in the goal
-  for (const indicator of goal.indicators) {
-    // Find the project-specific contribution for this indicator
-    const projectIndicator = indicator.contributingProjects.find(p => p.project_id === projectId);
-    if (!projectIndicator) continue;
-
-    projectName = projectIndicator.name; // Set project name
-
-    // Extract latest contribution value
-    const contribution = projectIndicator.latestContribution;
-    const target = indicator.global_target_value || 1; // Avoid division by zero
-    const contributionPercentage = (contribution / target) * 100;
-
-    // Handle sub-indicators
-    const subIndicators = indicator.sub_indicators?.map(sub => {
-      const subProjectIndicator = sub.contributingProjects.find(p => p.project_id === projectId);
-      if (!subProjectIndicator) return null;
-
-      const subContribution = subProjectIndicator.latestContribution;
-      const subTarget = sub.global_target_value || 1;
+    // Make sure indicators exist before iterating
+    if (!goal.indicators || !Array.isArray(goal.indicators)) {
       return {
-        name: sub.name,
-        contribution: subContribution,
-        target: subTarget,
-        contributionPercentage: (subContribution / subTarget) * 100
+        projectName,
+        goalName: goal.title || "Unknown Goal",
+        contributedIndicators: [],
+        overallContribution: 0
       };
-    }).filter(Boolean); // Remove null values
+    }
 
-    contributedIndicators.push({
-      name: indicator.name,
-      contribution,
-      target,
-      contributionPercentage,
-      subIndicators
-    });
+    // Iterate through each indicator in the goal
+    for (const indicator of goal.indicators) {
+      // Handle the case when contributingProjects is undefined
+      const contributingProjects = indicator.contributingProjects || [];
+      
+      // Find the project-specific contribution for this indicator
+      const projectIndicator = contributingProjects.find(p => p && p.project_id === projectId);
+      if (!projectIndicator) continue;
 
-    totalContribution += contributionPercentage;
-    totalIndicators++;
+      projectName = projectIndicator.name || "Unknown Project";
+
+      // Extract latest contribution value
+      const contribution = projectIndicator.latestContribution || 0;
+      
+      // Handle the case when target is an array
+      let targetValue: number;
+      if (Array.isArray(indicator.target)) {
+        targetValue = indicator.target.length > 0 ? indicator.target[0] : 1;
+      } else {
+        targetValue = indicator.target || 1; // Default to 1 to avoid division by zero
+      }
+      
+      const contributionPercentage = (contribution / targetValue) * 100;
+
+      // Safely handle sub-indicators
+      const subIndicators: {
+        name: string;
+        contribution: number;
+        target: number;
+        contributionPercentage: number;
+      }[] = [];
+      
+      // Check if sub_indicators exists before processing
+      if (indicator.sub_indicators && Array.isArray(indicator.sub_indicators)) {
+        for (const sub of indicator.sub_indicators) {
+          // Handle the case when contributingProjects is undefined
+          const subContributingProjects = sub.contributingProjects || [];
+          
+          const subProjectIndicator = subContributingProjects.find(p => p && p.project_id === projectId);
+          if (!subProjectIndicator) continue;
+          
+          const subContribution = subProjectIndicator.latestContribution || 0;
+          
+          // Handle the case when target is an array
+          let subTargetValue: number;
+          if (Array.isArray(sub.target)) {
+            subTargetValue = sub.target.length > 0 ? sub.target[0] : 1;
+          } else {
+            subTargetValue = sub.target || 1;
+          }
+          
+          subIndicators.push({
+            name: sub.name || "Unknown Sub-indicator",
+            contribution: subContribution,
+            target: subTargetValue,
+            contributionPercentage: (subContribution / subTargetValue) * 100
+          });
+        }
+      }
+
+      contributedIndicators.push({
+        name: indicator.name || "Unknown Indicator",
+        contribution,
+        target: targetValue,
+        contributionPercentage,
+        subIndicators: subIndicators.length > 0 ? subIndicators : undefined
+      });
+
+      totalContribution += contributionPercentage;
+      totalIndicators++;
+    }
+
+    return {
+      projectName,
+      goalName: goal.title || "Unknown Goal",
+      contributedIndicators,
+      overallContribution: totalIndicators ? totalContribution / totalIndicators : 0
+    };
+  } catch (error) {
+    console.error("Error in getProjectContributionToGoal:", error);
+    return {
+      projectName: "Error",
+      goalName: "Error occurred when calculating project contribution",
+      contributedIndicators: [],
+      overallContribution: 0
+    };
   }
-
-  return {
-    projectName,
-    goalName: goal.name,
-    contributedIndicators,
-    overallContribution: totalIndicators ? totalContribution / totalIndicators : 0
-  };
 };
 
 // Get the overall contribution percentage for a project to a specific goal
@@ -1104,30 +1165,15 @@ export const getProjectContributionPercentage = (
   goalId: number,
   allData: DashboardSDG[]
 ): number => {
-  // Find the goal in our data
-  const goal = allData.find(g => g.goal_id === goalId);
-  if (!goal) return 0;
-
-  let totalContribution = 0;
-  let totalIndicators = 0;
-
-  // Iterate through each indicator in the goal
-  for (const indicator of goal.indicators) {
-    // Find the project-specific contribution for this indicator
-    const projectIndicator = indicator.contributingProjects.find(p => p.project_id === projectId);
-    if (!projectIndicator) continue;
-
-    // Extract latest contribution value
-    const contribution = projectIndicator.latestContribution;
-    const target = indicator.global_target_value || 1; // Avoid division by zero
-    const contributionPercentage = (contribution / target) * 100;
-
-    totalContribution += contributionPercentage;
-    totalIndicators++;
+  // Use the existing function that's causing errors, but with proper error handling
+  const contribution = getProjectContributionToGoal(projectId, goalId, allData);
+  
+  // If contribution data exists, return the overall contribution percentage
+  if (contribution) {
+    return contribution.overallContribution;
   }
-
-  // Return the average contribution percentage across all indicators
-  return totalIndicators ? totalContribution / totalIndicators : 0;
+  
+  return 0;
 };
 
 function findContributingProjects(projects: any[], goalIndicatorId: number): ProjectContribution[] {

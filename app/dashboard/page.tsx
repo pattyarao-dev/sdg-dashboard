@@ -737,12 +737,15 @@ const Dashboard: React.FC = () => {
   );
 
   // New memoized project data
-const projectData = useMemo(() => {
-  if (!selectedGoalId || !selectedProject) return null;
-  
-  return getProjectContributionToGoal(selectedGoalId)
-    .find(p => p.id === selectedProject);
-}, [selectedGoalId, selectedProject]);
+  const projectData = useMemo(() => {
+    if (!selectedGoalId || !selectedProject || !sdgData) return null;
+    
+    // Get the contribution data for the selected project and goal
+    const contribution = getProjectContributionToGoal(selectedProject, selectedGoalId, sdgData);
+    
+    // Return the contribution data directly, as it already has the structure we need
+    return contribution;
+  }, [selectedGoalId, selectedProject, sdgData]);
 
 // Project level indicators
 const projectIndicators = useMemo(() => {
@@ -1010,14 +1013,20 @@ const projectSubIndicators = useMemo(() => {
           </h2>
           
           {/* Add Project Filter */}
-          <div className="mb-6">
-            <ProjectFilter 
-              availableProjects={getProjectContributionToGoal(selectedGoalId)}
-              selectedProject={selectedProject}
-              onProjectChange={handleProjectSelect}
-              onClearProject={() => setSelectedProject(null)}
-            />
-          </div>
+          <ProjectFilter 
+            availableProjects={sdgData ? sdgData.flatMap(goal => 
+              goal.indicators.flatMap(indicator => 
+                (indicator.contributingProjects || []).map(project => ({
+                  id: project.project_id,
+                  name: project.name,
+                  status: project.status
+                }))
+              )
+            ).filter((p, i, self) => self.findIndex(t => t.id === p.id) === i) : []}
+            selectedProject={selectedProject}
+            onProjectChange={handleProjectSelect}
+            onClearProject={() => setSelectedProject(null)}
+          />
   
           {/* Render either project view or regular SDG view */}
           {selectedProject ? renderProjectView() : (
