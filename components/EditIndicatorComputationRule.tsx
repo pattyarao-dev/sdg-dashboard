@@ -14,10 +14,20 @@ const EditIndicatorComputationRule = ({
     useCreateFormula();
 
   const [formula, setFormula] = useState("");
+  function formatFormula(input: string): string {
+    return input.replace(/\b[a-zA-Z\s]+\b/g, (match) => {
+      // Only replace if it's not an operator/number
+      if (!/^\d+$/.test(match.trim())) {
+        return match.trim().replace(/\s+/g, "_").toLowerCase();
+      }
+      return match;
+    });
+  }
 
   const submitFormulaChange = () => {
     if (indicator.goalIndicatorId) {
-      createFormula(formula, indicator.goalIndicatorId, "indicator");
+      const formattedFormula = formatFormula(formula);
+      createFormula(formattedFormula, indicator.goalIndicatorId, "indicator");
     }
   };
 
