@@ -251,32 +251,6 @@ model td_sub_indicator_value {
   td_goal_sub_indicator td_goal_sub_indicator? @relation(fields: [goal_sub_indicator_id], references: [goal_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-model td_project_indicator_value {
-  value_id             Int                  @id @default(autoincrement())
-  goal_indicator_id    Int
-  project_indicator_id Int
-  value                Float
-  measurement_date     DateTime?            @default(now()) @db.Timestamp(6)
-  location             String?              @db.VarChar(255)
-  notes                String?
-  created_by           Int
-  md_user              md_user              @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
-  td_project_indicator td_project_indicator @relation(fields: [project_indicator_id], references: [project_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-}
-
-model td_project_sub_indicator_value {
-  value_id                 Int                      @id @default(autoincrement())
-  goal_sub_indicator_id    Int
-  project_sub_indicator_id Int
-  value                    Float
-  measurement_date         DateTime?                @default(now()) @db.Timestamp(6)
-  location                 String?                  @db.VarChar(255)
-  notes                    String?
-  created_by               Int
-  md_user                  md_user                  @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
-  td_project_sub_indicator td_project_sub_indicator @relation(fields: [project_sub_indicator_id], references: [project_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-}
-
 enum project_status {
   ongoing
   complete
