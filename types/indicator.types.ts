@@ -63,7 +63,7 @@ interface RequiredData {
   requiredDataValue: number;
 }
 
-interface ComputationRule {
+export interface ComputationRule {
   ruleId: number;
   ruleFormula: string;
 }

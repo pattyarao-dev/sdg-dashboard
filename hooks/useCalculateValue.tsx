@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const useCalculateValue = () => {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [calculatedValue, setCalculatedValue] = useState<number | null>(null);
+
+  useEffect(() => {
+    console.log("Updated Calculated Value:", calculatedValue);
+  }, [calculatedValue]); // Logs when calculatedValue changes
 
   const calculateValue = async (
     ruleId: number,
@@ -120,10 +124,11 @@ const useCalculateValue = () => {
         }
 
         const result = await response.json();
+        console.log("API Response:", result);
         setSuccess(true);
 
-        if (result.value !== undefined) {
-          setCalculatedValue(result.value);
+        if (result.computedValue !== undefined) {
+          setCalculatedValue(result.computedValue);
         }
         setLoading(false);
         return result;

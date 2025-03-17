@@ -20,6 +20,7 @@ const EditProjectIndicatorValues = ({
     success: calculateIndicatorSuccess,
     loading: calculateIndicatorLoading,
     calculateValue,
+    calculatedValue,
   } = useCalculateValue();
 
   const [newValues, setNewValues] = useState<
@@ -32,6 +33,10 @@ const EditProjectIndicatorValues = ({
   >([]);
 
   const userId = 1;
+
+  const [finalCalculatedValue, setFinalCalculatedValue] = useState<
+    number | null
+  >();
 
   const handleValueChange = (requiredDataId: number, value: string) => {
     const numericValue = value === "" ? 0 : parseFloat(value);
@@ -97,13 +102,31 @@ const EditProjectIndicatorValues = ({
           }
         });
 
-        await calculateValue(
+        // await calculateValue(
+        //   rule.ruleId,
+        //   valuesToCalculate,
+        //   userId,
+        //   "projectIndicator",
+        //   indicator.projectIndicatorId,
+        // );
+
+        const computedResult = await calculateValue(
           rule.ruleId,
           valuesToCalculate,
           userId,
           "projectIndicator",
           indicator.projectIndicatorId,
         );
+
+        if (computedResult?.computedValue !== undefined) {
+          setFinalCalculatedValue(computedResult.computedValue);
+        }
+
+        // if (computedResult?.calculatedValue !== undefined) {
+        //   setFinalCalculatedValue(computedResult.calculatedValue);
+        // }
+        // console.log("Calculated Value:", computedResult?.computedValue);
+        // console.log("Final Calculated Value:", finalCalculatedValue);
       }
 
       setNewValues([]);
@@ -167,6 +190,20 @@ const EditProjectIndicatorValues = ({
                   >
                     Submit Values and Compute
                   </button>
+                </div>
+                <div className="w-full ">
+                  {calculateIndicatorLoading ? (
+                    <p>Calculating...</p>
+                  ) : calculatedValue !== null ? (
+                    <div className="w-full p-4 bg-gray-200">
+                      <p className="font-bold text-green-800">
+                        Computed Value:
+                      </p>
+                      <p className="text-xl font-mono">
+                        {finalCalculatedValue}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </>
