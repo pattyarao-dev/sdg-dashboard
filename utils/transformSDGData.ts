@@ -1160,21 +1160,26 @@ export const getProjectContributionToGoal = (
 };
 
 // Get the overall contribution percentage for a project to a specific goal
-export const getProjectContributionPercentage = (
-  projectId: number,
-  goalId: number,
-  allData: DashboardSDG[]
-): number => {
-  // Use the existing function that's causing errors, but with proper error handling
-  const contribution = getProjectContributionToGoal(projectId, goalId, allData);
+export function getProjectContributionPercentage(projectId, goalId, sdgData) {
+  const goal = sdgData.find(g => g.goal_id === goalId);
+  if (!goal) return 0;
   
-  // If contribution data exists, return the overall contribution percentage
-  if (contribution) {
-    return contribution.overallContribution;
+  let totalContribution = 0;
+  let totalIndicators = 0;
+  
+  for (const indicator of goal.indicators) {
+    const projectContribution = indicator.contributingProjects?.find(
+      p => p.project_id.toString() === projectId
+    );
+    
+    if (projectContribution) {
+      totalContribution += projectContribution.contributionPercentage;
+      totalIndicators++;
+    }
   }
   
-  return 0;
-};
+  return totalIndicators > 0 ? totalContribution / totalIndicators : 0;
+}
 
 function findContributingProjects(projects: any[], goalIndicatorId: number): ProjectContribution[] {
   const contributingProjects: ProjectContribution[] = [];

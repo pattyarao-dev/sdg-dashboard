@@ -740,16 +740,16 @@ const Dashboard: React.FC = () => {
   const projectData = useMemo(() => {
     if (!selectedGoalId || !selectedProject || !sdgData) return null;
     
-    // Get the contribution data for the selected project and goal
-    const contribution = getProjectContributionToGoal(selectedProject, selectedGoalId, sdgData);
-    
-    // Return the contribution data directly, as it already has the structure we need
-    return contribution;
+    return getProjectContributionToGoal(
+      parseInt(selectedProject), // Convert string ID to number
+      selectedGoalId,
+      sdgData
+    );
   }, [selectedGoalId, selectedProject, sdgData]);
 
 // Project level indicators
 const projectIndicators = useMemo(() => {
-  if (!projectData) return [];
+  if (!projectData || !projectData.indicators) return [];
   return projectData.indicators.map(indicator => ({
     ...indicator,
     label: `${indicator.name} (Project: ${projectData.name})`
@@ -760,8 +760,7 @@ const projectIndicators = useMemo(() => {
 const projectSubIndicators = useMemo(() => {
   if (!projectData || !selectedProjectIndicator) return [];
   
-  const indicator = projectData.indicators
-    .find(ind => ind.name === selectedProjectIndicator);
+  const indicator = projectData.indicators?.find(ind => ind.name === selectedProjectIndicator);
   
   return indicator?.sub_indicators?.map(subInd => ({
     ...subInd,
@@ -863,111 +862,134 @@ const projectSubIndicators = useMemo(() => {
     });
   }, [filteredSdgData]);
 
-  const renderProjectView = () => (
-    <div className="mt-6">
-      <div className="flex items-center gap-4 mb-6">
-        <h2 className="text-xl font-semibold">
-          Project: {projectData?.name}
-        </h2>
-        <button 
-          onClick={() => setSelectedProject(null)}
-          className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-md"
-        >
-          Clear Selection
-        </button>
-      </div>
-  
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Project Indicators */}
-        <div>
-          <h3 className="text-lg font-semibold mb-3">
-            Project Indicators
-            {selectedProjectIndicator && (
-              <button 
-                onClick={() => setSelectedProjectIndicator(null)}
-                className="ml-2 text-sm text-blue-600 hover:text-blue-800"
-              >
-                (Back to all indicators)
-              </button>
-            )}
-          </h3>
-          
-          {selectedProjectIndicator ? (
-            projectSubIndicators.length > 0 ? (
-              <IndicatorProgressBars 
-                indicators={projectSubIndicators}
-                colorOffset={3}
-              />
-            ) : (
-              <div className="p-4 bg-gray-50 rounded-md text-gray-600">
-                No sub-indicators available for this indicator.
-              </div>
-            )
-          ) : (
-            projectIndicators.length > 0 ? (
-              <IndicatorProgressBars 
-                indicators={projectIndicators}
-                onSelectIndicator={handleProjectIndicatorSelect}
-                selectedIndicator={selectedProjectIndicator}
-              />
-            ) : (
-              <div className="p-4 bg-gray-50 rounded-md text-gray-600">
-                No indicators available for this project.
-              </div>
-            )
-          )}
+  const renderProjectView = () => {
+    if (!projectData || !projectData.indicators) {
+      return (
+        <div className="mt-6">
+          <div className="flex items-center gap-4 mb-6">
+            <h2 className="text-xl font-semibold">
+              Project: {selectedProject}
+            </h2>
+            <button 
+              onClick={() => setSelectedProject(null)}
+              className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-md"
+            >
+              Clear Selection
+            </button>
+          </div>
+          <div className="p-6 bg-gray-50 rounded-lg">
+            <p className="text-gray-600">No data available for this project and SDG combination.</p>
+          </div>
         </div>
+      );
+    }
   
-        {/* Project Charts */}
-        <div>
+    return (
+      <div className="mt-6">
+        <div className="flex items-center gap-4 mb-6">
+          <h2 className="text-xl font-semibold">
+            Project: {projectData?.name}
+          </h2>
+          <button 
+            onClick={() => setSelectedProject(null)}
+            className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-md"
+          >
+            Clear Selection
+          </button>
+        </div>
+    
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Project Indicators */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">
+              Project Indicators
+              {selectedProjectIndicator && (
+                <button 
+                  onClick={() => setSelectedProjectIndicator(null)}
+                  className="ml-2 text-sm text-blue-600 hover:text-blue-800"
+                >
+                  (Back to all indicators)
+                </button>
+              )}
+            </h3>
+            
+            {selectedProjectIndicator ? (
+              projectSubIndicators.length > 0 ? (
+                <IndicatorProgressBars 
+                  indicators={projectSubIndicators}
+                  colorOffset={3}
+                />
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-md text-gray-600">
+                  No sub-indicators available for this indicator.
+                </div>
+              )
+            ) : (
+              projectIndicators.length > 0 ? (
+                <IndicatorProgressBars 
+                  indicators={projectIndicators}
+                  onSelectIndicator={handleProjectIndicatorSelect}
+                  selectedIndicator={selectedProjectIndicator}
+                />
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-md text-gray-600">
+                  No indicators available for this project.
+                </div>
+              )
+            )}
+          </div>
+    
+          {/* Project Charts */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">
+              {selectedProjectIndicator 
+                ? `${selectedProjectIndicator} Progress`
+                : 'Project Indicators Progress'}
+            </h3>
+            
+            <LineChart 
+              data={selectedProjectIndicator
+                ? projectSubIndicators.map((subInd, idx) => ({
+                    x: subInd.current.map(d => d.date),
+                    y: subInd.current.map(d => d.value),
+                    name: subInd.name,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    marker: { color: indicatorColors[idx] },
+                    line: { color: indicatorColors[idx] }
+                  }))
+                : projectIndicators.map((ind, idx) => ({
+                    x: ind.current.map(d => d.date),
+                    y: ind.current.map(d => d.value),
+                    name: ind.name,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    marker: { color: indicatorColors[idx] },
+                    line: { color: indicatorColors[idx] }
+                  }))
+              }
+            />
+          </div>
+        </div>
+    
+        {/* Project Contribution */}
+        <div className="mt-6">
           <h3 className="text-lg font-semibold mb-3">
-            {selectedProjectIndicator 
-              ? `${selectedProjectIndicator} Progress`
-              : 'Project Indicators Progress'}
+            Project Contribution to SDG {selectedGoalId}
           </h3>
-          
-          <LineChart 
-            data={selectedProjectIndicator
-              ? projectSubIndicators.map((subInd, idx) => ({
-                  x: subInd.current.map(d => d.date),
-                  y: subInd.current.map(d => d.value),
-                  name: subInd.name,
-                  type: 'scatter',
-                  mode: 'lines+markers',
-                  marker: { color: indicatorColors[idx] },
-                  line: { color: indicatorColors[idx] }
-                }))
-              : projectIndicators.map((ind, idx) => ({
-                  x: ind.current.map(d => d.date),
-                  y: ind.current.map(d => d.value),
-                  name: ind.name,
-                  type: 'scatter',
-                  mode: 'lines+markers',
-                  marker: { color: indicatorColors[idx] },
-                  line: { color: indicatorColors[idx] }
-                }))
-            }
+          <ProjectContributionChart 
+            projectContributions={[{
+              projectId: projectData.id,
+              projectName: projectData.name,
+              contribution: getProjectContributionPercentage(projectData.id, selectedGoalId) || 0
+            }]}
+            goalTitle={selectedGoalData?.title}
+            goalId={selectedGoalId}
           />
         </div>
       </div>
-  
-      {/* Project Contribution */}
-      <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-3">
-          Project Contribution to SDG {selectedGoalId}
-        </h3>
-        <ProjectContributionChart 
-          projectContributions={[{
-            projectId: projectData.id,
-            projectName: projectData.name,
-            contribution: getProjectContributionPercentage(projectData.id, selectedGoalId)
-          }]}
-          goalTitle={selectedGoalData?.title}
-          goalId={selectedGoalId}
-        />
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return <div className="p-6">Loading SDG data...</div>;
@@ -1027,6 +1049,27 @@ const projectSubIndicators = useMemo(() => {
             onProjectChange={handleProjectSelect}
             onClearProject={() => setSelectedProject(null)}
           />
+
+          <div className="mt-6 mb-6">
+            <h3 className="text-lg font-semibold mb-3">Projects Contributing to SDG {selectedGoalId}</h3>
+            <ProjectList 
+              projects={selectedGoalData?.indicators.flatMap(indicator => 
+                (indicator.contributingProjects || []).map(project => ({
+                  id: project.project_id.toString(),
+                  name: project.name,
+                  status: project.status,
+                  completion: project.contributionPercentage,
+                  sdgContributions: [{
+                    goalId: selectedGoalId,
+                    contribution: project.latestContribution
+                  }]
+                }))
+              ).filter((p, i, self) => self.findIndex(t => t.id === p.id) === i) || []}
+              onSelectProject={handleProjectSelect}
+              selectedProject={selectedProject}
+              selectedGoalId={selectedGoalId}
+            />
+          </div>
   
           {/* Render either project view or regular SDG view */}
           {selectedProject ? renderProjectView() : (
