@@ -203,35 +203,7 @@ const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
               </>
             ) : (
               <div className="w-full p-6 flex flex-col gap-6 border border-gray-300">
-                <div className="w-full flex flex-col gap-2">
-                  <p className="text-sm font-semibold text-green-800">
-                    Input the computational formula for this sub-indicator.
-                  </p>
-                  <div className="w-full flex items-center justify-center gap-4">
-                    <input
-                      type="text"
-                      className="grow p-2 border border-gray-300 rounded-md flex items-center"
-                      onChange={(e) => setFormula(e.target.value)}
-                      placeholder="Enter formula"
-                    />
-                    <button
-                      onClick={submitFormulaChange}
-                      className="w-fit py-2 px-4 bg-gradient-to-br from-green-200 to-orange-100 rounded-md"
-                    >
-                      Submit Formula
-                    </button>
-                  </div>
-                </div>
-                <div className="w-full flex flex-col">
-                  <p className="w-full text-sm font-semibold text-green-800">
-                    Required Data:
-                  </p>
-                  <div className="w-full pl-3 flex flex-col">
-                    {sub.requiredData.map((data) => (
-                      <p key={data.requiredDataId}>{data.requiredDataName}</p>
-                    ))}
-                  </div>
-                </div>
+                This sub-indicator does not have a computation rule yet.
               </div>
             )}
           </div>

@@ -6,38 +6,21 @@ import { Indicator } from "./ProgressFormComponent";
 import useCreateFormula from "@/hooks/useCreateFormula";
 import useUpdateValues from "@/hooks/useUpdateValues";
 import useCalculateValue from "@/hooks/useCalculateValue";
-import { REM } from "next/font/google";
 
 const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
   // console.log(indicator);
-  //
-  function formatFormula(input: string): string {
-    return input.replace(/\b[a-zA-Z\s]+\b/g, (match) => {
-      // Only replace if it's not an operator/number
-      if (!/^\d+$/.test(match.trim())) {
-        return match.trim().replace(/\s+/g, "_").toLowerCase();
-      }
-      return match;
-    });
-  }
+  // const { success, loading, createFormula, successMessage } =
+  //   useCreateFormula();
 
-  const { success, loading, createFormula, successMessage } =
-    useCreateFormula();
+  // const [formula, setFormula] = useState("");
 
-  const [formula, setFormula] = useState("");
+  // const submitFormulaChange = () => {
+  //   if (indicator.goalIndicatorId) {
+  //     createFormula(formula, indicator.goalIndicatorId, "indicator");
+  //   }
+  // };
 
-  const submitFormulaChange = () => {
-    if (indicator.goalIndicatorId) {
-      const formattedFormula = formatFormula(formula);
-      createFormula(formattedFormula, indicator.goalIndicatorId, "indicator");
-    }
-  };
-
-  const {
-    success: indicatorValueSuccess,
-    loading: indicatorValueLoading,
-    updateValues,
-  } = useUpdateValues();
+  const { updateValues } = useUpdateValues();
 
   const {
     success: calculateIndicatorSuccess,
@@ -210,36 +193,9 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
                   </div>
                 </>
               ) : (
-                <div className="w-full p-4 flex flex-col gap-2 bg-gray-100 gap-6">
-                  <div className="w-full flex flex-col gap-2">
-                    <p className="text-sm font-semibold text-green-800">
-                      Input the computational formula for this indicator.
-                    </p>
-                    <div className="w-full flex items-center justify-center gap-4">
-                      <input
-                        type="text"
-                        className="grow p-2 border border-gray-300 rounded-md flex items-center"
-                        onChange={(e) => setFormula(e.target.value)}
-                        placeholder="Enter formula"
-                      />
-                      <button
-                        onClick={submitFormulaChange}
-                        className="w-fit py-2 px-4 bg-gradient-to-br from-green-200 to-orange-100 rounded-md"
-                      >
-                        Submit Formula
-                      </button>
-                    </div>
-                  </div>
-                  <div className="w-full flex flex-col">
-                    <p className="w-full text-sm font-semibold text-green-800">
-                      Required Data:
-                    </p>
-                    <div className="w-full pl-3 flex flex-col">
-                      {indicator.requiredData.map((data) => (
-                        <p key={data.requiredDataId}>{data.requiredDataName}</p>
-                      ))}
-                    </div>
-                  </div>
+                <div className="w-full p-4 flex flex-col gap-2 bg-gray-100">
+                  This indicator has no computation rule yet. Identify a rule
+                  for this indicator first.
                 </div>
               )}
             </div>
