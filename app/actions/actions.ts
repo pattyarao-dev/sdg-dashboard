@@ -141,21 +141,21 @@ export async function getProjectWithIndicators() {
               td_goal_sub_indicator: {
                 include: {
                   md_sub_indicator: true,
-                  td_sub_indicator_value: true
-                }
-              }
-            }
+                  td_sub_indicator_value: true,
+                },
+              },
+            },
           },
           td_project_indicator_value: true,
           td_project_sub_indicator: {
             include: {
               md_sub_indicator: true,
-              td_project_sub_indicator_value: true
-            }
-          }
-        }
-      }
-    }
+              td_project_sub_indicator_value: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   return projects;
@@ -175,21 +175,21 @@ export async function getGoalsWithProjects() {
               td_project_sub_indicator: {
                 include: {
                   md_sub_indicator: true,
-                  td_project_sub_indicator_value: true
-                }
-              }
-            }
+                  td_project_sub_indicator_value: true,
+                },
+              },
+            },
           },
           td_goal_sub_indicator: {
             include: {
               md_sub_indicator: true,
-              td_sub_indicator_value: true
-            }
-          }
-        }
-      }
+              td_sub_indicator_value: true,
+            },
+          },
+        },
+      },
     },
-    orderBy: { goal_id: "asc" }
+    orderBy: { goal_id: "asc" },
   });
 
   return goals;
@@ -256,17 +256,37 @@ export async function getUnassignedProjectGoalIndicators(projectId: number) {
   return typedIndicator as IGoalWithIndicators[];
 }
 
+// export async function getGoals() {
+//   const goals = await prisma.md_goal.findMany({
+//     include: {
+//       td_goal_indicator: {
+//         include: {
+//           md_indicator: true, // Get the indicator details
+//           td_indicator_value: true,
+//           td_goal_sub_indicator: {
+//             include: {
+//               md_sub_indicator: true, // Get only sub-indicators applicable to the goal
+//               td_sub_indicator_value: true,
+//             },
+//           },
+//         },
+//       },
+//     },
+//     orderBy: { goal_id: "asc" },
+//   });
+
+//   return goals;
+// }
+//
 export async function getGoals() {
   const goals = await prisma.md_goal.findMany({
     include: {
       td_goal_indicator: {
         include: {
-          md_indicator: true, // Get the indicator details
-          td_indicator_value: true,
+          md_indicator: true,
           td_goal_sub_indicator: {
             include: {
-              md_sub_indicator: true, // Get only sub-indicators applicable to the goal
-              td_sub_indicator_value: true,
+              md_sub_indicator: true,
             },
           },
         },
@@ -276,6 +296,42 @@ export async function getGoals() {
   });
 
   return goals;
+}
+
+export async function getGoal(id: number) {
+  const goal = await prisma.md_goal.findUnique({
+    where: { goal_id: id },
+    include: {
+      td_goal_indicator: {
+        include: {
+          md_indicator: true,
+          td_goal_sub_indicator: {
+            include: {
+              md_sub_indicator: true,
+            },
+          },
+          td_goal_indicator_required_data: {
+            include: {
+              ref_required_data: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return goal;
+}
+
+export async function getRequiredDataList() {
+  const requiredData = await prisma.ref_required_data.findMany({
+    select: {
+      required_data_id: true,
+      name: true,
+    },
+  });
+
+  return requiredData;
 }
 
 export async function getGoalsInformation() {

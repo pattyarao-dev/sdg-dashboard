@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { getGoals } from "../actions/actions";
+import { getGoals, getGoalsInformation } from "../actions/actions";
 import { IoAddSharp } from "react-icons/io5";
 
 export default async function IndicatorManagement() {
-  const goalsList = await getGoals();
+  //const goals = await getGoals();
+  const goals = await getGoalsInformation();
   return (
     <div className="w-full min-h-screen p-10 flex items-center justify-center bg-green-50">
-      <div className="w-full h-full p-10 flex flex-col gap-10">
+      {/* <div className="w-full h-full p-10 flex flex-col gap-10">
         <h1 className="w-full font-black text-4xl uppercase">
           Sustainable Development Goals
         </h1>
@@ -53,6 +54,48 @@ export default async function IndicatorManagement() {
             </div>
           ))}
         </div>
+      </div> */}
+
+      <div className="w-full flex flex-col gap-24">
+        {goals.map((goal, index) => (
+          <div
+            key={index}
+            className="w-full p-10 flex flex-col gap-8 bg-white drop-shadow-lg"
+          >
+            <div className="w-full flex flex-col gap-4">
+              <div className="w-full flex items-center justify-between">
+                <h1 className="text-3xl uppercase font-black">
+                  {goal.goalName}
+                </h1>
+                <button className="w-fit px-6 py-2 bg-gradient-to-r from-green-100 to-orange-200 font-bold uppercase">
+                  <Link href={`/indicatormanagement/${goal.goalId}`}>
+                    Add Goal Indicators
+                  </Link>
+                </button>
+              </div>
+              <hr className="w-full border border-gray-600" />
+            </div>
+            <div className="w-full flex flex-col gap-2">
+              <h1 className="font-bold uppercase text-green-800">Indicators</h1>
+              {goal.indicators.length > 0 ? (
+                goal.indicators.map((indicator, index) => (
+                  <div
+                    key={index}
+                    className="w-full p-4 border border-gray-300"
+                  >
+                    <h1>{indicator.indicatorName}</h1>
+                  </div>
+                ))
+              ) : (
+                <div className="w-full p-4">
+                  <h1 className="text-lg italic text-gray-500">
+                    No indicators added
+                  </h1>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

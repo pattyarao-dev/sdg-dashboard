@@ -7,3 +7,7 @@ body {
     background: var(--background);
     font-family: Arial, Helvetica, sans-serif;
 }
+
+.button-style {
+    @apply w-fit px-8 py-2 bg-gradient-to-r from-green-100 to-orange-200 flex items-center gap-2 uppercase font-bold text-[#614124];
+}

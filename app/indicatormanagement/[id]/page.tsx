@@ -1,6 +1,7 @@
-import { getGoals } from "@/app/actions/actions";
+import { getGoal, getRequiredDataList } from "@/app/actions/actions";
 import AddIndicator from "@/components/AddIndicator";
 import GoBackButton from "@/components/GoBackButton";
+import IndicatorManagementComponent from "@/components/indicatormanagement/IndicatorManagementComponent";
 import prisma from "@/utils/prisma";
 
 export default async function AddGoalIndicator({
@@ -8,16 +9,11 @@ export default async function AddGoalIndicator({
 }: {
   params: Promise<{ id: number }>;
 }) {
-  const id = (await params).id;
+  const id = Number((await params).id);
 
   const idNum = Number(id);
 
-  const goal = await prisma.md_goal.findUnique({
-    where: { goal_id: idNum },
-    select: { name: true },
-  });
-  console.log(id);
-  console.log(`this is ${goal?.name}`);
+  const goal = await getGoal(idNum);
 
   const indicators = await prisma.md_indicator.findMany({
     select: {
@@ -61,12 +57,7 @@ export default async function AddGoalIndicator({
     },
   });
 
-  const requiredData = await prisma.ref_required_data.findMany({
-    select: {
-      required_data_id: true,
-      name: true,
-    },
-  });
+  const requiredData = await getRequiredDataList();
 
   const finalGoalIndicators = goalIndicators.map(
     (indicator) => indicator.indicator_id,
@@ -99,19 +90,19 @@ export default async function AddGoalIndicator({
   //   "Goal Indicators with Required Data:",
   //   goalIndicatorsWithRequiredData,
   // );
-  console.log("Available Indicators:", availableIndicators);
 
   // console.log(JSON.stringify(availableIndicators, null, 2));
 
   return (
     <div className="w-full min-h-screen p-10 flex flex-col items-start justify-start gap-10">
       <GoBackButton />
-      <AddIndicator
+      {/* <AddIndicator
         goalName={goal?.name}
         goalId={id}
         indicators={availableIndicators}
         requiredData={requiredData}
-      />
+      /> */}
+      <IndicatorManagementComponent goal={goal} requiredData={requiredData} />
     </div>
   );
 }
