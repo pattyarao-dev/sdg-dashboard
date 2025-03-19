@@ -28,7 +28,7 @@ export interface GoalIndicatorRequiredData {
 export interface GoalIndicator {
   goal_indicator_id: number;
   md_indicator: Indicator;
-  td_goal_sub_indicator: GoalSubIndicator[];
+  td_goal_sub_indicator?: GoalSubIndicator[];
   td_goal_indicator_required_data: GoalIndicatorRequiredData[];
 }
 

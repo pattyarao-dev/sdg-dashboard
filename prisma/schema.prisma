@@ -290,4 +290,5 @@ enum project_status {
 enum status {
   active
   disabled
+  pending
 }
