@@ -45,9 +45,9 @@ const IndicatorManagementComponent = ({
       </div>
       <div>
         {task === "Create a New Indicator" ? (
-          // <AddNewIndicator goal={goal} requiredData={requiredData} />
-          <AddNewIndicatorRecursive goal={goal} requiredData={requiredData} />
-        ) : task === "Add an Existing Indicator" ? (
+          <AddNewIndicator goal={goal} requiredData={requiredData} />
+        ) : // <AddNewIndicatorRecursive goal={goal} requiredData={requiredData} />
+        task === "Add an Existing Indicator" ? (
           <AddExistingIndicator
             goal={goal}
             availableIndicators={availableIndicators}

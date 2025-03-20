@@ -18,6 +18,7 @@ const AddExistingIndicator = ({
     global_target_value: 0,
     global_baseline_value: 0,
     requiredData: [{}],
+    sub_indicators: [{}],
   });
 
   const [requiredDataList, setRequiredDataList] = useState<RequiredData[]>([]);

@@ -1,36 +1,36 @@
 import { useState } from "react";
-
-interface Indicator {
-  name: string;
-  description: string;
-  global_target_value: number;
-  global_baseline_value: number;
-  subIndicators: Indicator[];
-}
+import {
+  GoalIndicator,
+  GoalSubIndicator,
+  SubIndicator,
+  Indicator,
+} from "@/types/goal.types";
 
 const IndicatorForm = () => {
-  const [newIndicator, setNewIndicator] = useState<Indicator>({
+  const [newIndicator, setNewIndicator] = useState({
     name: "",
     description: "",
     global_target_value: 0,
     global_baseline_value: 0,
+    required_Data: [],
     subIndicators: [],
   });
 
-  const handleInputChange = (field: keyof Indicator, value: any) => {
+  const handleInputChange = (field: keyof GoalIndicator, value: any) => {
     setNewIndicator((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleAddSubIndicator = (parentIndicator: Indicator) => {
-    const newSubIndicator: Indicator = {
+  const handleAddSubIndicator = (parentIndicator: GoalSubIndicator) => {
+    const newSubIndicator = {
       name: "",
       description: "",
       global_target_value: 0,
       global_baseline_value: 0,
+      required_data: [],
       subIndicators: [],
     };
     setNewIndicator((prev) => {
-      const updateIndicators = (indicator: Indicator): Indicator => {
+      const updateIndicators = (indicator: GoalSubIndicator) => {
         if (indicator === parentIndicator) {
           return {
             ...indicator,
@@ -70,8 +70,8 @@ const IndicatorForm = () => {
   };
 
   const renderIndicatorForm = (
-    indicator: Indicator,
-    parentIndicator?: Indicator,
+    indicator: GoalIndicator,
+    parentIndicator?: GoalIndicator,
   ) => {
     return (
       <div
@@ -84,42 +84,98 @@ const IndicatorForm = () => {
           {parentIndicator ? "Sub-Indicator" : "Indicator"}
         </h2>
         <div className="w-full flex flex-col gap-2">
-          <input
-            type="text"
-            placeholder="Indicator Name"
-            value={indicator.name}
-            onChange={(e) => handleInputChange("name", e.target.value)}
-            className="w-full p-2 border border-gray-300"
-          />
-          <input
-            type="text"
-            placeholder="Indicator Description"
-            value={indicator.description}
-            onChange={(e) => handleInputChange("description", e.target.value)}
-            className="w-full p-2 border border-gray-300"
-          />
-          <div className="w-full flex gap-4">
-            <input
-              type="number"
-              placeholder="2030 Target"
-              value={indicator.global_target_value}
-              onChange={(e) =>
-                handleInputChange("global_target_value", Number(e.target.value))
-              }
-              className="w-1/2 p-2 border border-gray-300"
-            />
-            <input
-              type="number"
-              placeholder="Baseline"
-              value={indicator.global_baseline_value}
-              onChange={(e) =>
-                handleInputChange(
-                  "global_baseline_value",
-                  Number(e.target.value),
-                )
-              }
-              className="w-1/2 p-2 border border-gray-300"
-            />
+          <div className="w-full flex flex-col gap-8">
+            <div className="w-full flex flex-col gap-2">
+              <p className="text-sm text-green-800 font-semibold uppercase">
+                Indicator Name:
+              </p>
+              <input
+                type="text"
+                placeholder="Indicator Name"
+                value={newIndicator.name}
+                onChange={(e) =>
+                  setNewIndicator({
+                    ...newIndicator,
+                    name: e.target.value,
+                  })
+                }
+                className="w-full p-2 border border-gray-300"
+              />
+            </div>
+            <div className="w-full flex flex-col gap-4">
+              <p className="text-sm text-green-800 font-semibold uppercase">
+                Indicator Description:
+              </p>
+              <input
+                type="text"
+                placeholder="Indicator Description"
+                value={newIndicator.description}
+                onChange={(e) =>
+                  setNewIndicator({
+                    ...newIndicator,
+                    description: e.target.value,
+                  })
+                }
+                className="w-full p-2 border border-gray-300"
+              />
+            </div>
+
+            <div className="w-full flex items-center justify-between gap-8">
+              <div className="w-1/2 flex flex-col gap-4">
+                <p className="text-sm text-green-800 font-semibold uppercase">
+                  2030 Target
+                </p>
+                <input
+                  type="number"
+                  placeholder="2030 Target"
+                  value={newIndicator.global_target_value}
+                  onChange={(e) =>
+                    setNewIndicator({
+                      ...newIndicator,
+                      global_target_value: Number(e.target.value),
+                    })
+                  }
+                  className="w-full p-2 border border-gray-300"
+                />
+              </div>
+              <div className="w-1/2 flex flex-col gap-4">
+                <p className="text-sm text-green-800 font-semibold uppercase">
+                  Baseline
+                </p>
+                <input
+                  type="number"
+                  placeholder="Baseline"
+                  value={newIndicator.global_baseline_value}
+                  onChange={(e) =>
+                    setNewIndicator({
+                      ...newIndicator,
+                      global_baseline_value: Number(e.target.value),
+                    })
+                  }
+                  className="w-full p-2 border border-gray-300"
+                />
+              </div>
+            </div>
+            <div className="w-full flex flex-col flex-grow gap-4">
+              <p className="text-sm text-green-800 font-semibold uppercase">
+                Input the required data to be collected for this indicator:
+              </p>
+              <div className="w-full h-[200px] overflow-y-scroll flex flex-col gap-2">
+                {requiredData.map((data, index) => (
+                  <div
+                    key={index}
+                    className={`w-full p-2 flex items-center gap-2 ${requiredDataList.includes(data) ? "bg-green-50 border border-green-800" : "border border-gray-200"}`}
+                  >
+                    <button
+                      onClick={() => handleSelectRequiredData(data)}
+                      className="w-full text-left"
+                    >
+                      {data.name}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-4">
@@ -146,8 +202,8 @@ const IndicatorForm = () => {
         </div>
 
         <div className="ml-6">
-          {indicator.subIndicators.map((subIndicator) => (
-            <div key={subIndicator.name}>
+          {indicator.subIndicators.map((subIndicator, index) => (
+            <div key={index}>
               {renderIndicatorForm(subIndicator, indicator)}
             </div>
           ))}
