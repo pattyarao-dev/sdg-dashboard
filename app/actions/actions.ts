@@ -279,6 +279,7 @@ export async function getGoals() {
   return goals;
 }
 
+// Indicator and sub indicator required data for computation
 export async function getGoalsInformation() {
   const goals = await prisma.md_goal.findMany({
     orderBy: { goal_id: "asc" },

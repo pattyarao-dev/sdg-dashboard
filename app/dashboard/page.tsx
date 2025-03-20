@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, use } from "react";
+import { useRouter } from 'next/navigation';
 import GaugeChart from "@/components/GaugeChart";
 import LineChart from "@/components/LineChart";
 import { ProgressBarList } from "@/components/ProgressBarChart";
@@ -15,6 +16,7 @@ import {
   getProjectContributionToGoal,
   getProjectContributionPercentage
 } from "@/utils/transformSDGData";
+import { GoAlert } from "react-icons/go";
 
 // SDG colors
 const sdgColors = {
@@ -627,6 +629,7 @@ const filterDataByDate = (data, selectedYear, selectedMonth) => {
 
 // Main Dashboard Component
 const Dashboard: React.FC = () => {
+  const router = useRouter();
   const [sdgData, setSdgData] = useState<DashboardSDG[]>([]);
   const [filteredSdgData, setFilteredSdgData] = useState<DashboardSDG[]>([]);
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
@@ -690,9 +693,8 @@ const Dashboard: React.FC = () => {
 
   // Memoize event handlers
   const handleGaugeClick = useCallback((goalId: number) => {
-    setSelectedGoalId(prevId => prevId === goalId ? null : goalId);
-    setSelectedIndicator("");
-  }, []);
+    router.push(`/dashboard/${goalId}`);
+  }, [router]);
 
   const handleSelectIndicator = useCallback((indicatorName: string) => {
     setSelectedIndicator(prevIndicator => prevIndicator === indicatorName ? "" : indicatorName);
@@ -1024,6 +1026,7 @@ const projectSubIndicators = useMemo(() => {
           sdgData={filteredSdgData}
           selectedGoalId={selectedGoalId}
           onGaugeClick={handleGaugeClick}
+          selectedProject={selectedProject}
         />
       </div>
   

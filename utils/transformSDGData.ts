@@ -931,7 +931,6 @@ export const getProjectImpactByGoal = (
     goalDetails: {
       goal_id: goalId,
       name: goal.title,
-      description: goal.description
     },
     projectImpact: [],
     impactMetrics: {
