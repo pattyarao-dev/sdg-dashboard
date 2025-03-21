@@ -4,6 +4,27 @@ export interface Goal {
   goal_name: string;
   color?: string;
 }
+export interface GeoJSONFeature {
+    type: string;
+    geometry: {
+      type: string;
+      coordinates: number[][][];
+    };
+    properties: {
+      NAME_3: string;
+      [key: string]: any;
+    };
+  }
+export interface IndicatorValue {
+    value_id: number;
+    indicator_id: number;
+    goal_id: number;
+    value: number;
+    measurement_date: string;
+    location: string;
+    goal_name: string;
+    indicator_name: string;
+  }
 
 export interface GoalSummary {
     goal_id: number;

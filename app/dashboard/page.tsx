@@ -6,7 +6,13 @@ import { Goal } from '@/types/dashboard.types';
 import { useRouter } from 'next/navigation';
 import { TimeFilter } from "@/components/TimeFilter";
 import GaugeChart from '@/components/GaugeChart';
+import dynamic from 'next/dynamic';
 
+// Dynamically import the ChoroplethMap component with no SSR
+const ChoroplethMapNoSSR = dynamic(
+  () => import('@/components/ChoroplethMap').then(mod => mod.default || mod),
+  { ssr: false }
+);
 
 const Dashboard: React.FC = () => {
   const [filters, setFilters] = useState({
@@ -21,6 +27,7 @@ const Dashboard: React.FC = () => {
   const [goalSummaries, setGoalSummaries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [goalsLoading, setGoalsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'table' | 'map'>('table');
 
   // Fetch all goals initially
   useEffect(() => {
@@ -124,18 +131,32 @@ const Dashboard: React.FC = () => {
         initialMonth={filters.month}
       />
       
-      <div className="filters mt-4">
+      <div className="filters mt-4 flex flex-wrap items-center">
         {/* Your other filters */}
         <select 
           value={filters.location || ''}
-          onChange={e => handleFilterChange('location', e.target.value ? e.target.value : null)}
+          onChange={e => handleFilterChange('location', e.target.value ? parseInt(e.target.value) : null)}
           className="border border-gray-300 rounded-md p-2 bg-white mr-2"
         >
           <option value="">Select Location</option>
           {/* Add your location options */}
         </select>
         
-        {/* Add more filter components as needed */}
+        {/* View mode toggle */}
+        <div className="ml-auto">
+          <button 
+            onClick={() => setViewMode('table')}
+            className={`px-4 py-2 rounded-l-md transition-colors ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          >
+            Table
+          </button>
+          <button 
+            onClick={() => setViewMode('map')}
+            className={`px-4 py-2 rounded-r-md transition-colors ${viewMode === 'map' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          >
+            Map
+          </button>
+        </div>
       </div>
 
       {/* SDG Goal Gauges */}
@@ -147,24 +168,24 @@ const Dashboard: React.FC = () => {
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {allGoals
-              .sort((a, b) => a.goal_id - b.goal_id) // Sort goals by ID
-              .map(goal => (
-                <GaugeChart 
-                  key={goal.goal_id}
-                  goal_id={goal.goal_id}
-                  title={`${goal.goal_id}. ${goal.name}`}
-                  color={goal.color || goalColors[goal.goal_id as keyof typeof goalColors]}
-                  isActive={filters.goal_id === goal.goal_id}
-                  onFilterChange={handleGoalFilterChange}
-                  year={filters.year}
-                  month={filters.month}
-                  location={filters.location}
-                  project_id={filters.project_id}
-                  defaultValue={0}
-                />
-              ))}
-          </div>
+              {allGoals
+                .sort((a, b) => a.goal_id - b.goal_id) // Sort goals by ID
+                .map(goal => (
+                  <GaugeChart 
+                    key={goal.goal_id}
+                    goal_id={goal.goal_id}
+                    title={`${goal.goal_id}. ${goal.name}`}
+                    color={goal.color || goalColors[goal.goal_id as keyof typeof goalColors]}
+                    isActive={filters.goal_id === goal.goal_id}
+                    onFilterChange={handleGoalFilterChange}
+                    year={filters.year}
+                    month={filters.month}
+                    location={filters.location}
+                    project_id={filters.project_id}
+                    defaultValue={0}
+                  />
+                ))}
+            </div>
             
             {filters.goal_id !== null && (
               <button 
@@ -178,39 +199,49 @@ const Dashboard: React.FC = () => {
         )}
       </div>
 
+      {/* Data display - Table or Map */}
       {loading ? (
         <p className="text-center my-8">Loading data...</p>
       ) : (
-        <div className="overflow-x-auto mt-6">
-          <table className="min-w-full bg-white border border-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-4 border-b text-left">Goal</th>
-                <th className="py-2 px-4 border-b text-left">Indicator</th>
-                <th className="py-2 px-4 border-b text-left">Value</th>
-                <th className="py-2 px-4 border-b text-left">Date</th>
-                <th className="py-2 px-4 border-b text-left">Location</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.length > 0 ? (
-                data.map(item => (
-                  <tr key={item.value_id} className="hover:bg-gray-50">
-                    <td className="py-2 px-4 border-b">{item.goal_name}</td>
-                    <td className="py-2 px-4 border-b">{item.indicator_name}</td>
-                    <td className="py-2 px-4 border-b">{item.value}</td>
-                    <td className="py-2 px-4 border-b">{new Date(item.measurement_date).toLocaleDateString()}</td>
-                    <td className="py-2 px-4 border-b">{item.location}</td>
+        <>
+          {viewMode === 'table' ? (
+            <div className="overflow-x-auto mt-6">
+              <table className="min-w-full bg-white border border-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="py-2 px-4 border-b text-left">Goal</th>
+                    <th className="py-2 px-4 border-b text-left">Indicator</th>
+                    <th className="py-2 px-4 border-b text-left">Value</th>
+                    <th className="py-2 px-4 border-b text-left">Date</th>
+                    <th className="py-2 px-4 border-b text-left">Location</th>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="py-4 text-center text-gray-500">No data available for the selected filters</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {data.length > 0 ? (
+                    data.map(item => (
+                      <tr key={item.value_id} className="hover:bg-gray-50">
+                        <td className="py-2 px-4 border-b">{item.goal_name}</td>
+                        <td className="py-2 px-4 border-b">{item.indicator_name}</td>
+                        <td className="py-2 px-4 border-b">{item.value}</td>
+                        <td className="py-2 px-4 border-b">{new Date(item.measurement_date).toLocaleDateString()}</td>
+                        <td className="py-2 px-4 border-b">{item.location}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="py-4 text-center text-gray-500">No data available for the selected filters</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mt-6">
+              <h2 className="text-xl font-semibold mb-4">Geographic Data Visualization</h2>
+              <ChoroplethMapNoSSR filters={filters} height="600px" />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

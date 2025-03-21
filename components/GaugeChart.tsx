@@ -4,33 +4,9 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import * as React from "react";
 import { Data, Layout } from "plotly.js";
+import { Goal, GoalSummary } from '@/types/dashboard.types';
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
-
-interface GoalSummary {
-  goal_id: number;
-  goal_name: string;
-  count: number;
-  avg_value: number;
-  median_value: number;
-  min_value: number;
-  max_value: number;
-  std_dev: number;
-  unique_values: number;
-  latest_value: number;
-  latest_measurement_date: string;
-  project_avg_value?: number;
-  project_median_value?: number;
-  project_min_value?: number;
-  project_max_value?: number;
-  project_values_count?: number;
-}
-
-// interface Goal {
-//   goal_id: number;
-//   goal_name: string;
-//   color?: string;
-// }
 
 interface GaugeChartProps {
   goal_id: number; 
@@ -42,7 +18,7 @@ interface GaugeChartProps {
   month?: number;
   project_id?: number;
   location?: string;
-  valueType?: 'latest_value' | 'avg_value' | 'median_value';
+  valueType?: 'avg_value'; // 'latest_value' | 'avg_value' | 'median_value'
   // Default fallback value when no data is available
   defaultValue?: number;
 }
