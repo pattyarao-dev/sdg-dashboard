@@ -20,7 +20,9 @@ const Dashboard: React.FC = () => {
     month: null,
     location: null,
     goal_id: null,
-    project_id: null
+    project_id: null,
+    indicator_id: null, 
+    sub_indicator_id: null 
   });
   const [data, setData] = useState([]);
   const [allGoals, setAllGoals] = useState<Goal[]>([]);
@@ -29,6 +31,13 @@ const Dashboard: React.FC = () => {
   const [goalsLoading, setGoalsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'map'>('map'); // Default to map view
   const [locations, setLocations] = useState<string[]>([]);
+
+  // New states for drill-down functionality
+  const [indicators, setIndicators] = useState<Indicator[]>([]);
+  const [indicatorsLoading, setIndicatorsLoading] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [projectContributions, setProjectContributions] = useState([]);
 
   // Fetch all goals initially
   useEffect(() => {
@@ -46,6 +55,65 @@ const Dashboard: React.FC = () => {
 
     fetchAllGoals();
   }, []);
+
+  // Fetch indicators when a goal is selected
+  useEffect(() => {
+    const fetchIndicators = async () => {
+      if (!filters.goal_id) {
+        setIndicators([]);
+        return;
+      }
+      
+      setIndicatorsLoading(true);
+      try {
+        const response = await axios.get(`http://localhost:8000/api/indicators/api/indicators/${filters.goal_id}`, {
+        });
+        setIndicators(response.data.data);
+      } catch (error) {
+        console.error('Error fetching indicators:', error);
+      } finally {
+        setIndicatorsLoading(false);
+      }
+    };
+
+    fetchIndicators();
+  }, [filters.goal_id]);
+
+  // Fetch projects and their contributions when an indicator is selected
+  useEffect(() => {
+    const fetchProjects = async () => {
+      if (!filters.indicator_id && !filters.sub_indicator_id) {
+        setProjects([]);
+        setProjectContributions([]);
+        return;
+      }
+      
+      setProjectsLoading(true);
+      try {
+        // Build query params for projects
+        const params = {};
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== null) {
+            params[key] = value;
+          }
+        });
+        
+        // Fetch projects related to the selected indicator/sub-indicator
+        const response = await axios.get('http://localhost:8000/api/projects', { params });
+        setProjects(response.data.data);
+        
+        // Fetch project contributions to this indicator
+        const contributionsResponse = await axios.get('http://localhost:8000/api/indicators/project-contribution', { params });
+        setProjectContributions(contributionsResponse.data.contributions);
+      } catch (error) {
+        console.error('Error fetching projects data:', error);
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, [filters.indicator_id, filters.sub_indicator_id, filters.year, filters.month, filters.location]);
 
   // Fetch locations
   useEffect(() => {
@@ -116,9 +184,28 @@ const Dashboard: React.FC = () => {
   };
   
   const handleGoalFilterChange = (goal_id: number | null) => {
+    // Reset indicator and sub-indicator when changing goal
     setFilters(prev => ({
       ...prev,
-      goal_id
+      goal_id,
+      indicator_id: null,
+      sub_indicator_id: null
+    }));
+  };
+
+  const handleIndicatorSelect = (indicator_id: number | null) => {
+    // Reset sub-indicator when changing indicator
+    setFilters(prev => ({
+      ...prev,
+      indicator_id,
+      sub_indicator_id: null
+    }));
+  };
+
+  const handleSubIndicatorSelect = (sub_indicator_id: number | null) => {
+    setFilters(prev => ({
+      ...prev,
+      sub_indicator_id
     }));
   };
 
@@ -126,6 +213,13 @@ const Dashboard: React.FC = () => {
     setFilters(prev => ({
       ...prev,
       location: locationName
+    }));
+  };
+
+  const handleProjectSelect = (project_id: number | null) => {
+    setFilters(prev => ({
+      ...prev,
+      project_id
     }));
   };
 
@@ -148,6 +242,66 @@ const Dashboard: React.FC = () => {
     15: "#56C02B", 
     16: "#00689D", 
     17: "#19486A", 
+  };
+
+  // Gets current goal color
+  const getCurrentGoalColor = () => {
+    if (!filters.goal_id) return "#666666";
+    return goalColors[filters.goal_id as keyof typeof goalColors];
+  };
+
+  // Function to generate random colors for project pie chart
+  const getProjectColors = (count: number) => {
+    const baseColor = getCurrentGoalColor();
+    const colors = [];
+    
+    // Create variations of the base color
+    for (let i = 0; i < count; i++) {
+      const hueShift = (i * 30) % 360;
+      colors.push(shiftHue(baseColor, hueShift));
+    }
+    return colors;
+  };
+
+  // Helper function to shift hue of a hex color
+  const shiftHue = (hex: string, deg: number) => {
+    // Very simplified version - in real code, use a proper color manipulation library
+    return hex; // Placeholder - would actually shift the hue in a real implementation
+  };
+
+ // Helper to get selected indicator or sub-indicator name
+  const getSelectedIndicatorName = () => {
+    if (filters.sub_indicator_id) {
+      // Look through your indicators data to find the one containing this sub-indicator
+      const indicator = indicators.find(ind => 
+        ind.sub_indicators && ind.sub_indicators.some(sub => 
+          sub.sub_indicator_id === filters.sub_indicator_id
+        )
+      );
+      
+      if (indicator && indicator.sub_indicators) {
+        const subIndicator = indicator.sub_indicators.find(
+          sub => sub.sub_indicator_id === filters.sub_indicator_id
+        );
+        
+        if (subIndicator) {
+          return `${subIndicator.sub_indicator_id || ''}: ${subIndicator.name || ''}`;
+        }
+      }
+    }
+    
+    if (filters.indicator_id) {
+      // Find the indicator in your indicators array
+      const indicator = indicators.find(
+        ind => ind.indicator_id === filters.indicator_id
+      );
+      
+      if (indicator) {
+        return `${indicator.indicator_id || ''}: ${indicator.name || indicator.indicator_name || ''}`;
+      }
+    }
+    
+    return 'All Indicators';
   };
 
   return (
@@ -194,11 +348,10 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Active filters display */}
-      {filters.location && (
-        <div className="mt-2 flex items-center">
-          <span className="text-sm text-gray-600 mr-2">Filtered by location:</span>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {filters.location && (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            {filters.location}
+            Location: {filters.location}
             <button 
               onClick={() => handleFilterChange('location', null)}
               className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
@@ -208,17 +361,65 @@ const Dashboard: React.FC = () => {
               </svg>
             </button>
           </span>
-        </div>
-      )}
-
-      {/* SDG Goal Gauges */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Goals Progress Overview</h2>
+        )}
         
-        {goalsLoading ? (
-          <p>Loading goals...</p>
-        ) : (
-          <>
+        {filters.goal_id && (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            Goal: {filters.goal_id}
+            <button 
+              onClick={() => handleGoalFilterChange(null)}
+              className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </span>
+        )}
+        
+        {filters.indicator_id && (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            Indicator: {indicators.find(i => i.indicator_id === filters.indicator_id)?.indicator_code}
+            <button 
+              onClick={() => handleIndicatorSelect(null)}
+              className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </span>
+        )}
+        
+        {filters.sub_indicator_id && (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            Sub-Indicator: {
+              indicators.find(i => 
+                i.sub_indicators?.some(s => s.sub_indicator_id === filters.sub_indicator_id)
+              )?.sub_indicators?.find(s => 
+                s.sub_indicator_id === filters.sub_indicator_id
+              )?.sub_indicator_code
+            }
+            <button 
+              onClick={() => handleSubIndicatorSelect(null)}
+              className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </span>
+        )}
+      </div>
+
+      {/* SDG Goal Gauges - shows only if no indicator is selected */}
+      {!filters.indicator_id && !filters.sub_indicator_id && (
+        <div className="mb-8 mt-6">
+          <h2 className="text-xl font-semibold mb-4">Goals Progress Overview</h2>
+          
+          {goalsLoading ? (
+            <p>Loading goals...</p>
+          ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {allGoals
                 .sort((a, b) => a.goal_id - b.goal_id) // Sort goals by ID
@@ -238,45 +439,190 @@ const Dashboard: React.FC = () => {
                   />
                 ))}
             </div>
-            
-            {filters.goal_id !== null && (
-              <button 
-                onClick={() => handleGoalFilterChange(null)}
-                className="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
-              >
-                Clear Goal Filter
-              </button>
-            )}
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {/* Data display - Table or Map */}
-      {loading ? (
-        <p className="text-center my-8">Loading data...</p>
-      ) : (
-        <>
-          {viewMode === 'table' ? (
-            <div className="overflow-x-auto mt-6">
-              <table className="min-w-full bg-white border border-gray-200">
+      {/* Indicators List - Shows when a goal is selected */}
+      {filters.goal_id && !filters.indicator_id && !filters.sub_indicator_id && (
+        <div className="mt-6 mb-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">
+              Goal {filters.goal_id} Indicators
+            </h2>
+            <button 
+              onClick={() => handleGoalFilterChange(null)}
+              className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-md text-sm transition-colors"
+            >
+              Back to All Goals
+            </button>
+          </div>
+          
+          {indicatorsLoading ? (
+            <p className="my-4">Loading indicators...</p>
+          ) : indicators.length === 0 ? (
+            <p className="my-4 text-gray-600">No indicators found for this goal.</p>
+          ) : (
+            <div className="mt-4 space-y-4">
+              {indicators.map(indicator => (
+                <div 
+                  key={indicator.indicator_id} 
+                  className="border rounded-md p-4 bg-white hover:shadow-md transition-shadow"
+                >
+                  <div 
+                    className="cursor-pointer"
+                    onClick={() => handleIndicatorSelect(indicator.indicator_id)}
+                  >
+                    <h3 className="text-lg font-medium flex items-center">
+                      <span 
+                        className="w-3 h-3 rounded-full mr-2" 
+                        style={{ backgroundColor: getCurrentGoalColor() }}
+                      ></span>
+                      {indicator.indicator_code}: {indicator.name}
+                    </h3>
+                    <p className="text-gray-600 mt-1">{indicator.description || 'No description available.'}</p>
+                  </div>
+                  
+                  {/* Sub-indicators with indent */}
+                  {indicator.sub_indicators && indicator.sub_indicators.length > 0 && (
+                    <div className="mt-3 pl-5 border-l-2 space-y-2" style={{ borderColor: getCurrentGoalColor() }}>
+                      <p className="text-sm text-gray-500 font-medium">Sub-indicators:</p>
+                      {indicator.sub_indicators.map(subInd => (
+                        <div 
+                          key={subInd.sub_indicator_id} 
+                          className="py-2 px-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer"
+                          onClick={() => handleSubIndicatorSelect(subInd.sub_indicator_id)}
+                        >
+                          <p className="font-medium">{subInd.sub_indicator_code}: {subInd.name}</p>
+                          {subInd.description && (
+                            <p className="text-sm text-gray-600 mt-1">{subInd.description}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Project Contributions - Shows when an indicator/sub-indicator is selected */}
+      {(filters.indicator_id || filters.sub_indicator_id) && (
+        <div className="mt-6 mb-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">
+              {getSelectedIndicatorName()}
+            </h2>
+            <button 
+              onClick={() => filters.indicator_id ? handleIndicatorSelect(null) : handleSubIndicatorSelect(null)}
+              className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-md text-sm transition-colors"
+            >
+              Back to {filters.indicator_id ? `Goal ${filters.goal_id} Indicators` : 'Indicator'}
+            </button>
+          </div>
+          
+          {projectsLoading ? (
+            <p className="my-4">Loading projects data...</p>
+          ) : (
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Projects Contribution Pie Chart */}
+              <div className="border rounded-lg p-4 bg-white shadow-sm">
+                <h3 className="text-lg font-medium mb-4">Project Contributions</h3>
+                {projectContributions.length > 0 ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={projectContributions}
+                          dataKey="contribution"
+                          nameKey="project_name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={({name, percent}) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                        >
+                          {projectContributions.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={getProjectColors(projectContributions.length)[index % getProjectColors(projectContributions.length).length]} 
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => `${value}%`} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-500 my-10">No project contribution data available</p>
+                )}
+              </div>
+              
+              {/* Projects List */}
+              <div className="border rounded-lg p-4 bg-white shadow-sm">
+                <h3 className="text-lg font-medium mb-4">Projects</h3>
+                {projects.length > 0 ? (
+                  <div className="overflow-y-auto max-h-64">
+                    <table className="min-w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="py-2 px-3 text-left text-sm font-medium text-gray-500">Project</th>
+                          <th className="py-2 px-3 text-right text-sm font-medium text-gray-500">Value</th>
+                          <th className="py-2 px-3 text-right text-sm font-medium text-gray-500">Contribution</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {projects.map(project => {
+                          const contribution = projectContributions.find(p => p.project_id === project.project_id);
+                          return (
+                            <tr 
+                              key={project.project_id} 
+                              className="hover:bg-gray-50 cursor-pointer"
+                              onClick={() => handleProjectSelect(project.project_id)}
+                            >
+                              <td className="py-2 px-3 text-sm">{project.name}</td>
+                              <td className="py-2 px-3 text-sm text-right">{project.value || '-'}</td>
+                              <td className="py-2 px-3 text-sm text-right">
+                                {contribution ? `${contribution.contribution}%` : '-'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-500 my-10">No projects found for this indicator</p>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* Recorded Values Table */}
+          <div className="mt-6 border rounded-lg p-4 bg-white shadow-sm">
+            <h3 className="text-lg font-medium mb-4">Recorded Values</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="py-2 px-4 border-b text-left">Goal</th>
-                    <th className="py-2 px-4 border-b text-left">Indicator</th>
-                    <th className="py-2 px-4 border-b text-left">Value</th>
-                    <th className="py-2 px-4 border-b text-left">Date</th>
-                    <th className="py-2 px-4 border-b text-left">Location</th>
+                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Date</th>
+                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Location</th>
+                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Project</th>
+                    <th className="py-2 px-4 text-right text-sm font-medium text-gray-500">Value</th>
+                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Source</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-200">
                   {data.length > 0 ? (
                     data.map(item => (
                       <tr key={item.value_id} className="hover:bg-gray-50">
-                        <td className="py-2 px-4 border-b">{item.goal_name}</td>
-                        <td className="py-2 px-4 border-b">{item.indicator_name}</td>
-                        <td className="py-2 px-4 border-b">{item.value}</td>
-                        <td className="py-2 px-4 border-b">{new Date(item.measurement_date).toLocaleDateString()}</td>
-                        <td className="py-2 px-4 border-b">{item.location}</td>
+                        <td className="py-2 px-4 text-sm">{new Date(item.measurement_date).toLocaleDateString()}</td>
+                        <td className="py-2 px-4 text-sm">{item.location}</td>
+                        <td className="py-2 px-4 text-sm">{item.project_name || '-'}</td>
+                        <td className="py-2 px-4 text-sm text-right">{item.value}</td>
+                        <td className="py-2 px-4 text-sm">{item.source || '-'}</td>
                       </tr>
                     ))
                   ) : (
@@ -287,18 +633,62 @@ const Dashboard: React.FC = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Map or Table View - Only show if no indicator is selected */}
+      {!filters.indicator_id && !filters.sub_indicator_id && (
+        <>
+          {loading ? (
+            <p className="text-center my-8">Loading data...</p>
           ) : (
-            <div className="mt-6">
-              <h2 className="text-xl font-semibold mb-4">
-                {filters.goal_id ? `Goal ${filters.goal_id} Geographic Performance` : 'Geographic Performance Overview'}
-                <span className="text-sm font-normal ml-2 text-gray-600">(Click on a location to filter data)</span>
-              </h2>
-              <ChoroplethMapNoSSR 
-                filters={filters} 
-                height="600px" 
-                onLocationSelect={handleLocationSelect}
-              />
-            </div>
+            <>
+              {viewMode === 'table' ? (
+                <div className="overflow-x-auto mt-6">
+                  <table className="min-w-full bg-white border border-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="py-2 px-4 border-b text-left">Goal</th>
+                        <th className="py-2 px-4 border-b text-left">Indicator</th>
+                        <th className="py-2 px-4 border-b text-left">Value</th>
+                        <th className="py-2 px-4 border-b text-left">Date</th>
+                        <th className="py-2 px-4 border-b text-left">Location</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.length > 0 ? (
+                        data.map(item => (
+                          <tr key={item.value_id} className="hover:bg-gray-50">
+                            <td className="py-2 px-4 border-b">{item.goal_name}</td>
+                            <td className="py-2 px-4 border-b">{item.indicator_name}</td>
+                            <td className="py-2 px-4 border-b">{item.value}</td>
+                            <td className="py-2 px-4 border-b">{new Date(item.measurement_date).toLocaleDateString()}</td>
+                            <td className="py-2 px-4 border-b">{item.location}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="py-4 text-center text-gray-500">No data available for the selected filters</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="mt-6">
+                  <h2 className="text-xl font-semibold mb-4">
+                    {filters.goal_id ? `Goal ${filters.goal_id} Geographic Performance` : 'Geographic Performance Overview'}
+                    <span className="text-sm font-normal ml-2 text-gray-600">(Click on a location to filter data)</span>
+                  </h2>
+                  <ChoroplethMapNoSSR 
+                    filters={filters} 
+                    height="600px" 
+                    onLocationSelect={handleLocationSelect}
+                  />
+                </div>
+              )}
+            </>
           )}
         </>
       )}
@@ -307,7 +697,6 @@ const Dashboard: React.FC = () => {
 }
 
 export default Dashboard;
-
 
 
 

@@ -129,10 +129,10 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({
     }
     
     // Default color scale
-    return ratio > 0.75 ? '#BD0026' :
-           ratio > 0.5  ? '#FC4E2A' :
-           ratio > 0.25 ? '#FD8D3C' :
-                          '#FFEDA0';
+    return  ratio > 0.75 ? '#228B22' :  // Dark Green (High Performance)
+            ratio > 0.5  ? '#66C266' :  // Light Green (Moderate-High)
+            ratio > 0.25 ? '#FFD700' :  // Yellow (Moderate-Low)
+                            '#BD0026';   // Dark Red (Low Performance)
   };
 
   // Helper function to lighten a hex color
@@ -284,7 +284,7 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({
         <h4 style={{ margin: '0 0 8px 0' }}>
           {filters.goal_id ? `Goal ${filters.goal_id} Performance` : 'Performance'}
         </h4>
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
+        {[1, 0.75, 0.5, 0.25, 0].map((ratio, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
             <div style={{ 
               width: '20px', 
