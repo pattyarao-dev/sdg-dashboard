@@ -2,22 +2,44 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Goal } from '@/types/dashboard.types';
 import { useRouter } from 'next/navigation';
 import { TimeFilter } from "@/components/TimeFilter";
 import GaugeChart from '@/components/GaugeChart';
 
+
 const Dashboard: React.FC = () => {
   const [filters, setFilters] = useState({
-    year: null,
+    year: new Date().getFullYear(),
     month: null,
     location: null,
     goal_id: null,
     project_id: null
   });
   const [data, setData] = useState([]);
-  const [goals, setGoals] = useState([]);
+  const [allGoals, setAllGoals] = useState<Goal[]>([]);
+  const [goalSummaries, setGoalSummaries] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [goalsLoading, setGoalsLoading] = useState(true);
 
+  // Fetch all goals initially
+  useEffect(() => {
+    const fetchAllGoals = async () => {
+      setGoalsLoading(true);
+      try {
+        const response = await axios.get('http://localhost:8000/api/indicators/goals');
+        setAllGoals(response.data.data);
+      } catch (error) {
+        console.error('Error fetching goals:', error);
+      } finally {
+        setGoalsLoading(false);
+      }
+    };
+
+    fetchAllGoals();
+  }, []);
+
+  // Fetch data based on filters
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -30,13 +52,13 @@ const Dashboard: React.FC = () => {
           }
         });
 
+        // Fetch indicator values
         const response = await axios.get('http://localhost:8000/api/indicators/values', { params });
         setData(response.data.data);
 
-        if (goals.length === 0) {
-          const goalsResponse = await axios.get('http://localhost:8000/api/indicators/goal-summary');
-          setGoals(goalsResponse.data.data);
-        }
+        // Fetch goal summaries
+        const goalSummaryResponse = await axios.get('http://localhost:8000/api/indicators/goal-summary', { params });
+        setGoalSummaries(goalSummaryResponse.data.data);
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -70,22 +92,43 @@ const Dashboard: React.FC = () => {
     }));
   };
 
+  // SDG goal colors
+  const goalColors = {
+    1: "#E5243B",
+    2: "#DDA63A", 
+    3: "#4C9F38", 
+    4: "#C5192D", 
+    5: "#FF3A21", 
+    6: "#26BDE2", 
+    7: "#FCC30B", 
+    8: "#A21942", 
+    9: "#FD6925",
+    10: "#DD1367", 
+    11: "#FD9D24", 
+    12: "#BF8B2E", 
+    13: "#3F7E44", 
+    14: "#0A97D9", 
+    15: "#56C02B", 
+    16: "#00689D", 
+    17: "#19486A", 
+  };
+
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">SDG Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-4">LGU SDG Dashboard</h1>
       
       {/* TimeFilter component */}
       <TimeFilter 
         onFilterChange={handleTimeFilterChange}
-        initialYear={new Date().getFullYear()}
-        initialMonth={null}
+        initialYear={filters.year}
+        initialMonth={filters.month}
       />
       
       <div className="filters mt-4">
         {/* Your other filters */}
         <select 
           value={filters.location || ''}
-          onChange={e => handleFilterChange('location', e.target.value ? parseInt(e.target.value) : null)}
+          onChange={e => handleFilterChange('location', e.target.value ? e.target.value : null)}
           className="border border-gray-300 rounded-md p-2 bg-white mr-2"
         >
           <option value="">Select Location</option>
@@ -97,34 +140,46 @@ const Dashboard: React.FC = () => {
 
       {/* SDG Goal Gauges */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Goals Progress</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {goals.map(goal => (
-            <GaugeChart 
-              key={goal.goal_id}
-              title={goal.goal_name}
-              value={goal.progress || 0}
-              goal_id={goal.goal_id}
-              color={goal.color}
-              isActive={filters.goal_id === goal.goal_id}
-              onFilterChange={handleGoalFilterChange}
-            />
-          ))}
-        </div>
+        <h2 className="text-xl font-semibold mb-4">Goals Progress Overview</h2>
         
-        {filters.goal_id !== null && (
-          <button 
-            onClick={() => handleGoalFilterChange(null)}
-            className="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
-          >
-            Clear Goal Filter
-          </button>
+        {goalsLoading ? (
+          <p>Loading goals...</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {allGoals
+              .sort((a, b) => a.goal_id - b.goal_id) // Sort goals by ID
+              .map(goal => (
+                <GaugeChart 
+                  key={goal.goal_id}
+                  goal_id={goal.goal_id}
+                  title={`${goal.goal_id}. ${goal.name}`}
+                  color={goal.color || goalColors[goal.goal_id as keyof typeof goalColors]}
+                  isActive={filters.goal_id === goal.goal_id}
+                  onFilterChange={handleGoalFilterChange}
+                  year={filters.year}
+                  month={filters.month}
+                  location={filters.location}
+                  project_id={filters.project_id}
+                  defaultValue={0}
+                />
+              ))}
+          </div>
+            
+            {filters.goal_id !== null && (
+              <button 
+                onClick={() => handleGoalFilterChange(null)}
+                className="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+              >
+                Clear Goal Filter
+              </button>
+            )}
+          </>
         )}
       </div>
 
-
       {loading ? (
-        <p className="text-center my-8">Loading...</p>
+        <p className="text-center my-8">Loading data...</p>
       ) : (
         <div className="overflow-x-auto mt-6">
           <table className="min-w-full bg-white border border-gray-200">
@@ -138,15 +193,21 @@ const Dashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {data.map(item => (
-                <tr key={item.value_id} className="hover:bg-gray-50">
-                  <td className="py-2 px-4 border-b">{item.goal_name}</td>
-                  <td className="py-2 px-4 border-b">{item.indicator_name}</td>
-                  <td className="py-2 px-4 border-b">{item.value}</td>
-                  <td className="py-2 px-4 border-b">{new Date(item.measurement_date).toLocaleDateString()}</td>
-                  <td className="py-2 px-4 border-b">{item.location}</td>
+              {data.length > 0 ? (
+                data.map(item => (
+                  <tr key={item.value_id} className="hover:bg-gray-50">
+                    <td className="py-2 px-4 border-b">{item.goal_name}</td>
+                    <td className="py-2 px-4 border-b">{item.indicator_name}</td>
+                    <td className="py-2 px-4 border-b">{item.value}</td>
+                    <td className="py-2 px-4 border-b">{new Date(item.measurement_date).toLocaleDateString()}</td>
+                    <td className="py-2 px-4 border-b">{item.location}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="py-4 text-center text-gray-500">No data available for the selected filters</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
@@ -156,7 +217,6 @@ const Dashboard: React.FC = () => {
 }
 
 export default Dashboard;
-
 
 
 

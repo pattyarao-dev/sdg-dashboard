@@ -26,9 +26,15 @@ interface GoalSummary {
   project_values_count?: number;
 }
 
+// interface Goal {
+//   goal_id: number;
+//   goal_name: string;
+//   color?: string;
+// }
+
 interface GaugeChartProps {
-  goal_id?: number; 
-  title?: string;
+  goal_id: number; 
+  title: string;
   color?: string;
   isActive?: boolean;
   onFilterChange?: (goal_id: number | null) => void;
@@ -36,7 +42,9 @@ interface GaugeChartProps {
   month?: number;
   project_id?: number;
   location?: string;
-  valueType?: 'latest_value' | 'avg_value' | 'median_value'; // Choose which value to display
+  valueType?: 'latest_value' | 'avg_value' | 'median_value';
+  // Default fallback value when no data is available
+  defaultValue?: number;
 }
 
 const GaugeChart: React.FC<GaugeChartProps> = ({ 
@@ -49,11 +57,13 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
   month,
   project_id,
   location,
-  valueType = 'latest_value'
+  valueType = 'latest_value',
+  defaultValue = 0
 }) => {
   const [goalData, setGoalData] = useState<GoalSummary | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasData, setHasData] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchGoalData = async () => {
@@ -81,11 +91,14 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
         
         if (goalSummary) {
           setGoalData(goalSummary);
+          setHasData(true);
         } else {
-          setError("Goal data not found");
+          // No data found but no error - just set hasData to false
+          setHasData(false);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error occurred");
+        setHasData(false);
       } finally {
         setIsLoading(false);
       }
@@ -110,17 +123,14 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
     return "#4CAF50"; // Green (80-100%)
   };
   
-  // Display value to show on gauge
-  const displayValue = goalData ? goalData[valueType] : 0;
+  // Display value to show on gauge (use goalData if available, otherwise use defaultValue)
+  const displayValue = hasData && goalData ? goalData[valueType] : defaultValue;
   
   // Format percentage value, ensuring it's within 0-100
   const normalizedValue = Math.min(Math.max(displayValue, 0), 100);
   
   // Use provided color or determine by value
   const gaugeColor = color || getGaugeColor(normalizedValue);
-  
-  // Display title from API or use provided title
-  const displayTitle = title || (goalData ? goalData.goal_name : "Loading...");
 
   // Create Plotly data
   const data: Data[] = [
@@ -129,7 +139,7 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
       mode: "gauge+number",
       value: normalizedValue,
       number: { suffix: "%" },
-      title: { text: displayTitle, font: { size: 12 } },
+      title: { text: title, font: { size: 12 } },
       gauge: {
         axis: { range: [0, 100] },
         bar: { color: gaugeColor },
@@ -156,7 +166,7 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
       onClick={handleOnClick} 
       style={{ 
         cursor: onFilterChange ? "pointer" : "default",
-        opacity: isActive ? 1 : 0.9,
+        opacity: isActive ? 1 : hasData ? 0.9 : 0.7, // Dimmed if no data
         border: isActive ? `2px solid ${gaugeColor}` : 'none',
         borderRadius: '8px',
         padding: '4px'
@@ -164,9 +174,14 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
       className="transition-all duration-200 hover:opacity-100 hover:shadow-md"
     >
       <Plot data={data} layout={layout} config={{ displayModeBar: false }} />
-      {isActive && (
+      {!hasData && (
+        <div className="text-xs text-center mt-1 text-gray-500">
+          No data
+        </div>
+      )}
+      {isActive && hasData && (
         <div className="text-xs text-center mt-1 font-medium" style={{ color: gaugeColor }}>
-          
+          Selected
         </div>
       )}
     </div>
