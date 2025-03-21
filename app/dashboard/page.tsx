@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { TimeFilter } from "@/components/TimeFilter";
-import LineChart from "@/components/LineChart";
-import ScoreCard from '@/components/ScoreCardChart';
+import GaugeChart from '@/components/GaugeChart';
 
 const Dashboard: React.FC = () => {
   const [filters, setFilters] = useState({
@@ -16,6 +15,7 @@ const Dashboard: React.FC = () => {
     project_id: null
   });
   const [data, setData] = useState([]);
+  const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -32,6 +32,12 @@ const Dashboard: React.FC = () => {
 
         const response = await axios.get('http://localhost:8000/api/indicators/values', { params });
         setData(response.data.data);
+
+        if (goals.length === 0) {
+          const goalsResponse = await axios.get('http://localhost:8000/api/indicators/goal-summary');
+          setGoals(goalsResponse.data.data);
+        }
+
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -54,6 +60,13 @@ const Dashboard: React.FC = () => {
     setFilters(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+  
+  const handleGoalFilterChange = (goal_id: number | null) => {
+    setFilters(prev => ({
+      ...prev,
+      goal_id
     }));
   };
 
@@ -81,6 +94,34 @@ const Dashboard: React.FC = () => {
         
         {/* Add more filter components as needed */}
       </div>
+
+      {/* SDG Goal Gauges */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Goals Progress</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {goals.map(goal => (
+            <GaugeChart 
+              key={goal.goal_id}
+              title={goal.goal_name}
+              value={goal.progress || 0}
+              goal_id={goal.goal_id}
+              color={goal.color}
+              isActive={filters.goal_id === goal.goal_id}
+              onFilterChange={handleGoalFilterChange}
+            />
+          ))}
+        </div>
+        
+        {filters.goal_id !== null && (
+          <button 
+            onClick={() => handleGoalFilterChange(null)}
+            className="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+          >
+            Clear Goal Filter
+          </button>
+        )}
+      </div>
+
 
       {loading ? (
         <p className="text-center my-8">Loading...</p>
