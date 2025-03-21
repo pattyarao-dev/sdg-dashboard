@@ -27,7 +27,8 @@ const Dashboard: React.FC = () => {
   const [goalSummaries, setGoalSummaries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [goalsLoading, setGoalsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'table' | 'map'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'map'>('map'); // Default to map view
+  const [locations, setLocations] = useState<string[]>([]);
 
   // Fetch all goals initially
   useEffect(() => {
@@ -44,6 +45,28 @@ const Dashboard: React.FC = () => {
     };
 
     fetchAllGoals();
+  }, []);
+
+  // Fetch locations
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/api/locations');
+        setLocations(response.data.data.map((loc: any) => loc.name));
+      } catch (error) {
+        console.error('Error fetching locations:', error);
+        // Fallback - extract locations from GeoJSON if available
+        fetch('/pasigcity.0.01.json')
+          .then(response => response.json())
+          .then(data => {
+            const extractedLocations = data.features.map((feature: any) => feature.properties.NAME_3);
+            setLocations([...new Set(extractedLocations)]);
+          })
+          .catch(err => console.error('Error extracting locations from GeoJSON:', err));
+      }
+    };
+
+    fetchLocations();
   }, []);
 
   // Fetch data based on filters
@@ -85,7 +108,7 @@ const Dashboard: React.FC = () => {
     }));
   };
 
-  const handleFilterChange = (name: string, value: number | null) => {
+  const handleFilterChange = (name: string, value: any) => {
     setFilters(prev => ({
       ...prev,
       [name]: value
@@ -96,6 +119,13 @@ const Dashboard: React.FC = () => {
     setFilters(prev => ({
       ...prev,
       goal_id
+    }));
+  };
+
+  const handleLocationSelect = (locationName: string | null) => {
+    setFilters(prev => ({
+      ...prev,
+      location: locationName
     }));
   };
 
@@ -132,15 +162,19 @@ const Dashboard: React.FC = () => {
       />
       
       <div className="filters mt-4 flex flex-wrap items-center">
-        {/* Your other filters */}
-        <select 
-          value={filters.location || ''}
-          onChange={e => handleFilterChange('location', e.target.value ? parseInt(e.target.value) : null)}
-          className="border border-gray-300 rounded-md p-2 bg-white mr-2"
-        >
-          <option value="">Select Location</option>
-          {/* Add your location options */}
-        </select>
+        {/* Only show location dropdown in table view */}
+        {viewMode === 'table' && (
+          <select 
+            value={filters.location || ''}
+            onChange={e => handleFilterChange('location', e.target.value ? e.target.value : null)}
+            className="border border-gray-300 rounded-md p-2 bg-white mr-2"
+          >
+            <option value="">All Locations</option>
+            {locations.map(location => (
+              <option key={location} value={location}>{location}</option>
+            ))}
+          </select>
+        )}
         
         {/* View mode toggle */}
         <div className="ml-auto">
@@ -158,6 +192,24 @@ const Dashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Active filters display */}
+      {filters.location && (
+        <div className="mt-2 flex items-center">
+          <span className="text-sm text-gray-600 mr-2">Filtered by location:</span>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            {filters.location}
+            <button 
+              onClick={() => handleFilterChange('location', null)}
+              className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </span>
+        </div>
+      )}
 
       {/* SDG Goal Gauges */}
       <div className="mb-8">
@@ -237,8 +289,15 @@ const Dashboard: React.FC = () => {
             </div>
           ) : (
             <div className="mt-6">
-              <h2 className="text-xl font-semibold mb-4">Geographic Data Visualization</h2>
-              <ChoroplethMapNoSSR filters={filters} height="600px" />
+              <h2 className="text-xl font-semibold mb-4">
+                {filters.goal_id ? `Goal ${filters.goal_id} Geographic Performance` : 'Geographic Performance Overview'}
+                <span className="text-sm font-normal ml-2 text-gray-600">(Click on a location to filter data)</span>
+              </h2>
+              <ChoroplethMapNoSSR 
+                filters={filters} 
+                height="600px" 
+                onLocationSelect={handleLocationSelect}
+              />
             </div>
           )}
         </>

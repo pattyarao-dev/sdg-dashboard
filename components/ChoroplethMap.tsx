@@ -5,8 +5,7 @@ import { MapContainer, TileLayer, GeoJSON, Tooltip } from 'react-leaflet';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { GeoJSONFeature, IndicatorValue } from '@/types/dashboard.types'
-
+import { GeoJSONFeature, IndicatorValue } from '@/types/dashboard.types';
 
 // Fix for Leaflet marker icons in Next.js
 if (typeof window !== 'undefined') {
@@ -19,25 +18,28 @@ if (typeof window !== 'undefined') {
 }
 
 interface ChoroplethMapProps {
-    filters: {
-      year: number;
-      month: number | null;
-      location: string | null;
-      goal_id: number | null;
-      project_id: number | null;
-    };
-    height?: string;
-    width?: string;
-  }
-  
+  filters: {
+    year: number;
+    month: number | null;
+    location: string | null;
+    goal_id: number | null;
+    project_id: number | null;
+  };
+  height?: string;
+  width?: string;
+  onLocationSelect: (locationName: string | null) => void;
+}
+
 const ChoroplethMap: React.FC<ChoroplethMapProps> = ({ 
   filters, 
   height = "500px", 
-  width = "100%" 
+  width = "100%",
+  onLocationSelect
 }) => {
   const [geoData, setGeoData] = useState<any>(null);
   const [locationData, setLocationData] = useState<IndicatorValue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(filters.location);
 
   // Fetch GeoJSON data
   useEffect(() => {
@@ -54,6 +56,11 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({
 
     fetchGeoData();
   }, []);
+
+  // Update selected location when filters change
+  useEffect(() => {
+    setSelectedLocation(filters.location);
+  }, [filters.location]);
 
   // Fetch indicator data based on filters
   useEffect(() => {
@@ -83,7 +90,7 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({
 
   // Get min and max values for color scaling
   const { minValue, maxValue } = useMemo(() => {
-    if (locationData.length === 0) return { minValue: 0, maxValue: 0 };
+    if (locationData.length === 0) return { minValue: 0, maxValue: 100 };
     
     let min = Number.MAX_VALUE;
     let max = Number.MIN_VALUE;
@@ -145,20 +152,25 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({
     const matchingData = locationData.find(item => item.location === locationName);
     
     const value = matchingData ? matchingData.value : 0;
+    const isSelected = selectedLocation === locationName;
     
     return {
       fillColor: getColor(value),
-      weight: 2,
+      weight: isSelected ? 4 : 2,
       opacity: 1,
-      color: 'white',
-      dashArray: '3',
-      fillOpacity: 0.7
+      color: isSelected ? '#000' : 'white',
+      dashArray: isSelected ? '' : '3',
+      fillOpacity: isSelected ? 0.9 : 0.7
     };
   };
 
   // Function to handle mouseover events
   const highlightFeature = (e: any) => {
     const layer = e.target;
+    const locationName = e.target.feature.properties.NAME_3;
+    
+    // Don't highlight if already selected
+    if (selectedLocation === locationName) return;
     
     layer.setStyle({
       weight: 3,
@@ -172,10 +184,29 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({
 
   // Function to reset highlight on mouseout
   const resetHighlight = (e: any) => {
+    const locationName = e.target.feature.properties.NAME_3;
+    
+    // Don't reset if this is the selected location
+    if (selectedLocation === locationName) return;
+    
     e.target.setStyle(style(e.target.feature));
   };
 
-  // Function to handle click events
+  // Handle location selection
+  const handleLocationClick = (e: any) => {
+    const locationName = e.target.feature.properties.NAME_3;
+    
+    // If clicking the already selected location, deselect it
+    if (selectedLocation === locationName) {
+      setSelectedLocation(null);
+      onLocationSelect(null);
+    } else {
+      setSelectedLocation(locationName);
+      onLocationSelect(locationName);
+    }
+  };
+
+  // Function to handle events for each feature
   const onEachFeature = (feature: GeoJSONFeature, layer: any) => {
     const locationName = feature.properties.NAME_3;
     const matchingData = locationData.find(item => item.location === locationName);
@@ -190,6 +221,7 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({
     layer.on({
       mouseover: highlightFeature,
       mouseout: resetHighlight,
+      click: handleLocationClick
     });
   };
 
@@ -228,6 +260,7 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({
         />
         {geoData && (
           <GeoJSON 
+            key={selectedLocation} // Force re-render when selection changes
             data={geoData} 
             style={style}
             onEachFeature={onEachFeature}
@@ -265,6 +298,20 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({
             </span>
           </div>
         ))}
+        {selectedLocation && (
+          <div style={{ marginTop: '10px', fontSize: '14px' }}>
+            <strong>Selected:</strong> {selectedLocation}
+            <button 
+              onClick={() => {
+                setSelectedLocation(null);
+                onLocationSelect(null);
+              }}
+              className="ml-2 px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded"
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
