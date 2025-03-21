@@ -6,6 +6,8 @@ import { Goal } from '@/types/dashboard.types';
 import { useRouter } from 'next/navigation';
 import { TimeFilter } from "@/components/TimeFilter";
 import GaugeChart from '@/components/GaugeChart';
+import ProgressBar from '@/components/ProgressBar';
+import ScoreCard from '@/components/ScoreCard';
 import dynamic from 'next/dynamic';
 
 // Dynamically import the ChoroplethMap component with no SSR
@@ -31,6 +33,7 @@ const Dashboard: React.FC = () => {
   const [goalsLoading, setGoalsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'map'>('map'); // Default to map view
   const [locations, setLocations] = useState<string[]>([]);
+  const [summaryLoading, setSummaryLoading] = useState(true);
 
   // New states for drill-down functionality
   const [indicators, setIndicators] = useState<Indicator[]>([]);
@@ -119,7 +122,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/locations');
+        const response = await axios.get('http://localhost:8000/api/indicators/locations');
         setLocations(response.data.data.map((loc: any) => loc.name));
       } catch (error) {
         console.error('Error fetching locations:', error);
@@ -157,6 +160,18 @@ const Dashboard: React.FC = () => {
         // Fetch goal summaries
         const goalSummaryResponse = await axios.get('http://localhost:8000/api/indicators/goal-summary', { params });
         setGoalSummaries(goalSummaryResponse.data.data);
+
+        // // If a goal is selected, filter the summary for that goal
+        // if (filters.goal_id) {
+        //   const selectedSummary = goalSummaryResponse.data.data.find(
+        //     (summary: any) => summary.goal_id === filters.goal_id
+        //   );
+        //   setSelectedGoalSummary(selectedSummary || null);
+        // } else {
+        //   setSelectedGoalSummary(null);
+        // }
+        
+       setSummaryLoading(false);
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -304,6 +319,18 @@ const Dashboard: React.FC = () => {
     return 'All Indicators';
   };
 
+  // Helper to format dates for display
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  // Helper to format numbers with commas and fixed decimal places
+  const formatNumber = (num: number, decimals = 1) => {
+    if (num === undefined || num === null) return 'N/A';
+    return num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">LGU SDG Dashboard</h1>
@@ -412,6 +439,48 @@ const Dashboard: React.FC = () => {
         )}
       </div>
 
+      {/* Overall Summary Scorecards - displays when no goal is selected */}
+      {!filters.goal_id && !filters.indicator_id && !filters.sub_indicator_id && (
+        <div className="mt-6 mb-4">
+          <h2 className="text-xl font-semibold mb-4">
+            Overall Summary
+          </h2>
+          
+          {summaryLoading ? (
+            <p className="my-4">Loading summary data...</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <ScoreCard
+                title="Total Goals Tracked"
+                value={allGoals.length}
+                subtitle="Sustainable Development Goals"
+                color="#19486A" // SDG 17 color
+              />
+              <ScoreCard
+                title="Total Measurements"
+                value={data.length}
+                subtitle={`In ${filters.year}${filters.month ? `, Month ${filters.month}` : ''}`}
+                color="#4C9F38" // SDG 3 color
+              />
+              <ScoreCard
+                title="Latest Update"
+                value={data.length > 0 ? formatDate(data.sort((a, b) => 
+                  new Date(b.measurement_date).getTime() - new Date(a.measurement_date).getTime()
+                )[0]?.measurement_date) : 'No data'}
+                subtitle="Most recent measurement"
+                color="#FD9D24" // SDG 11 color
+              />
+              <ScoreCard
+                title="Locations Tracked"
+                value={locations.length}
+                subtitle="Geographic coverage"
+                color="#00689D" // SDG 16 color
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* SDG Goal Gauges - shows only if no indicator is selected */}
       {!filters.indicator_id && !filters.sub_indicator_id && (
         <div className="mb-8 mt-6">
@@ -481,6 +550,23 @@ const Dashboard: React.FC = () => {
                       {indicator.indicator_code}: {indicator.name}
                     </h3>
                     <p className="text-gray-600 mt-1">{indicator.description || 'No description available.'}</p>
+                  
+                  {/* ProgressBar with dynamic target */}
+                    <div className="mt-3">
+                      <ProgressBar 
+                        value={indicator.current_value || 0} 
+                        target={indicator.global_target_value !== undefined ? indicator.global_target_value : 100}
+                        baseline={indicator.global_baseline_value || 0}
+                        showBaseline={true}
+                        color={getCurrentGoalColor()}
+                        // label="Progress"
+                        valueSuffix={indicator.unit_of_measurement || ''}
+                        targetSuffix={indicator.unit_of_measurement || ''}
+                        indicatorType="indicator"
+                        progressDirection={indicator.progress_direction || 'up'}
+                        className="mt-2"
+                      />
+                    </div>
                   </div>
                   
                   {/* Sub-indicators with indent */}
@@ -497,7 +583,22 @@ const Dashboard: React.FC = () => {
                           {subInd.description && (
                             <p className="text-sm text-gray-600 mt-1">{subInd.description}</p>
                           )}
-                        </div>
+
+                          {/* ProgressBar for sub-indicators with dynamic target */}
+                            <ProgressBar 
+                              value={subInd.current_value || 0} 
+                              target={subInd.global_target_value !== undefined ? subInd.global_target_value : 100}
+                              baseline={subInd.global_baseline_value || 0}
+                              color={getCurrentGoalColor()}
+                              height="0.5rem"
+                              valueSuffix={subInd.unit_of_measurement || ''}
+                              targetSuffix={subInd.unit_of_measurement || ''}
+                              indicatorType="sub-indicator"
+                              progressDirection={subInd.progress_direction || 'up'}
+                              showBaseline={false}
+                              className="mt-2"
+                            />
+                          </div>
                       ))}
                     </div>
                   )}
@@ -576,6 +677,17 @@ const Dashboard: React.FC = () => {
                       <tbody className="divide-y divide-gray-200">
                         {projects.map(project => {
                           const contribution = projectContributions.find(p => p.project_id === project.project_id);
+                          
+                          // Get project's target and baseline values for the current indicator/sub-indicator
+                          const projectTarget = project.project_target_value !== undefined ? 
+                            project.project_target_value : 
+                            (filters.sub_indicator_id ? 
+                              indicators.find(i => i.sub_indicators?.some(s => s.sub_indicator_id === filters.sub_indicator_id))
+                                ?.sub_indicators?.find(s => s.sub_indicator_id === filters.sub_indicator_id)?.global_target_value : 
+                              indicators.find(i => i.indicator_id === filters.indicator_id)?.global_target_value);
+                          
+                          const projectBaseline = project.project_baseline_value || 0;
+                          
                           return (
                             <tr 
                               key={project.project_id} 
@@ -583,9 +695,25 @@ const Dashboard: React.FC = () => {
                               onClick={() => handleProjectSelect(project.project_id)}
                             >
                               <td className="py-2 px-3 text-sm">{project.name}</td>
-                              <td className="py-2 px-3 text-sm text-right">{project.value || '-'}</td>
+                              <td className="py-2 px-3 text-sm text-right">{project.current_value || '-'}</td>
                               <td className="py-2 px-3 text-sm text-right">
                                 {contribution ? `${contribution.contribution}%` : '-'}
+                              </td>
+                              <td className="py-2 px-3">
+                                {/* Add dynamic ProgressBar for project indicators */}
+                                {project.current_value !== undefined && (
+                                  <ProgressBar 
+                                    value={project.current_value} 
+                                    target={projectTarget || 100}
+                                    baseline={projectBaseline}
+                                    color={getProjectColors(projects.length)[projects.indexOf(project) % getProjectColors(projects.length).length]}
+                                    height="0.5rem"
+                                    showValue={false}
+                                    showTarget={false}
+                                    indicatorType={filters.sub_indicator_id ? "project-sub-indicator" : "project-indicator"}
+                                    progressDirection={project.progress_direction || 'up'}
+                                  />
+                                )}
                               </td>
                             </tr>
                           );
