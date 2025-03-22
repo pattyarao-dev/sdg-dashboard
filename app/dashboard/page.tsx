@@ -8,7 +8,9 @@ import { TimeFilter } from "@/components/TimeFilter";
 import GaugeChart from '@/components/GaugeChart';
 import ProgressBar from '@/components/ProgressBar';
 import ScoreCard from '@/components/ScoreCard';
+import SDGLineChart from '@/components/LineChart';
 import dynamic from 'next/dynamic';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Dynamically import the ChoroplethMap component with no SSR
 const ChoroplethMapNoSSR = dynamic(
@@ -31,7 +33,7 @@ const Dashboard: React.FC = () => {
   const [goalSummaries, setGoalSummaries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [goalsLoading, setGoalsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'table' | 'map'>('map'); // Default to map view
+  const [viewMode, setViewMode] = useState<'chart' | 'map'>('chart'); // Default to map view
   const [locations, setLocations] = useState<string[]>([]);
   const [summaryLoading, setSummaryLoading] = useState(true);
 
@@ -82,41 +84,146 @@ const Dashboard: React.FC = () => {
     fetchIndicators();
   }, [filters.goal_id]);
 
-  // Fetch projects and their contributions when an indicator is selected
-  useEffect(() => {
-    const fetchProjects = async () => {
-      if (!filters.indicator_id && !filters.sub_indicator_id) {
-        setProjects([]);
-        setProjectContributions([]);
-        return;
+// Fetch projects and their contributions when an indicator is selected
+const fetchProjects = async () => {
+  if (!filters.indicator_id && !filters.sub_indicator_id) {
+    setProjects([]);
+    setProjectContributions([]);
+    return;
+  }
+  
+  setProjectsLoading(true);
+  try {
+    // Build query params for projects
+    const params = {};
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== null) {
+        params[key] = value;
       }
+    });
+    
+    // Use the correct endpoint for fetching projects
+    const response = await axios.get('http://localhost:8000/api/indicators/projects', { params });
+    const projectsData = response.data.data || [];
+    
+    // Fetch project contributions to this indicator
+    const contributionsResponse = await axios.get('http://localhost:8000/api/indicators/project-contribution', { params });
+    console.log('Raw contributions data:', contributionsResponse.data);
+    
+    let flattenedContributions = [];
+    let enhancedProjects = [...projectsData]; // Create a copy of projects data to enhance
+    
+    if (contributionsResponse.data && contributionsResponse.data.contributions) {
+      // Find the goal that matches our filter
+      const relevantGoal = contributionsResponse.data.contributions.find(
+        goal => goal.goal_id === filters.goal_id
+      );
       
-      setProjectsLoading(true);
-      try {
-        // Build query params for projects
-        const params = {};
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== null) {
-            params[key] = value;
-          }
-        });
+      if (relevantGoal) {
+        // Find the indicator that matches our filter
+        const relevantIndicator = relevantGoal.indicators.find(
+          indicator => indicator.indicator_id === filters.indicator_id
+        );
         
-        // Fetch projects related to the selected indicator/sub-indicator
-        const response = await axios.get('http://localhost:8000/api/projects', { params });
-        setProjects(response.data.data);
-        
-        // Fetch project contributions to this indicator
-        const contributionsResponse = await axios.get('http://localhost:8000/api/indicators/project-contribution', { params });
-        setProjectContributions(contributionsResponse.data.contributions);
-      } catch (error) {
-        console.error('Error fetching projects data:', error);
-      } finally {
-        setProjectsLoading(false);
+        if (relevantIndicator && relevantIndicator.projects) {
+          // Extract contributions data
+          flattenedContributions = relevantIndicator.projects.map(project => ({
+            project_id: project.project_id,
+            project_name: project.project_name,
+            contribution: project.contribution_percentage || 0
+          }));
+          
+          // Enhance projects with values from contributions
+          enhancedProjects = projectsData.map(project => {
+            const matchingContribution = relevantIndicator.projects.find(
+              p => p.project_id === project.project_id
+            );
+            
+            return {
+              ...project,
+              current_value: matchingContribution?.project_value || null,
+              project_target_value: null, // Will be fetched from project details if needed
+              project_baseline_value: 0,
+              progress_direction: 'up' // Default direction
+            };
+          });
+          
+          // Fetch additional details for each project if needed
+          const projectDetailsPromises = enhancedProjects.map(async (project) => {
+            try {
+              const detailsResponse = await axios.get(`http://localhost:8000/api/indicators/project-details/${project.project_id}`);
+              const projectDetails = detailsResponse.data;
+              
+              // Find the relevant indicator in the project details
+              let targetValue = null;
+              let baselineValue = 0;
+              let latestValue = null;
+              
+              if (projectDetails.goals) {
+                // Find matching goal
+                const goal = projectDetails.goals.find(g => g.goal_id === filters.goal_id);
+                if (goal && goal.indicators) {
+                  // Find matching indicator
+                  const indicator = goal.indicators.find(i => 
+                    i.indicator_name === relevantIndicator.indicator_name
+                  );
+                  
+                  if (indicator) {
+                    targetValue = indicator.project_target_value;
+                    baselineValue = indicator.project_baseline_value || 0;
+                    latestValue = indicator.latest_value;
+                  }
+                }
+              }
+              
+              return {
+                ...project,
+                current_value: latestValue || project.current_value,
+                project_target_value: targetValue,
+                project_baseline_value: baselineValue
+              };
+            } catch (error) {
+              console.error(`Error fetching details for project ${project.project_id}:`, error);
+              return project;
+            }
+          });
+          
+          // Wait for all project details to be fetched
+          const projectsWithDetails = await Promise.all(projectDetailsPromises);
+          enhancedProjects = projectsWithDetails;
+        }
       }
-    };
+    }
+    
+    console.log('Enhanced projects:', enhancedProjects);
+    console.log('Project contributions:', flattenedContributions);
+    
+    setProjects(enhancedProjects);
+    setProjectContributions(flattenedContributions);
+    
+  } catch (error) {
+    console.error('Error fetching projects data:', error);
+  } finally {
+    setProjectsLoading(false);
+  }
+};
 
-    fetchProjects();
-  }, [filters.indicator_id, filters.sub_indicator_id, filters.year, filters.month, filters.location]);
+  // Add this effect for fetching specific project indicator details
+useEffect(() => {
+  const fetchProjectDetails = async () => {
+    if (!filters.project_id) return;
+    
+    try {
+      const response = await axios.get(`http://localhost:8000/api/indicators/project-details/${filters.project_id}`);
+      // Handle the project details as needed
+      console.log('Project details:', response.data);
+    } catch (error) {
+      console.error('Error fetching project details:', error);
+    }
+  };
+
+  fetchProjectDetails();
+}, [filters.project_id]);
 
   // Fetch locations
   useEffect(() => {
@@ -160,16 +267,6 @@ const Dashboard: React.FC = () => {
         // Fetch goal summaries
         const goalSummaryResponse = await axios.get('http://localhost:8000/api/indicators/goal-summary', { params });
         setGoalSummaries(goalSummaryResponse.data.data);
-
-        // // If a goal is selected, filter the summary for that goal
-        // if (filters.goal_id) {
-        //   const selectedSummary = goalSummaryResponse.data.data.find(
-        //     (summary: any) => summary.goal_id === filters.goal_id
-        //   );
-        //   setSelectedGoalSummary(selectedSummary || null);
-        // } else {
-        //   setSelectedGoalSummary(null);
-        // }
         
        setSummaryLoading(false);
 
@@ -344,7 +441,7 @@ const Dashboard: React.FC = () => {
       
       <div className="filters mt-4 flex flex-wrap items-center">
         {/* Only show location dropdown in table view */}
-        {viewMode === 'table' && (
+        {viewMode === 'chart' && (
           <select 
             value={filters.location || ''}
             onChange={e => handleFilterChange('location', e.target.value ? e.target.value : null)}
@@ -356,14 +453,26 @@ const Dashboard: React.FC = () => {
             ))}
           </select>
         )}
+        {/* New time scale filter for the chart view */}
+        {viewMode === 'chart' && (
+          <select 
+            value={filters.timeScale || 'monthly'}
+            onChange={e => handleFilterChange('timeScale', e.target.value)}
+            className="border border-gray-300 rounded-md p-2 bg-white mr-2"
+          >
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        )}
         
         {/* View mode toggle */}
         <div className="ml-auto">
           <button 
-            onClick={() => setViewMode('table')}
-            className={`px-4 py-2 rounded-l-md transition-colors ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+            onClick={() => setViewMode('chart')}
+            className={`px-4 py-2 rounded-l-md transition-colors ${viewMode === 'chart' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
           >
-            Table
+            Chart
           </button>
           <button 
             onClick={() => setViewMode('map')}
@@ -623,6 +732,18 @@ const Dashboard: React.FC = () => {
               Back to {filters.indicator_id ? `Goal ${filters.goal_id} Indicators` : 'Indicator'}
             </button>
           </div>
+
+          {/* Line chart above the project contributions section */}
+          <div className="mt-4 border rounded-lg p-4 bg-white shadow-sm">
+            <SDGLineChart 
+              data={data}
+              height={350}
+              goalId={filters.goal_id}
+              indicatorId={filters.indicator_id}
+              subIndicatorId={filters.sub_indicator_id}
+              projectId={filters.project_id}
+            />
+          </div>
           
           {projectsLoading ? (
             <p className="my-4">Loading projects data...</p>
@@ -802,8 +923,21 @@ const Dashboard: React.FC = () => {
                       )}
                     </tbody>
                   </table>
-                </div>
-              ) : (
+                  </div>
+                  ) : viewMode === 'chart' ? (
+                    // Add a new view option for the chart
+                    <div className="mt-6 border rounded-lg p-4 bg-white shadow-sm">
+                      <SDGLineChart 
+                        data={data} 
+                        height={500}
+                        goalId={filters.goal_id}
+                        indicatorId={filters.indicator_id}
+                        subIndicatorId={filters.sub_indicator_id}
+                        projectId={filters.project_id}
+                        timeScale={filters.timeScale || 'monthly'}
+                      />
+                    </div>
+                  ) : (
                 <div className="mt-6">
                   <h2 className="text-xl font-semibold mb-4">
                     {filters.goal_id ? `Goal ${filters.goal_id} Geographic Performance` : 'Geographic Performance Overview'}
