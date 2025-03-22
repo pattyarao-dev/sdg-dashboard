@@ -30,8 +30,10 @@ export interface IProjectIndicator {
 
 export interface IProjectSubIndicator {
   projectSubIndicatorId: number;
-  subIndicatorId: number;
+  goalSubIndicatorId: number;
   subIndicatorName: string;
+  requiredData: IProjectRequiredData[];
+  computationRule: IProjectComputationRule[];
 }
 
 export interface IProjectRequiredData {

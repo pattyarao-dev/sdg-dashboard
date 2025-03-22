@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Goal, RequiredData, Indicator } from "@/types/goal.types";
+import {
+  createIndicator,
+  createNewIndicator,
+  createNewMainSubIndicator,
+  createNewSubSubIndicator,
+} from "@/app/actions/actions_indicatormanagement";
+
+type IndicatorType = "sub" | "main";
 
 const AddNewIndicator = ({
   goal,
@@ -19,12 +27,18 @@ const AddNewIndicator = ({
     required_data: [] as RequiredData[],
     sub_indicators: [] as Indicator[],
   });
+  const focusedElementId = useRef<string | null>(null);
 
   const handleInputChange = (
     indicator: Indicator,
     field: keyof Indicator,
     value: string | number | RequiredData[] | Indicator[],
   ) => {
+    // Save active element's ID before state update
+    if (document.activeElement) {
+      focusedElementId.current = document.activeElement.id;
+    }
+
     setNewIndicator((prev: Indicator) => {
       const updateIndicator = (current: Indicator): Indicator => {
         if (current.indicator_id === indicator.indicator_id) {
@@ -37,6 +51,16 @@ const AddNewIndicator = ({
       };
       return updateIndicator(prev);
     });
+
+    // Restore focus after render
+    setTimeout(() => {
+      if (focusedElementId.current) {
+        const element = document.getElementById(focusedElementId.current);
+        if (element) {
+          (element as HTMLElement).focus();
+        }
+      }
+    }, 0);
   };
 
   //const [requiredDataList, setRequiredDataList] = useState<RequiredData[]>([]);
@@ -124,9 +148,27 @@ const AddNewIndicator = ({
     });
   };
 
-  const travelIndicator = async (subIndicator: Indicator, key: number) => {
+  const travelIndicator = async (
+    subIndicator: Indicator,
+    parentIndicatorId: number,
+    goalIndicatorId: number,
+    type: IndicatorType,
+  ) => {
     // we place the logic over here!
-    console.log(key + ": " + subIndicator.name);
+    let newSubIndicator: number = -1;
+    if (type === "main") {
+      newSubIndicator = await createNewMainSubIndicator(
+        subIndicator,
+        parentIndicatorId,
+        goalIndicatorId,
+      );
+    } else if (type === "sub") {
+      newSubIndicator = await createNewSubSubIndicator(
+        subIndicator,
+        parentIndicatorId,
+        goalIndicatorId,
+      );
+    }
 
     // exit over here!
     if (subIndicator.sub_indicators.length <= 0) {
@@ -135,19 +177,29 @@ const AddNewIndicator = ({
 
     // if there are more we keep going
     for (const sub of subIndicator.sub_indicators) {
-      await travelIndicator(sub, key + 1);
+      await travelIndicator(sub, newSubIndicator, goalIndicatorId, "sub");
     }
   };
 
   const handleSubmitIndicator = async () => {
-    // TODO: Implement indicator submission logic
+    //TODO: Implement indicator submission logic
 
-    console.log("0: " + newIndicator.name);
+    const newlyCreateIndicator = await createNewIndicator(
+      newIndicator,
+      goal.goal_id,
+    );
+
     if (newIndicator.sub_indicators.length > 0) {
       for (const sub of newIndicator.sub_indicators) {
-        await travelIndicator(sub, 1);
+        await travelIndicator(
+          sub,
+          newlyCreateIndicator.newIndicatorId,
+          newlyCreateIndicator.newGoalIndicatorId,
+          "main",
+        );
       }
     }
+    console.log(newIndicator);
   };
 
   const renderIndicatorForm = (
@@ -175,6 +227,7 @@ const AddNewIndicator = ({
               Indicator Name:
             </p>
             <input
+              id={`indicator-${indicator.indicator_id}-name`}
               type="text"
               placeholder="Indicator Name"
               value={indicator.name}

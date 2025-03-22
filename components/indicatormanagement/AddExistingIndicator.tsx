@@ -21,6 +21,14 @@ const AddExistingIndicator = ({
     sub_indicators: [{}],
   });
 
+  const handleSelectIndicator = (indicator: GoalIndicator) => {
+    setSelectedIndicator({
+      ...indicator,
+      sub_indicators: indicator.sub_indicators || [],
+    });
+    setRequiredDataList([]);
+  };
+
   const [requiredDataList, setRequiredDataList] = useState<RequiredData[]>([]);
 
   const handleSelectRequiredData = (requiredData: RequiredData) => {

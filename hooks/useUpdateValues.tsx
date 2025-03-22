@@ -1,6 +1,7 @@
 import {
   updateIndicatorRequiredDataValue,
   updateProjectIndicatorRequiredDataValue,
+  updateProjectSubIndicatorRequiredDataValue,
   updateSubIndicatorRequiredDataValue,
 } from "@/app/actions/actions";
 import { useState } from "react";
@@ -16,7 +17,11 @@ const useUpdateValues = () => {
       value: number;
       createdBy: number;
     }>,
-    indicatorType: "subIndicator" | "indicator" | "projectIndicator",
+    indicatorType:
+      | "subIndicator"
+      | "indicator"
+      | "projectIndicator"
+      | "projectSubIndicator",
     projectId?: number,
   ) => {
     setLoading(true);
@@ -32,6 +37,11 @@ const useUpdateValues = () => {
       } else if (indicatorType === "projectIndicator") {
         const updatedValues =
           await updateProjectIndicatorRequiredDataValue(values);
+        setSuccess(true);
+        return updatedValues;
+      } else if (indicatorType === "projectSubIndicator") {
+        const updatedValues =
+          await updateProjectSubIndicatorRequiredDataValue(values);
         setSuccess(true);
         return updatedValues;
       }

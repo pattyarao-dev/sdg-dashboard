@@ -22,8 +22,11 @@ export default async function ProjectManagement() {
 
   return (
     <main className="w-full min-h-screen p-10 flex flex-col gap-10">
-      <div className="w-full p-6 bg-gradient-to-br from-green-50 to-orange-50 rounded-lg drop-shadow-lg">
+      <div className="w-full p-6 flex items-center justify-between bg-gradient-to-br from-green-50 to-orange-50 rounded-lg drop-shadow-lg">
         <h1 className="text-2xl uppercase font-bold">Project Management</h1>
+        <button className="button-style">
+          <Link href="/projectmanagement/createproject">Create Project</Link>
+        </button>
       </div>
       <div className="w-full flex flex-col gap-10">
         {projectsList.map((project, index) => (

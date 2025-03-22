@@ -46,6 +46,15 @@ export interface IGoalIndicatorSimple {
   goal_indicator_id: number;
   indicator_name: string;
   indicator_target: number | null;
+  sub_indicators: IGoalSubIndicatorSimple[];
+}
+
+export interface IGoalSubIndicatorSimple {
+  goal_sub_indicator_id: number;
+  indicator_name: string;
+  indicator_target: number | null;
+  sub_indicators: IGoalSubIndicatorSimple[];
+  sub_indicator_id?: number;
 }
 
 // For a goal with its associated indicators

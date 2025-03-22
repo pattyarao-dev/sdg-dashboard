@@ -523,6 +523,30 @@ export async function updateProjectIndicatorRequiredDataValue(
   }
 }
 
+export async function updateProjectSubIndicatorRequiredDataValue(
+  projectSubIndicatorRequiredDataValues: Array<{
+    goalIndicatorId: number;
+    requiredDataId: number;
+    value: number;
+    createdBy: number;
+  }>,
+) {
+  try {
+    const updatedValues = await prisma.td_required_data_value.createMany({
+      data: projectSubIndicatorRequiredDataValues.map((data) => ({
+        goal_sub_indicator_id: data.goalIndicatorId,
+        required_data_id: data.requiredDataId,
+        value: data.value,
+        created_by: data.createdBy,
+      })),
+    });
+    return updatedValues;
+  } catch (error) {
+    const err = error as Error;
+    console.log(err.message);
+  }
+}
+
 export async function getProjectIndicatorId(
   projectId: number,
   goalIndicatorId: number,
