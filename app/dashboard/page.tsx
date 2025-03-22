@@ -428,10 +428,24 @@ useEffect(() => {
     return num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   };
 
+  function handleGenerateReport(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
+    throw new Error('Function not implemented.');
+  }
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">LGU SDG Dashboard</h1>
       
+      <button 
+      onClick={handleGenerateReport}
+      className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded flex items-center"
+    >
+      <span className="mr-2">Generate Report</span>
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+      </svg>
+      </button>
+
       {/* TimeFilter component */}
       <TimeFilter 
         onFilterChange={handleTimeFilterChange}
