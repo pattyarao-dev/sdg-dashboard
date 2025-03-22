@@ -42,14 +42,14 @@ model md_indicator {
 
 model md_sub_indicator {
   sub_indicator_id         Int                        @id @default(autoincrement())
-  parent_indicator_id      Int
+  parent_indicator_id      Int?
   name                     String                     @unique @db.VarChar(100)
   description              String?
   status                   status
   parent_sub_indicator_id  Int?
   md_sub_indicator         md_sub_indicator?          @relation("md_sub_indicatorTomd_sub_indicator", fields: [parent_sub_indicator_id], references: [sub_indicator_id], onUpdate: NoAction, map: "fk_parent_sub_indicator")
   other_md_sub_indicator   md_sub_indicator[]         @relation("md_sub_indicatorTomd_sub_indicator")
-  md_indicator             md_indicator               @relation(fields: [parent_indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  md_indicator             md_indicator?              @relation(fields: [parent_indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_goal_sub_indicator    td_goal_sub_indicator[]
   td_project_sub_indicator td_project_sub_indicator[]
 }
