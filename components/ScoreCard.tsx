@@ -32,3 +32,4 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
 };
 
 export default ScoreCard;
+

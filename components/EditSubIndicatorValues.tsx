@@ -9,10 +9,20 @@ const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
   const { success, loading, createFormula } = useCreateFormula();
   const [formula, setFormula] = useState("");
 
+  function formatFormula(input: string): string {
+    return input.replace(/\b[a-zA-Z\s]+\b/g, (match) => {
+      // Only replace if it's not an operator/number
+      if (!/^\d+$/.test(match.trim())) {
+        return match.trim().replace(/\s+/g, "_").toLowerCase();
+      }
+      return match;
+    });
+  }
+
   const submitFormulaChange = () => {
-    console.log(sub.goalSubIndicatorId);
     if (sub.goalSubIndicatorId) {
-      createFormula(formula, sub.goalSubIndicatorId, "subIndicator");
+      const formattedFormula = formatFormula(formula);
+      createFormula(formattedFormula, sub.goalSubIndicatorId, "subIndicator");
     }
   };
 

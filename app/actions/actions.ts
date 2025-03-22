@@ -280,6 +280,7 @@ export async function getUnassignedProjectGoalIndicators(projectId: number) {
 //
 export async function getGoals() {
   const goals = await prisma.md_goal.findMany({
+    orderBy: { goal_id: "asc" },
     include: {
       td_goal_indicator: {
         include: {
@@ -336,6 +337,7 @@ export async function getRequiredDataList() {
 
 export async function getGoalsInformation() {
   const goals = await prisma.md_goal.findMany({
+    orderBy: { goal_id: "asc" },
     include: {
       td_goal_indicator: {
         include: {
