@@ -936,10 +936,8 @@ export default function AddIndicator({
         </ul>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <button className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">
-          Submit
-        </button>
+      <form onSubmit={handleSubmit} className="w-full flex justify-end">
+        <button className="button-style">Submit</button>
       </form>
       {message && <p>{message}</p>}
     </div>

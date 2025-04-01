@@ -212,7 +212,14 @@ const AddProjectIndicators = ({
                               </div>
                             </div>
                           ))}
-                          <button onClick={() => handleSubmit()}>submit</button>
+                          <div className="w-full flex justify-end">
+                            <button
+                              className="mt-2 button-style"
+                              onClick={() => handleSubmit()}
+                            >
+                              submit
+                            </button>
+                          </div>
                         </div>
                       )
                     );

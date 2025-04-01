@@ -282,26 +282,6 @@ model td_sub_indicator_value {
   td_goal_sub_indicator td_goal_sub_indicator? @relation(fields: [goal_sub_indicator_id], references: [goal_sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-model md_location {
-  location_id            Int                      @id @default(autoincrement())
-  name                   String                   @unique @db.VarChar(100)
-  td_project_location    td_project_location[]
-  td_sub_indicator_value td_sub_indicator_value[]
-}
-
-model td_project_location {
-  project_location_id            Int                              @id @default(autoincrement())
-  project_id                     Int
-  location_id                    Int
-  td_project_indicator           td_project_indicator[]
-  td_project_indicator_value     td_project_indicator_value[]
-  md_location                    md_location                      @relation(fields: [location_id], references: [location_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_location")
-  td_project                     td_project                       @relation(fields: [project_id], references: [project_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_project")
-  td_project_sub_indicator_value td_project_sub_indicator_value[]
-
-  @@unique([project_id, location_id], map: "unique_project_location")
-}
-
 enum project_status {
   ongoing
   complete

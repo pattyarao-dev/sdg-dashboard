@@ -64,7 +64,7 @@ export default async function DataConsolidationHomepage() {
             </p>
           </div>
         </Link>
-        <Link href="">
+        <Link href="/projectprogressform">
           <div className="w-[300px] h-[350px] px-6 flex flex-col items-center justify-center gap-4 text-center bg-gradient-to-br from-green-100/80 to-orange-100/80 rounded-lg">
             <TbStarsFilled className="text-7xl" />
             <p className="text-xl uppercase font-black">

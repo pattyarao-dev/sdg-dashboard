@@ -137,75 +137,83 @@ const EditProjectIndicatorValues = ({
 
   return (
     <div className="w-full">
-      <div className="w-full flex flex-col gap-6">
-        {indicator.computationRule.length > 0 ? (
-          <>
-            <div className="w-full p-4 bg-gray-300 flex flex-col gap-2">
-              <p className="text-sm font-bold text-green-800">
-                Computation Rule for {indicator.indicatorName}:
-              </p>
-              {indicator.computationRule.map((rule) => (
-                <p
-                  key={rule.ruleId}
-                  className="w-full font-black font-mono text-xl"
-                >
-                  {rule.ruleFormula}
+      {indicator.requiredData.length > 0 ? (
+        <div className="w-full flex flex-col gap-6">
+          {indicator.computationRule.length > 0 ? (
+            <>
+              <div className="w-full p-4 bg-gray-300 flex flex-col gap-2">
+                <p className="text-sm font-bold text-green-800">
+                  Computation Rule for {indicator.indicatorName}:
                 </p>
-              ))}
-            </div>
-            <div className="w-full p-4 flex flex-col gap-6">
-              <div className="w-full flex flex-col gap-2">
-                {indicator.requiredData.map((data) => (
-                  <div
-                    key={data.requiredDataId}
-                    className="w-full flex items-start justify-between"
+                {indicator.computationRule.map((rule) => (
+                  <p
+                    key={rule.ruleId}
+                    className="w-full font-black font-mono text-xl"
                   >
-                    <p>{data.requiredDataName}</p>
-                    <div className="flex items-center gap-4">
-                      <p>Current value for {data.requiredDataName}</p>
-                      <input
-                        type="number"
-                        className="w-[100px] border border-gray-700"
-                        onChange={(e) =>
-                          handleValueChange(
-                            data.requiredDataId,
-                            parseFloat(e.target.value),
-                          )
-                        }
-                        value={
-                          newValues.find(
-                            (v) => v.requiredDataId === data.requiredDataId,
-                          )?.value ?? ""
-                        }
-                      />
-                    </div>
-                  </div>
+                    {rule.ruleFormula}
+                  </p>
                 ))}
               </div>
-              <div className="w-full flex justify-end">
-                <button
-                  onClick={submitNewValues}
-                  className="w-fit px-4 py-2 bg-orange-200 font-bold"
-                >
-                  Submit Values and Compute
-                </button>
+              <div className="w-full p-4 flex flex-col gap-6">
+                <div className="w-full flex flex-col gap-2">
+                  {indicator.requiredData.map((data) => (
+                    <div
+                      key={data.requiredDataId}
+                      className="w-full flex items-start justify-between"
+                    >
+                      <p>{data.requiredDataName}</p>
+                      <div className="flex items-center gap-4">
+                        <p>Current value for {data.requiredDataName}</p>
+                        <input
+                          type="number"
+                          className="w-[100px] border border-gray-700"
+                          onChange={(e) =>
+                            handleValueChange(
+                              data.requiredDataId,
+                              parseFloat(e.target.value),
+                            )
+                          }
+                          value={
+                            newValues.find(
+                              (v) => v.requiredDataId === data.requiredDataId,
+                            )?.value ?? ""
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="w-full flex justify-end">
+                  <button
+                    onClick={submitNewValues}
+                    className="w-fit px-4 py-2 bg-orange-200 font-bold"
+                  >
+                    Submit Values and Compute
+                  </button>
+                </div>
+                <div className="w-full ">
+                  {calculateIndicatorLoading ? (
+                    <p>Calculating...</p>
+                  ) : calculatedValue !== null ? (
+                    <div className="w-full p-4 bg-gray-200">
+                      <p className="font-bold text-green-800">
+                        Computed Value:
+                      </p>
+                      <p className="text-xl font-mono">
+                        {finalCalculatedValue}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
               </div>
-              <div className="w-full ">
-                {calculateIndicatorLoading ? (
-                  <p>Calculating...</p>
-                ) : calculatedValue !== null ? (
-                  <div className="w-full p-4 bg-gray-200">
-                    <p className="font-bold text-green-800">Computed Value:</p>
-                    <p className="text-xl font-mono">{finalCalculatedValue}</p>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </>
-        ) : (
-          <div>No computation rule identified for this indicator.</div>
-        )}
-      </div>
+            </>
+          ) : (
+            <div>No computation rule identified for this indicator.</div>
+          )}
+        </div>
+      ) : (
+        <div>No required data identified for this indicator.</div>
+      )}
     </div>
   );
 };

@@ -525,6 +525,17 @@ export async function updateProjectIndicatorRequiredDataValue(
   }
 }
 
+export async function getLocations() {
+  const loc = await prisma.md_location.findMany({
+    select: {
+      location_id: true,
+      name: true,
+    },
+  });
+
+  return loc;
+}
+
 export async function updateProjectSubIndicatorRequiredDataValue(
   projectSubIndicatorRequiredDataValues: Array<{
     goalIndicatorId: number;

@@ -59,9 +59,8 @@ const useCalculateValue = () => {
 
         const result = await response.json();
         setSuccess(true);
-
-        if (result.value !== undefined) {
-          setCalculatedValue(result.value);
+        if (result.computedValue !== undefined) {
+          setCalculatedValue(result.computedValue);
         }
         setLoading(false);
         return result;

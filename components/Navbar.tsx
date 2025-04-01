@@ -21,9 +21,10 @@ const Navbar = ({ session }: NavbarProps) => {
         <h1>SDG Dashboard</h1>
       </div>
       <div className="w-fit flex items-center justify-end gap-8">
-        <p>Home</p>
+        <Link href="/dashboard">Dashboard</Link>
         <Link href="/indicatormanagement">Indicator Management</Link>
         <Link href="/projectmanagement">Project Management</Link>
+        <Link href="/datamanagementhome">Data Management</Link>
       </div>
       {session ? (
         <button

@@ -5,6 +5,7 @@ const ProjectProgressFormComponent = ({
   projectsList,
 }: {
   projectsList: IProjectProgressForm[];
+  locations: { id: number; name: string }[];
 }) => {
   return (
     <div className="w-full flex flex-col gap-24">
