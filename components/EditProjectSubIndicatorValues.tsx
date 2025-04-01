@@ -173,12 +173,14 @@ const EditSubIndicatorValues = ({ sub }: { sub: IProjectSubIndicator }) => {
                       </div>
                     ))}
                   </div>
-                  <button
-                    onClick={submitNewValues}
-                    className="w-fit bg-orange-200 px-6 py-2 rounded-md"
-                  >
-                    Submit Sub-Indicator Required Data Values and Compute
-                  </button>
+                  <div className="w-full flex justify-end">
+                    <button
+                      onClick={submitNewValues}
+                      className="w-fit bg-orange-200 px-6 py-2 rounded-md"
+                    >
+                      Submit Sub-Indicator Required Data Values and Compute
+                    </button>
+                  </div>
                 </div>
               </>
             ) : (
