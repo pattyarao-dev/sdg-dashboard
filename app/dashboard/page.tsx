@@ -234,7 +234,7 @@ useEffect(() => {
       } catch (error) {
         console.error('Error fetching locations:', error);
         // Fallback - extract locations from GeoJSON if available
-        fetch('/pasigcity.0.01.json')
+        fetch('/baguiocity.json')
           .then(response => response.json())
           .then(data => {
             const extractedLocations = data.features.map((feature: any) => feature.properties.NAME_3);
