@@ -46,7 +46,7 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({
     const fetchGeoData = async () => {
       try {
         // Adjust this to your actual GeoJSON file path or API endpoint
-        const response = await fetch('/pasigcity.0.01.json');
+        const response = await fetch('/baguiocity.json');
         const data = await response.json();
         setGeoData(data);
       } catch (error) {
