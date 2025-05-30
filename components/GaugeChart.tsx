@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import * as React from "react";
 import { Data, Layout } from "plotly.js";
 import { Goal, GoalSummary } from '@/types/dashboard.types';
+import { useGoalData } from '@/hooks/useGaugeData';
+import { useRetry } from '@/hooks/useRetry';
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -19,7 +21,6 @@ interface GaugeChartProps {
   project_id?: number;
   location?: string;
   valueType?: 'avg_value'; // 'latest_value' | 'avg_value' | 'median_value'
-  // Default fallback value when no data is available
   defaultValue?: number;
 }
 
@@ -36,52 +37,31 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
   valueType = 'latest_value',
   defaultValue = 0
 }) => {
-  const [goalData, setGoalData] = useState<GoalSummary | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [hasData, setHasData] = useState<boolean>(false);
+  // Use the custom hook with retry logic
+  const { executeWithRetry, retryCount, isRetrying, canRetry, reset: resetRetry } = useRetry({
+    maxRetries: 3,
+    retryDelay: 1000,
+    backoffMultiplier: 1.5
+  });
 
-  useEffect(() => {
-    const fetchGoalData = async () => {
-      if (!goal_id) return;
-      
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Construct query parameters
-        const params = new URLSearchParams();
-        if (year) params.append('year', year.toString());
-        if (month) params.append('month', month.toString());
-        if (project_id) params.append('project_id', project_id.toString());
-        if (location) params.append('location', location);
-        
-        const response = await fetch(`http://localhost:8000/api/indicators/goal-summary?${params.toString()}`);
-        
-        if (!response.ok) {
-          throw new Error(`Error fetching data: ${response.statusText}`);
-        }
-        
-        const result = await response.json();
-        const goalSummary = result.data.find((item: GoalSummary) => item.goal_id === goal_id);
-        
-        if (goalSummary) {
-          setGoalData(goalSummary);
-          setHasData(true);
-        } else {
-          // No data found but no error - just set hasData to false
-          setHasData(false);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error occurred");
-        setHasData(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchGoalData();
-  }, [goal_id, year, month, project_id, location]);
+  // Use the goal data hook
+  const { 
+    goalData, 
+    allGoalsData,
+    isLoading, 
+    error, 
+    hasData, 
+    message,
+    refetch,
+    retry 
+  } = useGoalData({
+    goal_id,
+    year,
+    month,
+    project_id,
+    location,
+    enabled: true
+  });
 
   const handleOnClick = () => {
     if (onFilterChange && goal_id !== undefined) {
@@ -93,19 +73,27 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
     }
   };
 
+  const handleRetry = async () => {
+    try {
+      resetRetry();
+      await executeWithRetry(
+        () => retry(),
+        (attempt) => console.log(`Retry attempt ${attempt} for goal ${goal_id}`)
+      );
+    } catch (err) {
+      console.error('All retry attempts failed:', err);
+    }
+  };
+
   const getGaugeColor = (percentage: number) => {
     if (percentage < 50) return "#E5243B"; // Red (0-49%)
     if (percentage < 80) return "#FF9800"; // Orange (50-79%)
     return "#4CAF50"; // Green (80-100%)
   };
   
-  // Display value to show on gauge (use goalData if available, otherwise use defaultValue)
+  // Display value to show on gauge
   const displayValue = hasData && goalData ? goalData[valueType] : defaultValue;
-  
-  // Format percentage value, ensuring it's within 0-100
   const normalizedValue = Math.min(Math.max(displayValue, 0), 100);
-  
-  // Use provided color or determine by value
   const gaugeColor = color || getGaugeColor(normalizedValue);
 
   // Create Plotly data
@@ -129,12 +117,41 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
     margin: { t: 40, b: 10, l: 10, r: 10 },
   };
 
-  if (isLoading) {
-    return <div className="w-full h-32 flex items-center justify-center">Loading...</div>;
+  // Loading state
+  if (isLoading || isRetrying) {
+    return (
+      <div className="w-full h-32 flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mb-2"></div>
+        <div className="text-xs text-gray-500">
+          {isRetrying ? `Retrying... (${retryCount}/${3})` : 'Loading...'}
+        </div>
+      </div>
+    );
   }
 
+  // Error state with retry option
   if (error) {
-    return <div className="text-red-500 text-sm p-2">Error: {error}</div>;
+    return (
+      <div className="w-full h-32 flex flex-col items-center justify-center p-2 bg-red-50 rounded">
+        <div className="text-red-600 text-xs text-center mb-2">
+          {error}
+        </div>
+        {canRetry && (
+          <button
+            onClick={handleRetry}
+            className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+          >
+            Retry ({retryCount}/{3})
+          </button>
+        )}
+        <button
+          onClick={refetch}
+          className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors mt-1"
+        >
+          Refresh
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -142,7 +159,7 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
       onClick={handleOnClick} 
       style={{ 
         cursor: onFilterChange ? "pointer" : "default",
-        opacity: isActive ? 1 : hasData ? 0.9 : 0.7, // Dimmed if no data
+        opacity: isActive ? 1 : hasData ? 0.9 : 0.7,
         border: isActive ? `2px solid ${gaugeColor}` : 'none',
         borderRadius: '8px',
         padding: '4px'
@@ -150,14 +167,24 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
       className="transition-all duration-200 hover:opacity-100 hover:shadow-md"
     >
       <Plot data={data} layout={layout} config={{ displayModeBar: false }} />
-      {!hasData && (
+      
+      {/* Status indicators */}
+      {!hasData && !error && (
         <div className="text-xs text-center mt-1 text-gray-500">
-          No data
+          {message || "No data available"}
         </div>
       )}
+      
       {isActive && hasData && (
         <div className="text-xs text-center mt-1 font-medium" style={{ color: gaugeColor }}>
           Selected
+        </div>
+      )}
+      
+      {/* Debug info (remove in production) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="text-xs text-gray-400 mt-1">
+          Goal: {goal_id} | Retries: {retryCount}
         </div>
       )}
     </div>
