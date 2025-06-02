@@ -18,17 +18,17 @@ export default async function AddGoalIndicator({
   return (
     <div className="w-full min-h-screen p-10 flex flex-col items-start justify-start gap-10">
       <GoBackButton />
-      <AddIndicator
+      {/* <AddIndicator
         goalId={id}
         goalName={goal?.name}
         indicators={availableIndicators}
         requiredData={requiredData}
-      />
-      {/* <IndicatorManagementComponent
+      /> */}
+      <IndicatorManagementComponent
         goal={goal}
         requiredData={requiredData}
         availableIndicators={availableIndicators}
-      /> */}
+      />
     </div>
   );
 }
