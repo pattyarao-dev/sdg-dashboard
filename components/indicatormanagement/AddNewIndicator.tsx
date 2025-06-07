@@ -29,6 +29,10 @@ const AddNewIndicator = ({
   });
   const focusedElementId = useRef<string | null>(null);
 
+  const [newRequiredDataInputs, setNewRequiredDataInputs] = useState<{[key: number]: string}>({});
+  const [allRequiredData, setAllRequiredData] = useState<RequiredData[]>(requiredData);
+
+
   const handleInputChange = (
     indicator: Indicator,
     field: keyof Indicator,
@@ -64,6 +68,10 @@ const AddNewIndicator = ({
   };
 
   //const [requiredDataList, setRequiredDataList] = useState<RequiredData[]>([]);
+
+  const handleNewRequiredDataInputChange = (indicatorId: number, value: string) => {
+    setNewRequiredDataInputs(prev => ({ ...prev, [indicatorId]: value }));
+  }
 
   const handleSelectRequiredData = (
     indicator: Indicator,
@@ -314,9 +322,6 @@ const AddNewIndicator = ({
                 </div>
                 <div className="w-full flex justify-end"></div>
               </div>
-              <div className="w-full p-2 bg-gray-200">
-                {/* New required data list*/}New required data goes here
-              </div>
             </div>
             <div className="w-full h-auto overflow-y-scroll flex flex-col gap-2">
               <p>Select existing required data:</p>
@@ -343,6 +348,10 @@ const AddNewIndicator = ({
             </div>
           </div>
 
+          <div>
+            {/*all selected required data -- newly created and selected from existing goes here */}
+          </div>
+
           <div className="flex gap-4">
             <button
               onClick={() => handleAddSubIndicator(indicator)}
@@ -363,7 +372,7 @@ const AddNewIndicator = ({
                 Remove
               </button>
             )}
-          </div>
+          </div>>
         </div>
 
         <div className="ml-6">
