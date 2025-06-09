@@ -29,9 +29,11 @@ const AddNewIndicator = ({
   });
   const focusedElementId = useRef<string | null>(null);
 
-  const [newRequiredDataInputs, setNewRequiredDataInputs] = useState<{[key: number]: string}>({});
-  const [allRequiredData, setAllRequiredData] = useState<RequiredData[]>(requiredData);
-
+  const [newRequiredDataInputs, setNewRequiredDataInputs] = useState<{
+    [key: number]: string;
+  }>({});
+  const [allRequiredData, setAllRequiredData] =
+    useState<RequiredData[]>(requiredData);
 
   const handleInputChange = (
     indicator: Indicator,
@@ -69,9 +71,15 @@ const AddNewIndicator = ({
 
   //const [requiredDataList, setRequiredDataList] = useState<RequiredData[]>([]);
 
-  const handleNewRequiredDataInputChange = (indicatorId: number, value: string) => {
-    setNewRequiredDataInputs(prev => ({ ...prev, [indicatorId]: value }));
-  }
+  const handleNewRequiredDataInputChange = (
+    indicatorId: number,
+    value: string,
+  ) => {
+    setNewRequiredDataInputs((prev) => ({
+      ...prev,
+      [indicatorId]: value,
+    }));
+  };
 
   const handleSelectRequiredData = (
     indicator: Indicator,
@@ -99,6 +107,58 @@ const AddNewIndicator = ({
       };
       return updateIndicator(prev);
     });
+  };
+
+  const handleCreateNewRequiredData = (indicator: Indicator) => {
+    const inputValue = newRequiredDataInputs[indicator.indicator_id]?.trim();
+
+    if (!inputValue) {
+      alert("Please enter a name for the required data");
+      return;
+    }
+
+    // Check if required data with this name already exists
+    const existingData = allRequiredData.find(
+      (data) => data.name.toLowerCase() === inputValue.toLowerCase(),
+    );
+
+    if (existingData) {
+      alert("Required data with this name already exists");
+      return;
+    }
+
+    // Create new required data object
+    const newRequiredData: RequiredData = {
+      required_data_id: Number(Date.now()), // Temporary ID
+      name: inputValue,
+      // Add other properties as needed based on your RequiredData type
+    };
+
+    // Add to all required data list
+    setAllRequiredData((prev) => [...prev, newRequiredData]);
+
+    // Add to the current indicator's selected required data
+    setNewIndicator((prev: Indicator) => {
+      const updateIndicator = (current: Indicator): Indicator => {
+        if (current.indicator_id === indicator.indicator_id) {
+          return {
+            ...current,
+            required_data: [...current.required_data, newRequiredData],
+          };
+        }
+        return {
+          ...current,
+          sub_indicators: current.sub_indicators?.map(updateIndicator) || [],
+        };
+      };
+      return updateIndicator(prev);
+    });
+
+    // Clear the input
+    setNewRequiredDataInputs((prev) => ({
+      ...prev,
+      [indicator.indicator_id]: "",
+    }));
   };
 
   const handleAddSubIndicator = (parentIndicator: Indicator) => {
@@ -130,6 +190,29 @@ const AddNewIndicator = ({
       };
 
       return updateIndicators(prev);
+    });
+  };
+
+  const handleRemoveRequiredData = (
+    indicator: Indicator,
+    dataToRemove: RequiredData,
+  ) => {
+    setNewIndicator((prev: Indicator) => {
+      const updateIndicator = (current: Indicator): Indicator => {
+        if (current.indicator_id === indicator.indicator_id) {
+          return {
+            ...current,
+            required_data: current.required_data.filter(
+              (rd) => rd.required_data_id !== dataToRemove.required_data_id,
+            ),
+          };
+        }
+        return {
+          ...current,
+          sub_indicators: current.sub_indicators?.map(updateIndicator) || [],
+        };
+      };
+      return updateIndicator(prev);
     });
   };
 
@@ -314,8 +397,27 @@ const AddNewIndicator = ({
                       type="text"
                       placeholder="Enter required data"
                       className="flex-1 p-2 border border-gray-300"
+                      value={
+                        newRequiredDataInputs[indicator.indicator_id] || ""
+                      }
+                      onChange={(e) =>
+                        handleNewRequiredDataInputChange(
+                          indicator.indicator_id,
+                          e.target.value,
+                        )
+                      }
+                      onKeyUp={(e) => {
+                        if (e.key === "Enter") {
+                          handleCreateNewRequiredData(indicator);
+                        }
+                      }}
                     />
-                    <button className="w-fit bg-green-700 text-white px-6 py-2 rounded-md uppercase font-semibold text-sm hover:bg-green-500 transition-all duration-100">
+                    <button
+                      onClick={() => {
+                        handleCreateNewRequiredData(indicator);
+                      }}
+                      className="w-fit bg-green-700 text-white px-6 py-2 rounded-md uppercase font-semibold text-sm hover:bg-green-500 transition-all duration-100"
+                    >
                       Add Required Data
                     </button>
                   </div>
@@ -324,7 +426,9 @@ const AddNewIndicator = ({
               </div>
             </div>
             <div className="w-full h-auto overflow-y-scroll flex flex-col gap-2">
-              <p>Select existing required data:</p>
+              <p className="uppercase text-sm text-green-800 font-bold">
+                Select existing required data:
+              </p>
               {requiredData.length > 0 ? (
                 requiredData.map((data, index) => (
                   <div
@@ -342,22 +446,51 @@ const AddNewIndicator = ({
                 ))
               ) : (
                 <div className="w-full p-2 flex items-center gap-2">
-                  No required data available
+                  <p className="italic text-gray-600">
+                    No required data available
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="w-full flex flex-col gap-2">
+              <p className="text-sm text-green-800 font-semibold uppercase">
+                Selected Required Data:
+              </p>
+              {indicator.required_data.length > 0 ? (
+                <div className="w-full flex flex-col gap-2">
+                  {indicator.required_data.map((data, index) => (
+                    <div
+                      key={index}
+                      className="w-full p-2 bg-gray-100 border border-gray-300 flex items-center justify-between"
+                    >
+                      <span className=" font-medium">{data.name}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleRemoveRequiredData(indicator, data)
+                        }
+                        className="text-red-600 hover:text-red-800 font-semibold text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="w-full p-2 text-gray-500 italic">
+                  No required data selected
                 </div>
               )}
             </div>
           </div>
 
-          <div>
-            {/*all selected required data -- newly created and selected from existing goes here */}
-          </div>
-
-          <div className="flex gap-4">
+          <div className="mt-4 w-full flex gap-4 items-center justify-end">
             <button
               onClick={() => handleAddSubIndicator(indicator)}
-              className="px-4 py-2 bg-green-500 text-white rounded"
+              className="px-4 py-2 bg-green-800 rounded-md  font-semibold text-white uppercase text-sm"
             >
-              + Add Sub-Indicator
+              Add Sub-Indicator
             </button>
             {parentIndicator && (
               <button
@@ -372,10 +505,10 @@ const AddNewIndicator = ({
                 Remove
               </button>
             )}
-          </div>>
+          </div>
         </div>
 
-        <div className="ml-6">
+        <div className="mt-6 ml-6">
           {indicator.sub_indicators.map((subIndicator, index) => (
             <div key={index}>
               {renderIndicatorForm(subIndicator, indicator)}
