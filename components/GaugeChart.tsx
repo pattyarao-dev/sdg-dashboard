@@ -181,12 +181,12 @@ const GaugeChart: React.FC<GaugeChartProps> = ({
         </div>
       )}
       
-      {/* Debug info (remove in production) */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* Debug info */}
+      {/* {process.env.NODE_ENV === 'development' && (
         <div className="text-xs text-gray-400 mt-1">
           Goal: {goal_id} | Retries: {retryCount}
         </div>
-      )}
+      )} */}
     </div>
   );
 };
