@@ -14,13 +14,77 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 import NotesPanel from '@/components/NotesPanel';
 
 // Dynamically import the ChoroplethMap component with no SSR
+// DYNAMIC IMPORT: ChoroplethMap is imported dynamically without SSR to avoid server-side rendering issues
+// This is common for map components that depend on browser APIs
 const ChoroplethMapNoSSR = dynamic(
   () => import('@/components/ChoroplethMap').then(mod => mod.default || mod),
   { ssr: false }
 );
 
+// TYPE DEFINITIONS: These should ideally be in separate type files
+interface Indicator {
+  indicator_id: number;
+  indicator_code: string;
+  name: string;
+  indicator_name?: string;
+  description?: string;
+  current_value?: number;
+  global_target_value?: number;
+  global_baseline_value?: number;
+  unit_of_measurement?: string;
+  progress_direction?: 'up' | 'down';
+  sub_indicators?: SubIndicator[];
+}
+
+interface SubIndicator {
+  sub_indicator_id: number;
+  sub_indicator_code: string;
+  name: string;
+  description?: string;
+  current_value?: number;
+  global_target_value?: number;
+  global_baseline_value?: number;
+  unit_of_measurement?: string;
+  progress_direction?: 'up' | 'down';
+}
+
+interface Project {
+  project_id: number;
+  name: string;
+  current_value?: number;
+  project_target_value?: number;
+  project_baseline_value?: number;
+  progress_direction?: 'up' | 'down';
+}
+
+// FILTER STATE INTERFACE: Defines the structure of all possible filters
+interface FilterState {
+  year: number;
+  month: number | null;
+  location: string | null;
+  goal_id: number | null;
+  project_id: number | null;
+  indicator_id: number | null;
+  sub_indicator_id: number | null;
+  timeScale?: string;
+}
+
+// NOTES CONTEXT INTERFACE: Defines different contexts for the notes panel
+interface NotesContext {
+  currentLevel: 'overview' | 'goal' | 'project' | 'indicator';
+  goalId?: number;
+  projectId?: number;
+  indicatorId?: number;
+}
+
 const Dashboard: React.FC = () => {
-  const [filters, setFilters] = useState({
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
+  
+  // MAIN FILTER STATE: Controls all filtering across the dashboard
+  // This is the central state that drives most data fetching and display logic
+  const [filters, setFilters] = useState<FilterState>({
     year: new Date().getFullYear(),
     month: null,
     location: null,
@@ -29,23 +93,60 @@ const Dashboard: React.FC = () => {
     indicator_id: null, 
     sub_indicator_id: null 
   });
-  const [data, setData] = useState([]);
-  const [allGoals, setAllGoals] = useState<Goal[]>([]);
-  const [goalSummaries, setGoalSummaries] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [goalsLoading, setGoalsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'chart' | 'map'>('chart'); // Default to map view
-  const [locations, setLocations] = useState<string[]>([]);
-  const [summaryLoading, setSummaryLoading] = useState(true);
 
-  // New states for drill-down functionality
-  const [indicators, setIndicators] = useState<Indicator[]>([]);
-  const [indicatorsLoading, setIndicatorsLoading] = useState(false);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [projectsLoading, setProjectsLoading] = useState(false);
-  const [projectContributions, setProjectContributions] = useState([]);
+  // DATA STATES: Store fetched data from various API endpoints
+  const [data, setData] = useState([]); // Main indicator values data
+  const [allGoals, setAllGoals] = useState<Goal[]>([]); // SDG goals master list
+  const [goalSummaries, setGoalSummaries] = useState([]); // Goal-level summary statistics
+  const [indicators, setIndicators] = useState<Indicator[]>([]); // Indicators for selected goal
+  const [projects, setProjects] = useState<Project[]>([]); // Projects for selected indicator
+  const [projectContributions, setProjectContributions] = useState([]); // Project contribution percentages
+  const [locations, setLocations] = useState<string[]>([]); // Available locations
 
-  // Fetch all goals initially
+  // LOADING STATES: Track loading status for different data sections
+  const [loading, setLoading] = useState(false); // Main data loading
+  const [goalsLoading, setGoalsLoading] = useState(true); // Goals loading
+  const [summaryLoading, setSummaryLoading] = useState(true); // Summary loading
+  const [indicatorsLoading, setIndicatorsLoading] = useState(false); // Indicators loading
+  const [projectsLoading, setProjectsLoading] = useState(false); // Projects loading
+
+  // UI STATE: Controls view modes and interactions
+  const [viewMode, setViewMode] = useState<'chart' | 'map'>('chart'); // Chart vs Map view toggle
+  // const [notesContext, setNotesContext] = useState<NotesContext>({ // Notes panel context
+  //   currentLevel: 'overview'
+  // });
+
+  // ============================================================================
+  // CONFIGURATION AND CONSTANTS
+  // ============================================================================
+  
+  // SDG GOAL COLORS: Official SDG color scheme mapping
+  const goalColors = {
+    1: "#E5243B",  // No Poverty
+    2: "#DDA63A",  // Zero Hunger
+    3: "#4C9F38",  // Good Health and Well-being
+    4: "#C5192D",  // Quality Education
+    5: "#FF3A21",  // Gender Equality
+    6: "#26BDE2",  // Clean Water and Sanitation
+    7: "#FCC30B",  // Affordable and Clean Energy
+    8: "#A21942",  // Decent Work and Economic Growth
+    9: "#FD6925",  // Industry, Innovation and Infrastructure
+    10: "#DD1367", // Reduced Inequality
+    11: "#FD9D24", // Sustainable Cities and Communities
+    12: "#BF8B2E", // Responsible Consumption and Production
+    13: "#3F7E44", // Climate Action
+    14: "#0A97D9", // Life Below Water
+    15: "#56C02B", // Life on Land
+    16: "#00689D", // Peace and Justice Strong Institutions
+    17: "#19486A", // Partnerships to achieve the Goal
+  };
+
+  // ============================================================================
+  // DATA FETCHING EFFECTS
+  // ============================================================================
+
+  // FETCH ALL GOALS: Loads the master list of SDG goals on component mount
+  // RELATIONSHIP: Goals -> Indicators -> Sub-indicators -> Projects
   useEffect(() => {
     const fetchAllGoals = async () => {
       setGoalsLoading(true);
@@ -62,7 +163,8 @@ const Dashboard: React.FC = () => {
     fetchAllGoals();
   }, []);
 
-  // Fetch indicators when a goal is selected
+  // FETCH INDICATORS: Loads indicators when a goal is selected
+  // RELATIONSHIP: Goal (1) -> Indicators (many) -> Sub-indicators (many)
   useEffect(() => {
     const fetchIndicators = async () => {
       if (!filters.goal_id) {
@@ -72,8 +174,7 @@ const Dashboard: React.FC = () => {
       
       setIndicatorsLoading(true);
       try {
-        const response = await axios.get(`http://localhost:8000/api/indicators/api/indicators/${filters.goal_id}`, {
-        });
+        const response = await axios.get(`http://localhost:8000/api/indicators/api/indicators/${filters.goal_id}`);
         setIndicators(response.data.data);
       } catch (error) {
         console.error('Error fetching indicators:', error);
@@ -85,152 +186,8 @@ const Dashboard: React.FC = () => {
     fetchIndicators();
   }, [filters.goal_id]);
 
-const [notesContext, setNotesContext] = useState({
-  currentLevel: 'overview'
-  });
-
-// Fetch projects and their contributions when an indicator is selected
-const fetchProjects = async () => {
-  if (!filters.indicator_id && !filters.sub_indicator_id) {
-    setProjects([]);
-    setProjectContributions([]);
-    return;
-  }
-  
-  setProjectsLoading(true);
-  try {
-    // Build query params for projects
-    const params = {};
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== null) {
-        params[key] = value;
-      }
-    });
-    
-    // Use the correct endpoint for fetching projects
-    const response = await axios.get('http://localhost:8000/api/indicators/projects', { params });
-    const projectsData = response.data.data || [];
-    
-    // Fetch project contributions to this indicator
-    const contributionsResponse = await axios.get('http://localhost:8000/api/indicators/project-contribution', { params });
-    console.log('Raw contributions data:', contributionsResponse.data);
-    
-    let flattenedContributions = [];
-    let enhancedProjects = [...projectsData]; // Create a copy of projects data to enhance
-    
-    if (contributionsResponse.data && contributionsResponse.data.contributions) {
-      // Find the goal that matches our filter
-      const relevantGoal = contributionsResponse.data.contributions.find(
-        goal => goal.goal_id === filters.goal_id
-      );
-      
-      if (relevantGoal) {
-        // Find the indicator that matches our filter
-        const relevantIndicator = relevantGoal.indicators.find(
-          indicator => indicator.indicator_id === filters.indicator_id
-        );
-        
-        if (relevantIndicator && relevantIndicator.projects) {
-          // Extract contributions data
-          flattenedContributions = relevantIndicator.projects.map(project => ({
-            project_id: project.project_id,
-            project_name: project.project_name,
-            contribution: project.contribution_percentage || 0
-          }));
-          
-          // Enhance projects with values from contributions
-          enhancedProjects = projectsData.map(project => {
-            const matchingContribution = relevantIndicator.projects.find(
-              p => p.project_id === project.project_id
-            );
-            
-            return {
-              ...project,
-              current_value: matchingContribution?.project_value || null,
-              project_target_value: null, // Will be fetched from project details if needed
-              project_baseline_value: 0,
-              progress_direction: 'up' // Default direction
-            };
-          });
-          
-          // Fetch additional details for each project if needed
-          const projectDetailsPromises = enhancedProjects.map(async (project) => {
-            try {
-              const detailsResponse = await axios.get(`http://localhost:8000/api/indicators/project-details/${project.project_id}`);
-              const projectDetails = detailsResponse.data;
-              
-              // Find the relevant indicator in the project details
-              let targetValue = null;
-              let baselineValue = 0;
-              let latestValue = null;
-              
-              if (projectDetails.goals) {
-                // Find matching goal
-                const goal = projectDetails.goals.find(g => g.goal_id === filters.goal_id);
-                if (goal && goal.indicators) {
-                  // Find matching indicator
-                  const indicator = goal.indicators.find(i => 
-                    i.indicator_name === relevantIndicator.indicator_name
-                  );
-                  
-                  if (indicator) {
-                    targetValue = indicator.project_target_value;
-                    baselineValue = indicator.project_baseline_value || 0;
-                    latestValue = indicator.latest_value;
-                  }
-                }
-              }
-              
-              return {
-                ...project,
-                current_value: latestValue || project.current_value,
-                project_target_value: targetValue,
-                project_baseline_value: baselineValue
-              };
-            } catch (error) {
-              console.error(`Error fetching details for project ${project.project_id}:`, error);
-              return project;
-            }
-          });
-          
-          // Wait for all project details to be fetched
-          const projectsWithDetails = await Promise.all(projectDetailsPromises);
-          enhancedProjects = projectsWithDetails;
-        }
-      }
-    }
-    
-    console.log('Enhanced projects:', enhancedProjects);
-    console.log('Project contributions:', flattenedContributions);
-    
-    setProjects(enhancedProjects);
-    setProjectContributions(flattenedContributions);
-    
-  } catch (error) {
-    console.error('Error fetching projects data:', error);
-  } finally {
-    setProjectsLoading(false);
-  }
-};
-
-  // Add this effect for fetching specific project indicator details
-useEffect(() => {
-  const fetchProjectDetails = async () => {
-    if (!filters.project_id) return;
-    
-    try {
-      const response = await axios.get(`http://localhost:8000/api/indicators/project-details/${filters.project_id}`);
-      // Handle the project details as needed
-      console.log('Project details:', response.data);
-    } catch (error) {
-      console.error('Error fetching project details:', error);
-    }
-  };
-
-  fetchProjectDetails();
-}, [filters.project_id]);
-
-  // Fetch locations
+  // FETCH LOCATIONS: Loads available geographic locations
+  // RELATIONSHIP: Locations are used to filter indicator values geographically
   useEffect(() => {
     const fetchLocations = async () => {
       try {
@@ -238,7 +195,7 @@ useEffect(() => {
         setLocations(response.data.data.map((loc: any) => loc.name));
       } catch (error) {
         console.error('Error fetching locations:', error);
-        // Fallback - extract locations from GeoJSON if available
+        // FALLBACK: Try to extract locations from GeoJSON file if API fails
         fetch('/baguiocity.json')
           .then(response => response.json())
           .then(data => {
@@ -252,12 +209,13 @@ useEffect(() => {
     fetchLocations();
   }, []);
 
-  // Fetch data based on filters
+  // FETCH MAIN DATA: Loads indicator values based on current filters
+  // RELATIONSHIP: This is the main data that populates charts, tables, and visualizations
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Build query params
+        // BUILD QUERY PARAMS: Convert filter state to API parameters
         const params = {};
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== null) {
@@ -265,16 +223,15 @@ useEffect(() => {
           }
         });
 
-        // Fetch indicator values
+        // FETCH INDICATOR VALUES: Main data for visualizations
         const response = await axios.get('http://localhost:8000/api/indicators/values', { params });
         setData(response.data.data);
 
-        // Fetch goal summaries
+        // FETCH GOAL SUMMARIES: Aggregate statistics per goal
         const goalSummaryResponse = await axios.get('http://localhost:8000/api/indicators/goal-summary', { params });
         setGoalSummaries(goalSummaryResponse.data.data);
         
-       setSummaryLoading(false);
-
+        setSummaryLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -283,8 +240,151 @@ useEffect(() => {
     };
 
     fetchData();
-  }, [filters]);
+  }, [filters]); // Refetch whenever filters change
 
+  // FETCH PROJECTS: Loads projects when an indicator is selected
+  // RELATIONSHIP: Indicator/Sub-indicator (1) -> Projects (many) -> Project Contributions (many)
+  useEffect(() => {
+    const fetchProjects = async () => {
+      if (!filters.indicator_id && !filters.sub_indicator_id) {
+        setProjects([]);
+        setProjectContributions([]);
+        return;
+      }
+      
+      setProjectsLoading(true);
+      try {
+        const params = {};
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== null) {
+            params[key] = value;
+          }
+        });
+        
+        // FETCH PROJECTS LIST
+        const response = await axios.get('http://localhost:8000/api/indicators/projects', { params });
+        const projectsData = response.data.data || [];
+        
+        // FETCH PROJECT CONTRIBUTIONS: How much each project contributes to the indicator
+        const contributionsResponse = await axios.get('http://localhost:8000/api/indicators/project-contribution', { params });
+        
+        let flattenedContributions = [];
+        let enhancedProjects = [...projectsData];
+        
+        // PROCESS CONTRIBUTIONS DATA: Navigate nested structure to find relevant contributions
+        if (contributionsResponse.data && contributionsResponse.data.contributions) {
+          const relevantGoal = contributionsResponse.data.contributions.find(
+            goal => goal.goal_id === filters.goal_id
+          );
+          
+          if (relevantGoal) {
+            const relevantIndicator = relevantGoal.indicators.find(
+              indicator => indicator.indicator_id === filters.indicator_id
+            );
+            
+            if (relevantIndicator && relevantIndicator.projects) {
+              // EXTRACT CONTRIBUTION PERCENTAGES
+              flattenedContributions = relevantIndicator.projects.map(project => ({
+                project_id: project.project_id,
+                project_name: project.project_name,
+                contribution: project.contribution_percentage || 0
+              }));
+              
+              // ENHANCE PROJECTS WITH VALUES: Merge project data with contribution values
+              enhancedProjects = projectsData.map(project => {
+                const matchingContribution = relevantIndicator.projects.find(
+                  p => p.project_id === project.project_id
+                );
+                
+                return {
+                  ...project,
+                  current_value: matchingContribution?.project_value || null,
+                  project_target_value: null,
+                  project_baseline_value: 0,
+                  progress_direction: 'up'
+                };
+              });
+              
+              // FETCH DETAILED PROJECT DATA: Get additional project-specific indicator details
+              const projectDetailsPromises = enhancedProjects.map(async (project) => {
+                try {
+                  const detailsResponse = await axios.get(`http://localhost:8000/api/indicators/project-details/${project.project_id}`);
+                  const projectDetails = detailsResponse.data;
+                  
+                  // EXTRACT PROJECT-SPECIFIC TARGETS AND BASELINES
+                  let targetValue = null;
+                  let baselineValue = 0;
+                  let latestValue = null;
+                  
+                  if (projectDetails.goals) {
+                    const goal = projectDetails.goals.find(g => g.goal_id === filters.goal_id);
+                    if (goal && goal.indicators) {
+                      const indicator = goal.indicators.find(i => 
+                        i.indicator_name === relevantIndicator.indicator_name
+                      );
+                      
+                      if (indicator) {
+                        targetValue = indicator.project_target_value;
+                        baselineValue = indicator.project_baseline_value || 0;
+                        latestValue = indicator.latest_value;
+                      }
+                    }
+                  }
+                  
+                  return {
+                    ...project,
+                    current_value: latestValue || project.current_value,
+                    project_target_value: targetValue,
+                    project_baseline_value: baselineValue
+                  };
+                } catch (error) {
+                  console.error(`Error fetching details for project ${project.project_id}:`, error);
+                  return project;
+                }
+              });
+              
+              const projectsWithDetails = await Promise.all(projectDetailsPromises);
+              enhancedProjects = projectsWithDetails;
+            }
+          }
+        }
+        
+        setProjects(enhancedProjects);
+        setProjectContributions(flattenedContributions);
+        
+      } catch (error) {
+        console.error('Error fetching projects data:', error);
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, [filters.indicator_id, filters.sub_indicator_id, filters.goal_id]);
+
+  // FETCH PROJECT DETAILS: Additional effect for when a specific project is selected
+  useEffect(() => {
+    const fetchProjectDetails = async () => {
+      if (!filters.project_id) return;
+      
+      try {
+        const response = await axios.get(`http://localhost:8000/api/indicators/project-details/${filters.project_id}`);
+        console.log('Project details:', response.data);
+        // This could be used to show project-specific information
+      } catch (error) {
+        console.error('Error fetching project details:', error);
+      }
+    };
+
+    fetchProjectDetails();
+  }, [filters.project_id]);
+
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+
+  // TIME FILTER HANDLER: Updates year and month filters
+  // RELATIONSHIP: Connects TimeFilter component to main filter state
   const handleTimeFilterChange = (year: number | null, month: number | null) => {
     setFilters(prev => ({
       ...prev,
@@ -293,6 +393,7 @@ useEffect(() => {
     }));
   };
 
+  // GENERIC FILTER HANDLER: Updates any filter property
   const handleFilterChange = (name: string, value: any) => {
     setFilters(prev => ({
       ...prev,
@@ -300,25 +401,46 @@ useEffect(() => {
     }));
   };
   
+  // GOAL FILTER HANDLER: Handles goal selection and resets dependent filters
+  // RELATIONSHIP: Goal -> Indicators -> Sub-indicators (cascade reset)
   const handleGoalFilterChange = (goal_id: number | null) => {
-    // Reset indicator and sub-indicator when changing goal
     setFilters(prev => ({
       ...prev,
       goal_id,
-      indicator_id: null,
-      sub_indicator_id: null
+      indicator_id: null,      // Reset when goal changes
+      sub_indicator_id: null   // Reset when goal changes
     }));
+    
+    // UPDATE NOTES CONTEXT: Change notes panel context based on selection
+    // if (goal_id) {
+    //   setNotesContext({ currentLevel: 'goal', goalId: goal_id });
+    // } else {
+    //   setNotesContext({ currentLevel: 'overview' });
+    // }
   };
 
+  // INDICATOR FILTER HANDLER: Handles indicator selection and resets sub-indicators
+  // RELATIONSHIP: Indicator -> Sub-indicators (cascade reset)
   const handleIndicatorSelect = (indicator_id: number | null) => {
-    // Reset sub-indicator when changing indicator
     setFilters(prev => ({
       ...prev,
       indicator_id,
-      sub_indicator_id: null
+      sub_indicator_id: null   // Reset when indicator changes
     }));
+    
+    // UPDATE NOTES CONTEXT
+    if (indicator_id) {
+      setNotesContext({ 
+        currentLevel: 'indicator', 
+        goalId: filters.goal_id!, 
+        indicatorId: indicator_id 
+      });
+    } else {
+      setNotesContext({ currentLevel: 'goal', goalId: filters.goal_id! });
+    }
   };
 
+  // SUB-INDICATOR FILTER HANDLER
   const handleSubIndicatorSelect = (sub_indicator_id: number | null) => {
     setFilters(prev => ({
       ...prev,
@@ -326,6 +448,7 @@ useEffect(() => {
     }));
   };
 
+  // LOCATION FILTER HANDLER: For geographic filtering
   const handleLocationSelect = (locationName: string | null) => {
     setFilters(prev => ({
       ...prev,
@@ -333,46 +456,40 @@ useEffect(() => {
     }));
   };
 
+  // PROJECT FILTER HANDLER: For project-specific filtering
   const handleProjectSelect = (project_id: number | null) => {
     setFilters(prev => ({
       ...prev,
       project_id
     }));
+    
+    // UPDATE NOTES CONTEXT
+    if (project_id) {
+      setNotesContext({ 
+        currentLevel: 'project', 
+        goalId: filters.goal_id!, 
+        projectId: project_id 
+      });
+    }
   };
 
-  // SDG goal colors
-  const goalColors = {
-    1: "#E5243B",
-    2: "#DDA63A", 
-    3: "#4C9F38", 
-    4: "#C5192D", 
-    5: "#FF3A21", 
-    6: "#26BDE2", 
-    7: "#FCC30B", 
-    8: "#A21942", 
-    9: "#FD6925",
-    10: "#DD1367", 
-    11: "#FD9D24", 
-    12: "#BF8B2E", 
-    13: "#3F7E44", 
-    14: "#0A97D9", 
-    15: "#56C02B", 
-    16: "#00689D", 
-    17: "#19486A", 
-  };
 
-  // Gets current goal color
+ // ============================================================================
+  // UTILITY FUNCTIONS
+  // ============================================================================
+
+  // GET CURRENT GOAL COLOR: Returns the color for the currently selected goal
   const getCurrentGoalColor = () => {
     if (!filters.goal_id) return "#666666";
     return goalColors[filters.goal_id as keyof typeof goalColors];
   };
 
-  // Function to generate random colors for project pie chart
+  // GENERATE PROJECT COLORS: Creates color variations for project visualizations
   const getProjectColors = (count: number) => {
     const baseColor = getCurrentGoalColor();
     const colors = [];
     
-    // Create variations of the base color
+    // This is a simplified version - in production, use a proper color manipulation library
     for (let i = 0; i < count; i++) {
       const hueShift = (i * 30) % 360;
       colors.push(shiftHue(baseColor, hueShift));
@@ -380,16 +497,15 @@ useEffect(() => {
     return colors;
   };
 
-  // Helper function to shift hue of a hex color
+  // SHIFT HUE: Helper function for color manipulation (simplified)
   const shiftHue = (hex: string, deg: number) => {
-    // Very simplified version - in real code, use a proper color manipulation library
-    return hex; // Placeholder - would actually shift the hue in a real implementation
+    // Placeholder - would actually shift the hue in a real implementation
+    return hex;
   };
 
- // Helper to get selected indicator or sub-indicator name
+  // GET SELECTED INDICATOR NAME: Returns formatted name of currently selected indicator
   const getSelectedIndicatorName = () => {
     if (filters.sub_indicator_id) {
-      // Look through your indicators data to find the one containing this sub-indicator
       const indicator = indicators.find(ind => 
         ind.sub_indicators && ind.sub_indicators.some(sub => 
           sub.sub_indicator_id === filters.sub_indicator_id
@@ -408,7 +524,6 @@ useEffect(() => {
     }
     
     if (filters.indicator_id) {
-      // Find the indicator in your indicators array
       const indicator = indicators.find(
         ind => ind.indicator_id === filters.indicator_id
       );
@@ -421,20 +536,24 @@ useEffect(() => {
     return 'All Indicators';
   };
 
-  // Helper to format dates for display
+  // FORMATTING HELPERS
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Helper to format numbers with commas and fixed decimal places
   const formatNumber = (num: number, decimals = 1) => {
     if (num === undefined || num === null) return 'N/A';
-    return num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    return num.toLocaleString(undefined, { 
+      minimumFractionDigits: decimals, 
+      maximumFractionDigits: decimals 
+    });
   };
 
-  function handleGenerateReport(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
-    throw new Error('Function not implemented.');
+  // PLACEHOLDER FUNCTION: This needs to be implemented
+  function handleGenerateReport(event: React.MouseEvent<HTMLButtonElement>) {
+    console.log('Generate report functionality needs to be implemented');
+    // TODO: Implement report generation logic
   }
 
   return (
@@ -974,10 +1093,10 @@ useEffect(() => {
         </>
       )}
 
-      <NotesPanel 
+      {/* <NotesPanel 
         currentContext={notesContext}
         onContextChange={setNotesContext}
-      />
+      /> */}
     </div>
   );
 }
