@@ -3,7 +3,6 @@
 import { useState, useRef } from "react";
 import { Goal, RequiredData, Indicator } from "@/types/goal.types";
 import {
-  createIndicator,
   createNewIndicator,
   createNewMainSubIndicator,
   createNewSubSubIndicator,
@@ -94,8 +93,8 @@ const AddNewIndicator = ({
 
           const updatedRequiredData = isSelected
             ? current.required_data.filter(
-                (rd) => rd.required_data_id !== data.required_data_id,
-              )
+              (rd) => rd.required_data_id !== data.required_data_id,
+            )
             : [...current.required_data, data];
 
           return { ...current, required_data: updatedRequiredData };
@@ -131,6 +130,7 @@ const AddNewIndicator = ({
     const newRequiredData: RequiredData = {
       required_data_id: Number(Date.now()), // Temporary ID
       name: inputValue,
+      newRD: true
       // Add other properties as needed based on your RequiredData type
     };
 

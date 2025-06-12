@@ -18,6 +18,7 @@ export interface Indicator {
 export interface RequiredData {
   required_data_id: number;
   name: string;
+  newRD: boolean;
 }
 
 // export interface SubIndicator {

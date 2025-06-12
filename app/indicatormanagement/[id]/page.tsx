@@ -12,8 +12,12 @@ export default async function AddGoalIndicator({
 }) {
   const id = Number((await params).id);
   const goal = await getGoal(id);
-  const requiredData = await getRequiredDataList();
+  const oldRequiredData = await getRequiredDataList();
   const availableIndicators = await getAvailableIndicatorsNoSub(id);
+
+  const requiredData = oldRequiredData.map((requiredData) => {
+    return { required_data_id: requiredData.required_data_id, name: requiredData.name, newRD: false }
+  })
 
   return (
     <div className="w-full min-h-screen p-10 flex flex-col items-start justify-start gap-10">

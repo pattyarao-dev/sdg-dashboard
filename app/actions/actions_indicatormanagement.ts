@@ -44,6 +44,21 @@ export async function getAvailableIndicatorsNoSub(goalId: number) {
 }
 
 export async function createNewIndicator(indicator: Indicator, goalId: number) {
+
+  // create new required data list where it's new only
+  const newRequiredDataClient = indicator.required_data.filter(req => req.newRD)
+  const oldRequiredDataClient = indicator.required_data.filter(req => req.newRD === false)
+
+  const newRequiredDataPromises = newRequiredDataClient.map(req =>
+    prisma.ref_required_data.create({
+      data: { name: req.name }
+    })
+  );
+
+  const newRequiredData = await Promise.all(newRequiredDataPromises);
+
+  const completeRequiredData = [...newRequiredData, ...oldRequiredDataClient]
+
   const newIndicator = await prisma.md_indicator.create({
     data: {
       name: indicator.name,
@@ -62,7 +77,7 @@ export async function createNewIndicator(indicator: Indicator, goalId: number) {
   });
 
   await prisma.td_goal_indicator_required_data.createMany({
-    data: indicator.required_data.map((req) => ({
+    data: completeRequiredData.map((req) => ({
       required_data_id: req.required_data_id,
       goal_indicator_id: newGoalIndicator.goal_indicator_id,
     })),
@@ -79,6 +94,19 @@ export async function createNewMainSubIndicator(
   parentIndicatorId: number,
   goalIndicatorId: number,
 ) {
+  // create new required data list where it's new only
+  const newRequiredDataClient = subIndicator.required_data.filter(req => req.newRD)
+  const oldRequiredDataClient = subIndicator.required_data.filter(req => req.newRD === false)
+
+  const newRequiredDataPromises = newRequiredDataClient.map(req =>
+    prisma.ref_required_data.create({
+      data: { name: req.name }
+    })
+  );
+
+  const newRequiredData = await Promise.all(newRequiredDataPromises);
+
+  const completeRequiredData = [...newRequiredData, ...oldRequiredDataClient]
   const newSubIndicator = await prisma.md_sub_indicator.create({
     data: {
       name: subIndicator.name,
@@ -98,7 +126,7 @@ export async function createNewMainSubIndicator(
   });
 
   await prisma.td_goal_sub_indicator_required_data.createMany({
-    data: subIndicator.required_data.map((req) => ({
+    data: completeRequiredData.map((req) => ({
       required_data_id: req.required_data_id,
       goal_sub_indicator_id: newGoalSubIndicator.goal_sub_indicator_id,
     })),
@@ -112,6 +140,19 @@ export async function createNewSubSubIndicator(
   parentIndicatorId: number,
   goalIndicatorId: number,
 ) {
+  // create new required data list where it's new only
+  const newRequiredDataClient = subIndicator.required_data.filter(req => req.newRD)
+  const oldRequiredDataClient = subIndicator.required_data.filter(req => req.newRD === false)
+
+  const newRequiredDataPromises = newRequiredDataClient.map(req =>
+    prisma.ref_required_data.create({
+      data: { name: req.name }
+    })
+  );
+
+  const newRequiredData = await Promise.all(newRequiredDataPromises);
+
+  const completeRequiredData = [...newRequiredData, ...oldRequiredDataClient]
   const newSubIndicator = await prisma.md_sub_indicator.create({
     data: {
       name: subIndicator.name,
@@ -131,7 +172,7 @@ export async function createNewSubSubIndicator(
   });
 
   await prisma.td_goal_sub_indicator_required_data.createMany({
-    data: subIndicator.required_data.map((req) => ({
+    data: completeRequiredData.map((req) => ({
       required_data_id: req.required_data_id,
       goal_sub_indicator_id: newGoalSubIndicator.goal_sub_indicator_id,
     })),
