@@ -1,6 +1,6 @@
 import { getGoalsInformation } from "@/app/actions/actions";
 import EditIndicatorComputationRule from "@/components/EditIndicatorComputationRule";
-import { Inder } from "next/font/google";
+import { Indicator } from "@/types/indicator.types";
 
 export default async function ComputationRules() {
   const goals = await getGoalsInformation();
@@ -27,7 +27,7 @@ export default async function ComputationRules() {
             <div className="w-full flex flex-col gap-10">
               {goal.indicators.map((indicator) => (
                 <EditIndicatorComputationRule
-                  indicator={indicator}
+                  indicator={indicator as Indicator}
                   key={indicator.goalIndicatorId}
                 />
               ))}

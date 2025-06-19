@@ -254,10 +254,9 @@
 
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import EditSubIndicatorValues from "./EditSubIndicatorValues";
 import { Indicator } from "./ProgressFormComponent";
-import useCreateFormula from "@/hooks/useCreateFormula";
 import useUpdateValues from "@/hooks/useUpdateValues";
 import useCalculateValue from "@/hooks/useCalculateValue";
 
@@ -265,10 +264,8 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
   const { updateValues } = useUpdateValues();
 
   const {
-    success: calculateIndicatorSuccess,
     loading: calculateIndicatorLoading,
     calculateValue,
-    calculatedValue,
   } = useCalculateValue();
 
   const [newValues, setNewValues] = useState<

@@ -11,13 +11,10 @@ const EditProjectIndicatorValues = ({
   indicator: IProjectIndicator;
 }) => {
   const {
-    success: indicatorValueSuccess,
-    loading: indicatorValueLoading,
     updateValues,
   } = useUpdateValues();
 
   const {
-    success: calculateIndicatorSuccess,
     loading: calculateIndicatorLoading,
     calculateValue,
     calculatedValue,
@@ -170,7 +167,7 @@ const EditProjectIndicatorValues = ({
                           onChange={(e) =>
                             handleValueChange(
                               data.requiredDataId,
-                              parseFloat(e.target.value),
+                              e.target.value,
                             )
                           }
                           value={

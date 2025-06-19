@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IProject } from "@/types/project.types";
 import { createProject } from "@/app/actions/actions_projectmanagement";
-import { create } from "domain";
 
 const CreateProject = () => {
   const [success, setSuccess] = useState(false);

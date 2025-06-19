@@ -5,7 +5,6 @@
 // import AddProject from "@/components/AddProject";
 import { getAllGoalIndicators } from "@/app/actions/actions_projectmanagement";
 import AddProjectIndicators from "@/components/projectmanagement/AddProjectIndicators";
-import AddProjectIndicatorsRecursive from "@/components/projectmanagement/AddProjectIndicatorsRecursive";
 
 export default async function AddProjectIndicator({
   params,

@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { getGoals, getGoalsInformation } from "../actions/actions";
-import { IoAddSharp } from "react-icons/io5";
+import { getGoalsInformation } from "../actions/actions";
 
 export default async function IndicatorManagement() {
   //const goals = await getGoals();

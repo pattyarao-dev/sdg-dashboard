@@ -5,7 +5,7 @@ import { useState } from "react";
 import useCreateFormula from "@/hooks/useCreateFormula";
 
 const EditSubIndicatorComputationRule = ({ sub }: { sub: SubIndicator }) => {
-  const { success, loading, createFormula, successMessage } =
+  const { createFormula } =
     useCreateFormula();
 
   const [formula, setFormula] = useState("");
@@ -26,8 +26,6 @@ const EditSubIndicatorComputationRule = ({ sub }: { sub: SubIndicator }) => {
       createFormula(formattedFormula, sub.goalSubIndicatorId, "subIndicator");
     }
   };
-
-  const userId = 1;
 
   return (
     <div className="w-full p-6 flex flex-col gap-4 bg-gray-100">

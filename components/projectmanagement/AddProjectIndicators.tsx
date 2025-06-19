@@ -1,15 +1,10 @@
 "use client";
 
-import { ReactNode, useCallback, useEffect, useState } from "react";
-import {
-  addProjectIndicators,
-  getBabyIndicator,
-} from "@/app/actions/actions_projectmanagement";
+import { useEffect, useState } from "react";
 import {
   IGoalWithIndicators,
   IGoalIndicatorSimple,
   IGoalSubIndicatorSimple,
-  SubIndicator,
 } from "@/types/indicator.types";
 import { MdKeyboardArrowDown, MdKeyboardArrowUp } from "react-icons/md";
 
@@ -20,16 +15,12 @@ const AddProjectIndicators = ({
   gols: IGoalWithIndicators[];
   id: number;
 }) => {
-  const [goals, setGoals] = useState<IGoalWithIndicators[]>(gols);
+  const [goals, setGoals] = useState<IGoalWithIndicators[]>();
   const [openGoals, setOpenGoals] = useState<Record<string, boolean>>({});
-  const [showMoreIndicators, setShowMoreIndicators] = useState<
-    Record<string, boolean>
-  >({});
 
   useEffect(() => {
-    console.log("effect goals:");
-    console.log(goals);
-  }, [goals]);
+    setGoals(gols)
+  }, [gols]);
 
   const toggleGoal = (goalId: number) => {
     setOpenGoals((prev) => ({
@@ -76,9 +67,9 @@ const AddProjectIndicators = ({
         alert("Please select at least one indicator.");
         return;
       }
-
+      console.log(id)
       // Assuming `projectId` is available
-      const projectId = id; // Replace this with the actual project ID
+      // const projectId = id; // Replace this with the actual project ID
 
       // Prepare indicators with selected sub-indicators
       const indicatorsWithSubs = selectedIndicators.map((indicator) => ({
@@ -88,8 +79,9 @@ const AddProjectIndicators = ({
         ),
       }));
 
+      console.log(indicatorsWithSubs)
       // Call the addProjectIndicators function
-      await addProjectIndicators(indicatorsWithSubs, projectId);
+      // await addProjectIndicators(indicatorsWithSubs, projectId);
 
       alert("Indicators successfully added!");
     } catch (error) {
@@ -106,7 +98,7 @@ const AddProjectIndicators = ({
           </div>
           <div className="w-full flex items-start justify-between gap-10">
             <div className="w-[40%] border-2 border-gray-300 flex flex-col">
-              {goals.map((goal) => (
+              {goals?.map((goal) => (
                 <div key={goal.goal_id} className="w-full flex flex-col gap-2">
                   <div className="w-full p-4 flex items-center justify-between bg-gray-200">
                     <h1 className="text-lg font-bold text-green-800">
@@ -140,13 +132,13 @@ const AddProjectIndicators = ({
             <div className="w-[60%]">
               {selectedIndicators.length > 0 ? (
                 <>
-                  {goals.map((goal, index) => {
+                  {goals?.map((goal, index) => {
                     const goalIndicators = selectedIndicators.filter(
                       (indicator) =>
                         goal.indicators.some(
                           (goalIndicator) =>
                             goalIndicator.goal_indicator_id ===
-                            indicator.goal_indicator_id,
+                            indicator.goal_indicator_id
                         ),
                     );
 

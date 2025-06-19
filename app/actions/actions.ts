@@ -1,17 +1,10 @@
 "use server";
 
 import prisma from "@/utils/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../api/auth/[...nextauth]/route";
 import {
-  IGoalIndicator,
-  IIndicator,
-  IIndicatorGoal,
-  IGoalProjectIndicator,
   IGoalWithIndicators,
   IGoalIndicatorSimple,
 } from "@/types/indicator.types";
-// import { redirect } from "next/navigation";
 
 export async function getProjects() {
   const projects = await prisma.td_project.findMany({
@@ -293,7 +286,6 @@ export async function getGoals() {
         },
       },
     },
-    orderBy: { goal_id: "asc" },
   });
 
   return goals;
@@ -364,7 +356,6 @@ export async function getGoalsInformation() {
         },
       },
     },
-    orderBy: { goal_id: "asc" },
   });
 
   // Transform data for easier frontend use

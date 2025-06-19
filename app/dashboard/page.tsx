@@ -1,978 +1,977 @@
-"use client"
-
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Goal } from '@/types/dashboard.types';
-import { useRouter } from 'next/navigation';
-import { TimeFilter } from "@/components/TimeFilter";
-import GaugeChart from '@/components/GaugeChart';
-import ProgressBar from '@/components/ProgressBar';
-import ScoreCard from '@/components/ScoreCard';
-import SDGLineChart from '@/components/LineChart';
-import dynamic from 'next/dynamic';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-// Dynamically import the ChoroplethMap component with no SSR
-const ChoroplethMapNoSSR = dynamic(
-  () => import('@/components/ChoroplethMap').then(mod => mod.default || mod),
-  { ssr: false }
-);
-
-const Dashboard: React.FC = () => {
-  const [filters, setFilters] = useState({
-    year: new Date().getFullYear(),
-    month: null,
-    location: null,
-    goal_id: null,
-    project_id: null,
-    indicator_id: null, 
-    sub_indicator_id: null 
-  });
-  const [data, setData] = useState([]);
-  const [allGoals, setAllGoals] = useState<Goal[]>([]);
-  const [goalSummaries, setGoalSummaries] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [goalsLoading, setGoalsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'chart' | 'map'>('chart'); // Default to map view
-  const [locations, setLocations] = useState<string[]>([]);
-  const [summaryLoading, setSummaryLoading] = useState(true);
-
-  // New states for drill-down functionality
-  const [indicators, setIndicators] = useState<Indicator[]>([]);
-  const [indicatorsLoading, setIndicatorsLoading] = useState(false);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [projectsLoading, setProjectsLoading] = useState(false);
-  const [projectContributions, setProjectContributions] = useState([]);
-
-  // Fetch all goals initially
-  useEffect(() => {
-    const fetchAllGoals = async () => {
-      setGoalsLoading(true);
-      try {
-        const response = await axios.get('http://localhost:8000/api/indicators/goals');
-        setAllGoals(response.data.data);
-      } catch (error) {
-        console.error('Error fetching goals:', error);
-      } finally {
-        setGoalsLoading(false);
-      }
-    };
-
-    fetchAllGoals();
-  }, []);
-
-  // Fetch indicators when a goal is selected
-  useEffect(() => {
-    const fetchIndicators = async () => {
-      if (!filters.goal_id) {
-        setIndicators([]);
-        return;
-      }
-      
-      setIndicatorsLoading(true);
-      try {
-        const response = await axios.get(`http://localhost:8000/api/indicators/api/indicators/${filters.goal_id}`, {
-        });
-        setIndicators(response.data.data);
-      } catch (error) {
-        console.error('Error fetching indicators:', error);
-      } finally {
-        setIndicatorsLoading(false);
-      }
-    };
-
-    fetchIndicators();
-  }, [filters.goal_id]);
-
-// Fetch projects and their contributions when an indicator is selected
-const fetchProjects = async () => {
-  if (!filters.indicator_id && !filters.sub_indicator_id) {
-    setProjects([]);
-    setProjectContributions([]);
-    return;
-  }
-  
-  setProjectsLoading(true);
-  try {
-    // Build query params for projects
-    const params = {};
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== null) {
-        params[key] = value;
-      }
-    });
-    
-    // Use the correct endpoint for fetching projects
-    const response = await axios.get('http://localhost:8000/api/indicators/projects', { params });
-    const projectsData = response.data.data || [];
-    
-    // Fetch project contributions to this indicator
-    const contributionsResponse = await axios.get('http://localhost:8000/api/indicators/project-contribution', { params });
-    console.log('Raw contributions data:', contributionsResponse.data);
-    
-    let flattenedContributions = [];
-    let enhancedProjects = [...projectsData]; // Create a copy of projects data to enhance
-    
-    if (contributionsResponse.data && contributionsResponse.data.contributions) {
-      // Find the goal that matches our filter
-      const relevantGoal = contributionsResponse.data.contributions.find(
-        goal => goal.goal_id === filters.goal_id
-      );
-      
-      if (relevantGoal) {
-        // Find the indicator that matches our filter
-        const relevantIndicator = relevantGoal.indicators.find(
-          indicator => indicator.indicator_id === filters.indicator_id
-        );
-        
-        if (relevantIndicator && relevantIndicator.projects) {
-          // Extract contributions data
-          flattenedContributions = relevantIndicator.projects.map(project => ({
-            project_id: project.project_id,
-            project_name: project.project_name,
-            contribution: project.contribution_percentage || 0
-          }));
-          
-          // Enhance projects with values from contributions
-          enhancedProjects = projectsData.map(project => {
-            const matchingContribution = relevantIndicator.projects.find(
-              p => p.project_id === project.project_id
-            );
-            
-            return {
-              ...project,
-              current_value: matchingContribution?.project_value || null,
-              project_target_value: null, // Will be fetched from project details if needed
-              project_baseline_value: 0,
-              progress_direction: 'up' // Default direction
-            };
-          });
-          
-          // Fetch additional details for each project if needed
-          const projectDetailsPromises = enhancedProjects.map(async (project) => {
-            try {
-              const detailsResponse = await axios.get(`http://localhost:8000/api/indicators/project-details/${project.project_id}`);
-              const projectDetails = detailsResponse.data;
-              
-              // Find the relevant indicator in the project details
-              let targetValue = null;
-              let baselineValue = 0;
-              let latestValue = null;
-              
-              if (projectDetails.goals) {
-                // Find matching goal
-                const goal = projectDetails.goals.find(g => g.goal_id === filters.goal_id);
-                if (goal && goal.indicators) {
-                  // Find matching indicator
-                  const indicator = goal.indicators.find(i => 
-                    i.indicator_name === relevantIndicator.indicator_name
-                  );
-                  
-                  if (indicator) {
-                    targetValue = indicator.project_target_value;
-                    baselineValue = indicator.project_baseline_value || 0;
-                    latestValue = indicator.latest_value;
-                  }
-                }
-              }
-              
-              return {
-                ...project,
-                current_value: latestValue || project.current_value,
-                project_target_value: targetValue,
-                project_baseline_value: baselineValue
-              };
-            } catch (error) {
-              console.error(`Error fetching details for project ${project.project_id}:`, error);
-              return project;
-            }
-          });
-          
-          // Wait for all project details to be fetched
-          const projectsWithDetails = await Promise.all(projectDetailsPromises);
-          enhancedProjects = projectsWithDetails;
-        }
-      }
-    }
-    
-    console.log('Enhanced projects:', enhancedProjects);
-    console.log('Project contributions:', flattenedContributions);
-    
-    setProjects(enhancedProjects);
-    setProjectContributions(flattenedContributions);
-    
-  } catch (error) {
-    console.error('Error fetching projects data:', error);
-  } finally {
-    setProjectsLoading(false);
-  }
-};
-
-  // Add this effect for fetching specific project indicator details
-useEffect(() => {
-  const fetchProjectDetails = async () => {
-    if (!filters.project_id) return;
-    
-    try {
-      const response = await axios.get(`http://localhost:8000/api/indicators/project-details/${filters.project_id}`);
-      // Handle the project details as needed
-      console.log('Project details:', response.data);
-    } catch (error) {
-      console.error('Error fetching project details:', error);
-    }
-  };
-
-  fetchProjectDetails();
-}, [filters.project_id]);
-
-  // Fetch locations
-  useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        const response = await axios.get('http://localhost:8000/api/indicators/locations');
-        setLocations(response.data.data.map((loc: any) => loc.name));
-      } catch (error) {
-        console.error('Error fetching locations:', error);
-        // Fallback - extract locations from GeoJSON if available
-        fetch('/pasigcity.0.01.json')
-          .then(response => response.json())
-          .then(data => {
-            const extractedLocations = data.features.map((feature: any) => feature.properties.NAME_3);
-            setLocations([...new Set(extractedLocations)]);
-          })
-          .catch(err => console.error('Error extracting locations from GeoJSON:', err));
-      }
-    };
-
-    fetchLocations();
-  }, []);
-
-  // Fetch data based on filters
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Build query params
-        const params = {};
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== null) {
-            params[key] = value;
-          }
-        });
-
-        // Fetch indicator values
-        const response = await axios.get('http://localhost:8000/api/indicators/values', { params });
-        setData(response.data.data);
-
-        // Fetch goal summaries
-        const goalSummaryResponse = await axios.get('http://localhost:8000/api/indicators/goal-summary', { params });
-        setGoalSummaries(goalSummaryResponse.data.data);
-        
-       setSummaryLoading(false);
-
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [filters]);
-
-  const handleTimeFilterChange = (year: number | null, month: number | null) => {
-    setFilters(prev => ({
-      ...prev,
-      year,
-      month
-    }));
-  };
-
-  const handleFilterChange = (name: string, value: any) => {
-    setFilters(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-  
-  const handleGoalFilterChange = (goal_id: number | null) => {
-    // Reset indicator and sub-indicator when changing goal
-    setFilters(prev => ({
-      ...prev,
-      goal_id,
-      indicator_id: null,
-      sub_indicator_id: null
-    }));
-  };
-
-  const handleIndicatorSelect = (indicator_id: number | null) => {
-    // Reset sub-indicator when changing indicator
-    setFilters(prev => ({
-      ...prev,
-      indicator_id,
-      sub_indicator_id: null
-    }));
-  };
-
-  const handleSubIndicatorSelect = (sub_indicator_id: number | null) => {
-    setFilters(prev => ({
-      ...prev,
-      sub_indicator_id
-    }));
-  };
-
-  const handleLocationSelect = (locationName: string | null) => {
-    setFilters(prev => ({
-      ...prev,
-      location: locationName
-    }));
-  };
-
-  const handleProjectSelect = (project_id: number | null) => {
-    setFilters(prev => ({
-      ...prev,
-      project_id
-    }));
-  };
-
-  // SDG goal colors
-  const goalColors = {
-    1: "#E5243B",
-    2: "#DDA63A", 
-    3: "#4C9F38", 
-    4: "#C5192D", 
-    5: "#FF3A21", 
-    6: "#26BDE2", 
-    7: "#FCC30B", 
-    8: "#A21942", 
-    9: "#FD6925",
-    10: "#DD1367", 
-    11: "#FD9D24", 
-    12: "#BF8B2E", 
-    13: "#3F7E44", 
-    14: "#0A97D9", 
-    15: "#56C02B", 
-    16: "#00689D", 
-    17: "#19486A", 
-  };
-
-  // Gets current goal color
-  const getCurrentGoalColor = () => {
-    if (!filters.goal_id) return "#666666";
-    return goalColors[filters.goal_id as keyof typeof goalColors];
-  };
-
-  // Function to generate random colors for project pie chart
-  const getProjectColors = (count: number) => {
-    const baseColor = getCurrentGoalColor();
-    const colors = [];
-    
-    // Create variations of the base color
-    for (let i = 0; i < count; i++) {
-      const hueShift = (i * 30) % 360;
-      colors.push(shiftHue(baseColor, hueShift));
-    }
-    return colors;
-  };
-
-  // Helper function to shift hue of a hex color
-  const shiftHue = (hex: string, deg: number) => {
-    // Very simplified version - in real code, use a proper color manipulation library
-    return hex; // Placeholder - would actually shift the hue in a real implementation
-  };
-
- // Helper to get selected indicator or sub-indicator name
-  const getSelectedIndicatorName = () => {
-    if (filters.sub_indicator_id) {
-      // Look through your indicators data to find the one containing this sub-indicator
-      const indicator = indicators.find(ind => 
-        ind.sub_indicators && ind.sub_indicators.some(sub => 
-          sub.sub_indicator_id === filters.sub_indicator_id
-        )
-      );
-      
-      if (indicator && indicator.sub_indicators) {
-        const subIndicator = indicator.sub_indicators.find(
-          sub => sub.sub_indicator_id === filters.sub_indicator_id
-        );
-        
-        if (subIndicator) {
-          return `${subIndicator.sub_indicator_id || ''}: ${subIndicator.name || ''}`;
-        }
-      }
-    }
-    
-    if (filters.indicator_id) {
-      // Find the indicator in your indicators array
-      const indicator = indicators.find(
-        ind => ind.indicator_id === filters.indicator_id
-      );
-      
-      if (indicator) {
-        return `${indicator.indicator_id || ''}: ${indicator.name || indicator.indicator_name || ''}`;
-      }
-    }
-    
-    return 'All Indicators';
-  };
-
-  // Helper to format dates for display
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  // Helper to format numbers with commas and fixed decimal places
-  const formatNumber = (num: number, decimals = 1) => {
-    if (num === undefined || num === null) return 'N/A';
-    return num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-  };
-
-  function handleGenerateReport(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
-    throw new Error('Function not implemented.');
-  }
-
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">LGU SDG Dashboard</h1>
-      
-      <button 
-      onClick={handleGenerateReport}
-      className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded flex items-center"
-    >
-      <span className="mr-2">Generate Report</span>
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
-      </svg>
-      </button>
-
-      {/* TimeFilter component */}
-      <TimeFilter 
-        onFilterChange={handleTimeFilterChange}
-        initialYear={filters.year}
-        initialMonth={filters.month}
-      />
-      
-      <div className="filters mt-4 flex flex-wrap items-center">
-        {/* Only show location dropdown in table view */}
-        {viewMode === 'chart' && (
-          <select 
-            value={filters.location || ''}
-            onChange={e => handleFilterChange('location', e.target.value ? e.target.value : null)}
-            className="border border-gray-300 rounded-md p-2 bg-white mr-2"
-          >
-            <option value="">All Locations</option>
-            {locations.map(location => (
-              <option key={location} value={location}>{location}</option>
-            ))}
-          </select>
-        )}
-        {/* New time scale filter for the chart view */}
-        {viewMode === 'chart' && (
-          <select 
-            value={filters.timeScale || 'monthly'}
-            onChange={e => handleFilterChange('timeScale', e.target.value)}
-            className="border border-gray-300 rounded-md p-2 bg-white mr-2"
-          >
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="yearly">Yearly</option>
-          </select>
-        )}
-        
-        {/* View mode toggle */}
-        <div className="ml-auto">
-          <button 
-            onClick={() => setViewMode('chart')}
-            className={`px-4 py-2 rounded-l-md transition-colors ${viewMode === 'chart' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-          >
-            Chart
-          </button>
-          <button 
-            onClick={() => setViewMode('map')}
-            className={`px-4 py-2 rounded-r-md transition-colors ${viewMode === 'map' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-          >
-            Map
-          </button>
-        </div>
-      </div>
-
-      {/* Active filters display */}
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {filters.location && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            Location: {filters.location}
-            <button 
-              onClick={() => handleFilterChange('location', null)}
-              className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
-            >
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </span>
-        )}
-        
-        {filters.goal_id && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            Goal: {filters.goal_id}
-            <button 
-              onClick={() => handleGoalFilterChange(null)}
-              className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
-            >
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </span>
-        )}
-        
-        {filters.indicator_id && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            Indicator: {indicators.find(i => i.indicator_id === filters.indicator_id)?.indicator_code}
-            <button 
-              onClick={() => handleIndicatorSelect(null)}
-              className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
-            >
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </span>
-        )}
-        
-        {filters.sub_indicator_id && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            Sub-Indicator: {
-              indicators.find(i => 
-                i.sub_indicators?.some(s => s.sub_indicator_id === filters.sub_indicator_id)
-              )?.sub_indicators?.find(s => 
-                s.sub_indicator_id === filters.sub_indicator_id
-              )?.sub_indicator_code
-            }
-            <button 
-              onClick={() => handleSubIndicatorSelect(null)}
-              className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
-            >
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </span>
-        )}
-      </div>
-
-      {/* Overall Summary Scorecards - displays when no goal is selected */}
-      {!filters.goal_id && !filters.indicator_id && !filters.sub_indicator_id && (
-        <div className="mt-6 mb-4">
-          <h2 className="text-xl font-semibold mb-4">
-            Overall Summary
-          </h2>
-          
-          {summaryLoading ? (
-            <p className="my-4">Loading summary data...</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              <ScoreCard
-                title="Total Goals Tracked"
-                value={allGoals.length}
-                subtitle="Sustainable Development Goals"
-                color="#19486A" // SDG 17 color
-              />
-              <ScoreCard
-                title="Total Measurements"
-                value={data.length}
-                subtitle={`In ${filters.year}${filters.month ? `, Month ${filters.month}` : ''}`}
-                color="#4C9F38" // SDG 3 color
-              />
-              <ScoreCard
-                title="Latest Update"
-                value={data.length > 0 ? formatDate(data.sort((a, b) => 
-                  new Date(b.measurement_date).getTime() - new Date(a.measurement_date).getTime()
-                )[0]?.measurement_date) : 'No data'}
-                subtitle="Most recent measurement"
-                color="#FD9D24" // SDG 11 color
-              />
-              <ScoreCard
-                title="Locations Tracked"
-                value={locations.length}
-                subtitle="Geographic coverage"
-                color="#00689D" // SDG 16 color
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* SDG Goal Gauges - shows only if no indicator is selected */}
-      {!filters.indicator_id && !filters.sub_indicator_id && (
-        <div className="mb-8 mt-6">
-          <h2 className="text-xl font-semibold mb-4">Goals Progress Overview</h2>
-          
-          {goalsLoading ? (
-            <p>Loading goals...</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {allGoals
-                .sort((a, b) => a.goal_id - b.goal_id) // Sort goals by ID
-                .map(goal => (
-                  <GaugeChart 
-                    key={goal.goal_id}
-                    goal_id={goal.goal_id}
-                    title={`${goal.goal_id}. ${goal.name}`}
-                    color={goal.color || goalColors[goal.goal_id as keyof typeof goalColors]}
-                    isActive={filters.goal_id === goal.goal_id}
-                    onFilterChange={handleGoalFilterChange}
-                    year={filters.year}
-                    month={filters.month}
-                    location={filters.location}
-                    project_id={filters.project_id}
-                    defaultValue={0}
-                  />
-                ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Indicators List - Shows when a goal is selected */}
-      {filters.goal_id && !filters.indicator_id && !filters.sub_indicator_id && (
-        <div className="mt-6 mb-8">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
-              Goal {filters.goal_id} Indicators
-            </h2>
-            <button 
-              onClick={() => handleGoalFilterChange(null)}
-              className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-md text-sm transition-colors"
-            >
-              Back to All Goals
-            </button>
-          </div>
-          
-          {indicatorsLoading ? (
-            <p className="my-4">Loading indicators...</p>
-          ) : indicators.length === 0 ? (
-            <p className="my-4 text-gray-600">No indicators found for this goal.</p>
-          ) : (
-            <div className="mt-4 space-y-4">
-              {indicators.map(indicator => (
-                <div 
-                  key={indicator.indicator_id} 
-                  className="border rounded-md p-4 bg-white hover:shadow-md transition-shadow"
-                >
-                  <div 
-                    className="cursor-pointer"
-                    onClick={() => handleIndicatorSelect(indicator.indicator_id)}
-                  >
-                    <h3 className="text-lg font-medium flex items-center">
-                      <span 
-                        className="w-3 h-3 rounded-full mr-2" 
-                        style={{ backgroundColor: getCurrentGoalColor() }}
-                      ></span>
-                      {indicator.indicator_code}: {indicator.name}
-                    </h3>
-                    <p className="text-gray-600 mt-1">{indicator.description || 'No description available.'}</p>
-                  
-                  {/* ProgressBar with dynamic target */}
-                    <div className="mt-3">
-                      <ProgressBar 
-                        value={indicator.current_value || 0} 
-                        target={indicator.global_target_value !== undefined ? indicator.global_target_value : 100}
-                        baseline={indicator.global_baseline_value || 0}
-                        showBaseline={true}
-                        color={getCurrentGoalColor()}
-                        // label="Progress"
-                        valueSuffix={indicator.unit_of_measurement || ''}
-                        targetSuffix={indicator.unit_of_measurement || ''}
-                        indicatorType="indicator"
-                        progressDirection={indicator.progress_direction || 'up'}
-                        className="mt-2"
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Sub-indicators with indent */}
-                  {indicator.sub_indicators && indicator.sub_indicators.length > 0 && (
-                    <div className="mt-3 pl-5 border-l-2 space-y-2" style={{ borderColor: getCurrentGoalColor() }}>
-                      <p className="text-sm text-gray-500 font-medium">Sub-indicators:</p>
-                      {indicator.sub_indicators.map(subInd => (
-                        <div 
-                          key={subInd.sub_indicator_id} 
-                          className="py-2 px-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer"
-                          onClick={() => handleSubIndicatorSelect(subInd.sub_indicator_id)}
-                        >
-                          <p className="font-medium">{subInd.sub_indicator_code}: {subInd.name}</p>
-                          {subInd.description && (
-                            <p className="text-sm text-gray-600 mt-1">{subInd.description}</p>
-                          )}
-
-                          {/* ProgressBar for sub-indicators with dynamic target */}
-                            <ProgressBar 
-                              value={subInd.current_value || 0} 
-                              target={subInd.global_target_value !== undefined ? subInd.global_target_value : 100}
-                              baseline={subInd.global_baseline_value || 0}
-                              color={getCurrentGoalColor()}
-                              height="0.5rem"
-                              valueSuffix={subInd.unit_of_measurement || ''}
-                              targetSuffix={subInd.unit_of_measurement || ''}
-                              indicatorType="sub-indicator"
-                              progressDirection={subInd.progress_direction || 'up'}
-                              showBaseline={false}
-                              className="mt-2"
-                            />
-                          </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Project Contributions - Shows when an indicator/sub-indicator is selected */}
-      {(filters.indicator_id || filters.sub_indicator_id) && (
-        <div className="mt-6 mb-8">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
-              {getSelectedIndicatorName()}
-            </h2>
-            <button 
-              onClick={() => filters.indicator_id ? handleIndicatorSelect(null) : handleSubIndicatorSelect(null)}
-              className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-md text-sm transition-colors"
-            >
-              Back to {filters.indicator_id ? `Goal ${filters.goal_id} Indicators` : 'Indicator'}
-            </button>
-          </div>
-
-          {/* Line chart above the project contributions section */}
-          <div className="mt-4 border rounded-lg p-4 bg-white shadow-sm">
-            <SDGLineChart 
-              data={data}
-              height={350}
-              goalId={filters.goal_id}
-              indicatorId={filters.indicator_id}
-              subIndicatorId={filters.sub_indicator_id}
-              projectId={filters.project_id}
-            />
-          </div>
-          
-          {projectsLoading ? (
-            <p className="my-4">Loading projects data...</p>
-          ) : (
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Projects Contribution Pie Chart */}
-              <div className="border rounded-lg p-4 bg-white shadow-sm">
-                <h3 className="text-lg font-medium mb-4">Project Contributions</h3>
-                {projectContributions.length > 0 ? (
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={projectContributions}
-                          dataKey="contribution"
-                          nameKey="project_name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          label={({name, percent}) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                        >
-                          {projectContributions.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={getProjectColors(projectContributions.length)[index % getProjectColors(projectContributions.length).length]} 
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value) => `${value}%`} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <p className="text-center text-gray-500 my-10">No project contribution data available</p>
-                )}
-              </div>
-              
-              {/* Projects List */}
-              <div className="border rounded-lg p-4 bg-white shadow-sm">
-                <h3 className="text-lg font-medium mb-4">Projects</h3>
-                {projects.length > 0 ? (
-                  <div className="overflow-y-auto max-h-64">
-                    <table className="min-w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="py-2 px-3 text-left text-sm font-medium text-gray-500">Project</th>
-                          <th className="py-2 px-3 text-right text-sm font-medium text-gray-500">Value</th>
-                          <th className="py-2 px-3 text-right text-sm font-medium text-gray-500">Contribution</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {projects.map(project => {
-                          const contribution = projectContributions.find(p => p.project_id === project.project_id);
-                          
-                          // Get project's target and baseline values for the current indicator/sub-indicator
-                          const projectTarget = project.project_target_value !== undefined ? 
-                            project.project_target_value : 
-                            (filters.sub_indicator_id ? 
-                              indicators.find(i => i.sub_indicators?.some(s => s.sub_indicator_id === filters.sub_indicator_id))
-                                ?.sub_indicators?.find(s => s.sub_indicator_id === filters.sub_indicator_id)?.global_target_value : 
-                              indicators.find(i => i.indicator_id === filters.indicator_id)?.global_target_value);
-                          
-                          const projectBaseline = project.project_baseline_value || 0;
-                          
-                          return (
-                            <tr 
-                              key={project.project_id} 
-                              className="hover:bg-gray-50 cursor-pointer"
-                              onClick={() => handleProjectSelect(project.project_id)}
-                            >
-                              <td className="py-2 px-3 text-sm">{project.name}</td>
-                              <td className="py-2 px-3 text-sm text-right">{project.current_value || '-'}</td>
-                              <td className="py-2 px-3 text-sm text-right">
-                                {contribution ? `${contribution.contribution}%` : '-'}
-                              </td>
-                              <td className="py-2 px-3">
-                                {/* Add dynamic ProgressBar for project indicators */}
-                                {project.current_value !== undefined && (
-                                  <ProgressBar 
-                                    value={project.current_value} 
-                                    target={projectTarget || 100}
-                                    baseline={projectBaseline}
-                                    color={getProjectColors(projects.length)[projects.indexOf(project) % getProjectColors(projects.length).length]}
-                                    height="0.5rem"
-                                    showValue={false}
-                                    showTarget={false}
-                                    indicatorType={filters.sub_indicator_id ? "project-sub-indicator" : "project-indicator"}
-                                    progressDirection={project.progress_direction || 'up'}
-                                  />
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-center text-gray-500 my-10">No projects found for this indicator</p>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* Recorded Values Table */}
-          <div className="mt-6 border rounded-lg p-4 bg-white shadow-sm">
-            <h3 className="text-lg font-medium mb-4">Recorded Values</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Date</th>
-                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Location</th>
-                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Project</th>
-                    <th className="py-2 px-4 text-right text-sm font-medium text-gray-500">Value</th>
-                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Source</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {data.length > 0 ? (
-                    data.map(item => (
-                      <tr key={item.value_id} className="hover:bg-gray-50">
-                        <td className="py-2 px-4 text-sm">{new Date(item.measurement_date).toLocaleDateString()}</td>
-                        <td className="py-2 px-4 text-sm">{item.location}</td>
-                        <td className="py-2 px-4 text-sm">{item.project_name || '-'}</td>
-                        <td className="py-2 px-4 text-sm text-right">{item.value}</td>
-                        <td className="py-2 px-4 text-sm">{item.source || '-'}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="py-4 text-center text-gray-500">No data available for the selected filters</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Map or Table View - Only show if no indicator is selected */}
-      {!filters.indicator_id && !filters.sub_indicator_id && (
-        <>
-          {loading ? (
-            <p className="text-center my-8">Loading data...</p>
-          ) : (
-            <>
-              {viewMode === 'table' ? (
-                <div className="overflow-x-auto mt-6">
-                  <table className="min-w-full bg-white border border-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="py-2 px-4 border-b text-left">Goal</th>
-                        <th className="py-2 px-4 border-b text-left">Indicator</th>
-                        <th className="py-2 px-4 border-b text-left">Value</th>
-                        <th className="py-2 px-4 border-b text-left">Date</th>
-                        <th className="py-2 px-4 border-b text-left">Location</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.length > 0 ? (
-                        data.map(item => (
-                          <tr key={item.value_id} className="hover:bg-gray-50">
-                            <td className="py-2 px-4 border-b">{item.goal_name}</td>
-                            <td className="py-2 px-4 border-b">{item.indicator_name}</td>
-                            <td className="py-2 px-4 border-b">{item.value}</td>
-                            <td className="py-2 px-4 border-b">{new Date(item.measurement_date).toLocaleDateString()}</td>
-                            <td className="py-2 px-4 border-b">{item.location}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={5} className="py-4 text-center text-gray-500">No data available for the selected filters</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                  </div>
-                  ) : viewMode === 'chart' ? (
-                    // Add a new view option for the chart
-                    <div className="mt-6 border rounded-lg p-4 bg-white shadow-sm">
-                      <SDGLineChart 
-                        data={data} 
-                        height={500}
-                        goalId={filters.goal_id}
-                        indicatorId={filters.indicator_id}
-                        subIndicatorId={filters.sub_indicator_id}
-                        projectId={filters.project_id}
-                        timeScale={filters.timeScale || 'monthly'}
-                      />
-                    </div>
-                  ) : (
-                <div className="mt-6">
-                  <h2 className="text-xl font-semibold mb-4">
-                    {filters.goal_id ? `Goal ${filters.goal_id} Geographic Performance` : 'Geographic Performance Overview'}
-                    <span className="text-sm font-normal ml-2 text-gray-600">(Click on a location to filter data)</span>
-                  </h2>
-                  <ChoroplethMapNoSSR 
-                    filters={filters} 
-                    height="600px" 
-                    onLocationSelect={handleLocationSelect}
-                  />
-                </div>
-              )}
-            </>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-export default Dashboard;
+// "use client"
+//
+// import React, { useState, useEffect } from 'react';
+// import axios from 'axios';
+// import { Goal } from '@/types/dashboard.types';
+// import { TimeFilter } from "@/components/TimeFilter";
+// import GaugeChart from '@/components/GaugeChart';
+// import ProgressBar from '@/components/ProgressBar';
+// import ScoreCard from '@/components/ScoreCard';
+// import SDGLineChart from '@/components/LineChart';
+// import dynamic from 'next/dynamic';
+// import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+//
+// // Dynamically import the ChoroplethMap component with no SSR
+// const ChoroplethMapNoSSR = dynamic(
+//   () => import('@/components/ChoroplethMap').then(mod => mod.default || mod),
+//   { ssr: false }
+// );
+//
+// const Dashboard: React.FC = () => {
+//   const [filters, setFilters] = useState({
+//     year: new Date().getFullYear(),
+//     month: null,
+//     location: null,
+//     goal_id: null,
+//     project_id: null,
+//     indicator_id: null,
+//     sub_indicator_id: null
+//   });
+//   const [data, setData] = useState([]);
+//   const [allGoals, setAllGoals] = useState<Goal[]>([]);
+//   const [goalSummaries, setGoalSummaries] = useState([]);
+//   const [loading, setLoading] = useState(false);
+//   const [goalsLoading, setGoalsLoading] = useState(true);
+//   const [viewMode, setViewMode] = useState<'chart' | 'map'>('chart'); // Default to map view
+//   const [locations, setLocations] = useState<string[]>([]);
+//   const [summaryLoading, setSummaryLoading] = useState(true);
+//
+//   // New states for drill-down functionality
+//   const [indicators, setIndicators] = useState<Indicator[]>([]);
+//   const [indicatorsLoading, setIndicatorsLoading] = useState(false);
+//   const [projects, setProjects] = useState<Project[]>([]);
+//   const [projectsLoading, setProjectsLoading] = useState(false);
+//   const [projectContributions, setProjectContributions] = useState([]);
+//
+//   // Fetch all goals initially
+//   useEffect(() => {
+//     const fetchAllGoals = async () => {
+//       setGoalsLoading(true);
+//       try {
+//         const response = await axios.get('http://localhost:8000/api/indicators/goals');
+//         setAllGoals(response.data.data);
+//       } catch (error) {
+//         console.error('Error fetching goals:', error);
+//       } finally {
+//         setGoalsLoading(false);
+//       }
+//     };
+//
+//     fetchAllGoals();
+//   }, []);
+//
+//   // Fetch indicators when a goal is selected
+//   useEffect(() => {
+//     const fetchIndicators = async () => {
+//       if (!filters.goal_id) {
+//         setIndicators([]);
+//         return;
+//       }
+//
+//       setIndicatorsLoading(true);
+//       try {
+//         const response = await axios.get(`http://localhost:8000/api/indicators/api/indicators/${filters.goal_id}`, {
+//         });
+//         setIndicators(response.data.data);
+//       } catch (error) {
+//         console.error('Error fetching indicators:', error);
+//       } finally {
+//         setIndicatorsLoading(false);
+//       }
+//     };
+//
+//     fetchIndicators();
+//   }, [filters.goal_id]);
+//
+//   // Fetch projects and their contributions when an indicator is selected
+//   // const fetchProjects = async () => {
+//   //   if (!filters.indicator_id && !filters.sub_indicator_id) {
+//   //     setProjects([]);
+//   //     setProjectContributions([]);
+//   //     return;
+//   //   }
+//   //
+//   //   setProjectsLoading(true);
+//   //   try {
+//   //     // Build query params for projects
+//   //     const params = {};
+//   //     Object.entries(filters).forEach(([key, value]) => {
+//   //       if (value !== null) {
+//   //         params[key] = value;
+//   //       }
+//   //     });
+//   //
+//   //     // Use the correct endpoint for fetching projects
+//   //     const response = await axios.get('http://localhost:8000/api/indicators/projects', { params });
+//   //     const projectsData = response.data.data || [];
+//   //
+//   //     // Fetch project contributions to this indicator
+//   //     const contributionsResponse = await axios.get('http://localhost:8000/api/indicators/project-contribution', { params });
+//   //     console.log('Raw contributions data:', contributionsResponse.data);
+//   //
+//   //     let flattenedContributions = [];
+//   //     let enhancedProjects = [...projectsData]; // Create a copy of projects data to enhance
+//   //
+//   //     if (contributionsResponse.data && contributionsResponse.data.contributions) {
+//   //       // Find the goal that matches our filter
+//   //       const relevantGoal = contributionsResponse.data.contributions.find(
+//   //         goal => goal.goal_id === filters.goal_id
+//   //       );
+//   //
+//   //       if (relevantGoal) {
+//   //         // Find the indicator that matches our filter
+//   //         const relevantIndicator = relevantGoal.indicators.find(
+//   //           indicator => indicator.indicator_id === filters.indicator_id
+//   //         );
+//   //
+//   //         if (relevantIndicator && relevantIndicator.projects) {
+//   //           // Extract contributions data
+//   //           flattenedContributions = relevantIndicator.projects.map(project => ({
+//   //             project_id: project.project_id,
+//   //             project_name: project.project_name,
+//   //             contribution: project.contribution_percentage || 0
+//   //           }));
+//   //
+//   //           // Enhance projects with values from contributions
+//   //           enhancedProjects = projectsData.map(project => {
+//   //             const matchingContribution = relevantIndicator.projects.find(
+//   //               p => p.project_id === project.project_id
+//   //             );
+//   //
+//   //             return {
+//   //               ...project,
+//   //               current_value: matchingContribution?.project_value || null,
+//   //               project_target_value: null, // Will be fetched from project details if needed
+//   //               project_baseline_value: 0,
+//   //               progress_direction: 'up' // Default direction
+//   //             };
+//   //           });
+//   //
+//   //           // Fetch additional details for each project if needed
+//   //           const projectDetailsPromises = enhancedProjects.map(async (project) => {
+//   //             try {
+//   //               const detailsResponse = await axios.get(`http://localhost:8000/api/indicators/project-details/${project.project_id}`);
+//   //               const projectDetails = detailsResponse.data;
+//   //
+//   //               // Find the relevant indicator in the project details
+//   //               let targetValue = null;
+//   //               let baselineValue = 0;
+//   //               let latestValue = null;
+//   //
+//   //               if (projectDetails.goals) {
+//   //                 // Find matching goal
+//   //                 const goal = projectDetails.goals.find(g => g.goal_id === filters.goal_id);
+//   //                 if (goal && goal.indicators) {
+//   //                   // Find matching indicator
+//   //                   const indicator = goal.indicators.find(i =>
+//   //                     i.indicator_name === relevantIndicator.indicator_name
+//   //                   );
+//   //
+//   //                   if (indicator) {
+//   //                     targetValue = indicator.project_target_value;
+//   //                     baselineValue = indicator.project_baseline_value || 0;
+//   //                     latestValue = indicator.latest_value;
+//   //                   }
+//   //                 }
+//   //               }
+//   //
+//   //               return {
+//   //                 ...project,
+//   //                 current_value: latestValue || project.current_value,
+//   //                 project_target_value: targetValue,
+//   //                 project_baseline_value: baselineValue
+//   //               };
+//   //             } catch (error) {
+//   //               console.error(`Error fetching details for project ${project.project_id}:`, error);
+//   //               return project;
+//   //             }
+//   //           });
+//   //
+//   //           // Wait for all project details to be fetched
+//   //           const projectsWithDetails = await Promise.all(projectDetailsPromises);
+//   //           enhancedProjects = projectsWithDetails;
+//   //         }
+//   //       }
+//   //     }
+//   //
+//   //     console.log('Enhanced projects:', enhancedProjects);
+//   //     console.log('Project contributions:', flattenedContributions);
+//   //
+//   //     setProjects(enhancedProjects);
+//   //     setProjectContributions(flattenedContributions);
+//   //
+//   //   } catch (error) {
+//   //     console.error('Error fetching projects data:', error);
+//   //   } finally {
+//   //     setProjectsLoading(false);
+//   //   }
+//   // };
+//
+//   // Add this effect for fetching specific project indicator details
+//   useEffect(() => {
+//     const fetchProjectDetails = async () => {
+//       if (!filters.project_id) return;
+//
+//       try {
+//         const response = await axios.get(`http://localhost:8000/api/indicators/project-details/${filters.project_id}`);
+//         // Handle the project details as needed
+//         console.log('Project details:', response.data);
+//       } catch (error) {
+//         console.error('Error fetching project details:', error);
+//       }
+//     };
+//
+//     fetchProjectDetails();
+//   }, [filters.project_id]);
+//
+//   // Fetch locations
+//   useEffect(() => {
+//     const fetchLocations = async () => {
+//       try {
+//         const response = await axios.get('http://localhost:8000/api/indicators/locations');
+//         setLocations(response.data.data.map((loc: any) => loc.name));
+//       } catch (error) {
+//         console.error('Error fetching locations:', error);
+//         // Fallback - extract locations from GeoJSON if available
+//         fetch('/pasigcity.0.01.json')
+//           .then(response => response.json())
+//           .then(data => {
+//             const extractedLocations = data.features.map((feature: any) => feature.properties.NAME_3);
+//             setLocations([...new Set(extractedLocations)]);
+//           })
+//           .catch(err => console.error('Error extracting locations from GeoJSON:', err));
+//       }
+//     };
+//
+//     fetchLocations();
+//   }, []);
+//
+//   // Fetch data based on filters
+//   useEffect(() => {
+//     const fetchData = async () => {
+//       setLoading(true);
+//       try {
+//         // Build query params
+//         const params = {};
+//         Object.entries(filters).forEach(([key, value]) => {
+//           if (value !== null) {
+//             params[key] = value;
+//           }
+//         });
+//
+//         // Fetch indicator values
+//         const response = await axios.get('http://localhost:8000/api/indicators/values', { params });
+//         setData(response.data.data);
+//
+//         // Fetch goal summaries
+//         const goalSummaryResponse = await axios.get('http://localhost:8000/api/indicators/goal-summary', { params });
+//         setGoalSummaries(goalSummaryResponse.data.data);
+//
+//         setSummaryLoading(false);
+//
+//       } catch (error) {
+//         console.error('Error fetching data:', error);
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+//
+//     fetchData();
+//   }, [filters]);
+//
+//   const handleTimeFilterChange = (year: number | null, month: number | null) => {
+//     setFilters(prev => ({
+//       ...prev,
+//       year,
+//       month
+//     }));
+//   };
+//
+//   const handleFilterChange = (name: string, value: any) => {
+//     setFilters(prev => ({
+//       ...prev,
+//       [name]: value
+//     }));
+//   };
+//
+//   const handleGoalFilterChange = (goal_id: number | null) => {
+//     // Reset indicator and sub-indicator when changing goal
+//     setFilters(prev => ({
+//       ...prev,
+//       goal_id,
+//       indicator_id: null,
+//       sub_indicator_id: null
+//     }));
+//   };
+//
+//   const handleIndicatorSelect = (indicator_id: number | null) => {
+//     // Reset sub-indicator when changing indicator
+//     setFilters(prev => ({
+//       ...prev,
+//       indicator_id,
+//       sub_indicator_id: null
+//     }));
+//   };
+//
+//   const handleSubIndicatorSelect = (sub_indicator_id: number | null) => {
+//     setFilters(prev => ({
+//       ...prev,
+//       sub_indicator_id
+//     }));
+//   };
+//
+//   const handleLocationSelect = (locationName: string | null) => {
+//     setFilters(prev => ({
+//       ...prev,
+//       location: locationName
+//     }));
+//   };
+//
+//   const handleProjectSelect = (project_id: number | null) => {
+//     setFilters(prev => ({
+//       ...prev,
+//       project_id
+//     }));
+//   };
+//
+//   // SDG goal colors
+//   const goalColors = {
+//     1: "#E5243B",
+//     2: "#DDA63A",
+//     3: "#4C9F38",
+//     4: "#C5192D",
+//     5: "#FF3A21",
+//     6: "#26BDE2",
+//     7: "#FCC30B",
+//     8: "#A21942",
+//     9: "#FD6925",
+//     10: "#DD1367",
+//     11: "#FD9D24",
+//     12: "#BF8B2E",
+//     13: "#3F7E44",
+//     14: "#0A97D9",
+//     15: "#56C02B",
+//     16: "#00689D",
+//     17: "#19486A",
+//   };
+//
+//   // Gets current goal color
+//   const getCurrentGoalColor = () => {
+//     if (!filters.goal_id) return "#666666";
+//     return goalColors[filters.goal_id as keyof typeof goalColors];
+//   };
+//
+//   // Function to generate random colors for project pie chart
+//   const getProjectColors = (count: number) => {
+//     const baseColor = getCurrentGoalColor();
+//     const colors = [];
+//
+//     // Create variations of the base color
+//     for (let i = 0; i < count; i++) {
+//       const hueShift = (i * 30) % 360;
+//       colors.push(shiftHue(baseColor, hueShift));
+//     }
+//     return colors;
+//   };
+//
+//   // Helper function to shift hue of a hex color
+//   const shiftHue = (hex: string, deg: number) => {
+//     // Very simplified version - in real code, use a proper color manipulation library
+//     return hex; // Placeholder - would actually shift the hue in a real implementation
+//   };
+//
+//   // Helper to get selected indicator or sub-indicator name
+//   const getSelectedIndicatorName = () => {
+//     if (filters.sub_indicator_id) {
+//       // Look through your indicators data to find the one containing this sub-indicator
+//       const indicator = indicators.find(ind =>
+//         ind.sub_indicators && ind.sub_indicators.some(sub =>
+//           sub.sub_indicator_id === filters.sub_indicator_id
+//         )
+//       );
+//
+//       if (indicator && indicator.sub_indicators) {
+//         const subIndicator = indicator.sub_indicators.find(
+//           sub => sub.sub_indicator_id === filters.sub_indicator_id
+//         );
+//
+//         if (subIndicator) {
+//           return `${subIndicator.sub_indicator_id || ''}: ${subIndicator.name || ''}`;
+//         }
+//       }
+//     }
+//
+//     if (filters.indicator_id) {
+//       // Find the indicator in your indicators array
+//       const indicator = indicators.find(
+//         ind => ind.indicator_id === filters.indicator_id
+//       );
+//
+//       if (indicator) {
+//         return `${indicator.indicator_id || ''}: ${indicator.name || indicator.indicator_name || ''}`;
+//       }
+//     }
+//
+//     return 'All Indicators';
+//   };
+//
+//   // Helper to format dates for display
+//   const formatDate = (dateString: string) => {
+//     if (!dateString) return 'N/A';
+//     return new Date(dateString).toLocaleDateString();
+//   };
+//
+//   // Helper to format numbers with commas and fixed decimal places
+//   const formatNumber = (num: number, decimals = 1) => {
+//     if (num === undefined || num === null) return 'N/A';
+//     return num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+//   };
+//
+//   function handleGenerateReport(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
+//     throw new Error('Function not implemented.');
+//   }
+//
+//   return (
+//     <div className="container mx-auto p-4">
+//       <h1 className="text-2xl font-bold mb-4">LGU SDG Dashboard</h1>
+//
+//       <button
+//         onClick={handleGenerateReport}
+//         className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded flex items-center"
+//       >
+//         <span className="mr-2">Generate Report</span>
+//         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+//           <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+//         </svg>
+//       </button>
+//
+//       {/* TimeFilter component */}
+//       <TimeFilter
+//         onFilterChange={handleTimeFilterChange}
+//         initialYear={filters.year}
+//         initialMonth={filters.month}
+//       />
+//
+//       <div className="filters mt-4 flex flex-wrap items-center">
+//         {/* Only show location dropdown in table view */}
+//         {viewMode === 'chart' && (
+//           <select
+//             value={filters.location || ''}
+//             onChange={e => handleFilterChange('location', e.target.value ? e.target.value : null)}
+//             className="border border-gray-300 rounded-md p-2 bg-white mr-2"
+//           >
+//             <option value="">All Locations</option>
+//             {locations.map(location => (
+//               <option key={location} value={location}>{location}</option>
+//             ))}
+//           </select>
+//         )}
+//         {/* New time scale filter for the chart view */}
+//         {viewMode === 'chart' && (
+//           <select
+//             value={filters.timeScale || 'monthly'}
+//             onChange={e => handleFilterChange('timeScale', e.target.value)}
+//             className="border border-gray-300 rounded-md p-2 bg-white mr-2"
+//           >
+//             <option value="monthly">Monthly</option>
+//             <option value="quarterly">Quarterly</option>
+//             <option value="yearly">Yearly</option>
+//           </select>
+//         )}
+//
+//         {/* View mode toggle */}
+//         <div className="ml-auto">
+//           <button
+//             onClick={() => setViewMode('chart')}
+//             className={`px-4 py-2 rounded-l-md transition-colors ${viewMode === 'chart' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+//           >
+//             Chart
+//           </button>
+//           <button
+//             onClick={() => setViewMode('map')}
+//             className={`px-4 py-2 rounded-r-md transition-colors ${viewMode === 'map' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+//           >
+//             Map
+//           </button>
+//         </div>
+//       </div>
+//
+//       {/* Active filters display */}
+//       <div className="mt-2 flex flex-wrap items-center gap-2">
+//         {filters.location && (
+//           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+//             Location: {filters.location}
+//             <button
+//               onClick={() => handleFilterChange('location', null)}
+//               className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
+//             >
+//               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+//               </svg>
+//             </button>
+//           </span>
+//         )}
+//
+//         {filters.goal_id && (
+//           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+//             Goal: {filters.goal_id}
+//             <button
+//               onClick={() => handleGoalFilterChange(null)}
+//               className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
+//             >
+//               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+//               </svg>
+//             </button>
+//           </span>
+//         )}
+//
+//         {filters.indicator_id && (
+//           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+//             Indicator: {indicators.find(i => i.indicator_id === filters.indicator_id)?.indicator_code}
+//             <button
+//               onClick={() => handleIndicatorSelect(null)}
+//               className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
+//             >
+//               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+//               </svg>
+//             </button>
+//           </span>
+//         )}
+//
+//         {filters.sub_indicator_id && (
+//           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+//             Sub-Indicator: {
+//               indicators.find(i =>
+//                 i.sub_indicators?.some(s => s.sub_indicator_id === filters.sub_indicator_id)
+//               )?.sub_indicators?.find(s =>
+//                 s.sub_indicator_id === filters.sub_indicator_id
+//               )?.sub_indicator_code
+//             }
+//             <button
+//               onClick={() => handleSubIndicatorSelect(null)}
+//               className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600"
+//             >
+//               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+//               </svg>
+//             </button>
+//           </span>
+//         )}
+//       </div>
+//
+//       {/* Overall Summary Scorecards - displays when no goal is selected */}
+//       {!filters.goal_id && !filters.indicator_id && !filters.sub_indicator_id && (
+//         <div className="mt-6 mb-4">
+//           <h2 className="text-xl font-semibold mb-4">
+//             Overall Summary
+//           </h2>
+//
+//           {summaryLoading ? (
+//             <p className="my-4">Loading summary data...</p>
+//           ) : (
+//             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+//               <ScoreCard
+//                 title="Total Goals Tracked"
+//                 value={allGoals.length}
+//                 subtitle="Sustainable Development Goals"
+//                 color="#19486A" // SDG 17 color
+//               />
+//               <ScoreCard
+//                 title="Total Measurements"
+//                 value={data.length}
+//                 subtitle={`In ${filters.year}${filters.month ? `, Month ${filters.month}` : ''}`}
+//                 color="#4C9F38" // SDG 3 color
+//               />
+//               <ScoreCard
+//                 title="Latest Update"
+//                 value={data.length > 0 ? formatDate(data.sort((a, b) =>
+//                   new Date(b.measurement_date).getTime() - new Date(a.measurement_date).getTime()
+//                 )[0]?.measurement_date) : 'No data'}
+//                 subtitle="Most recent measurement"
+//                 color="#FD9D24" // SDG 11 color
+//               />
+//               <ScoreCard
+//                 title="Locations Tracked"
+//                 value={locations.length}
+//                 subtitle="Geographic coverage"
+//                 color="#00689D" // SDG 16 color
+//               />
+//             </div>
+//           )}
+//         </div>
+//       )}
+//
+//       {/* SDG Goal Gauges - shows only if no indicator is selected */}
+//       {!filters.indicator_id && !filters.sub_indicator_id && (
+//         <div className="mb-8 mt-6">
+//           <h2 className="text-xl font-semibold mb-4">Goals Progress Overview</h2>
+//
+//           {goalsLoading ? (
+//             <p>Loading goals...</p>
+//           ) : (
+//             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+//               {allGoals
+//                 .sort((a, b) => a.goal_id - b.goal_id) // Sort goals by ID
+//                 .map(goal => (
+//                   <GaugeChart
+//                     key={goal.goal_id}
+//                     goal_id={goal.goal_id}
+//                     title={`${goal.goal_id}. ${goal.name}`}
+//                     color={goal.color || goalColors[goal.goal_id as keyof typeof goalColors]}
+//                     isActive={filters.goal_id === goal.goal_id}
+//                     onFilterChange={handleGoalFilterChange}
+//                     year={filters.year}
+//                     month={filters.month}
+//                     location={filters.location}
+//                     project_id={filters.project_id}
+//                     defaultValue={0}
+//                   />
+//                 ))}
+//             </div>
+//           )}
+//         </div>
+//       )}
+//
+//       {/* Indicators List - Shows when a goal is selected */}
+//       {filters.goal_id && !filters.indicator_id && !filters.sub_indicator_id && (
+//         <div className="mt-6 mb-8">
+//           <div className="flex items-center justify-between">
+//             <h2 className="text-xl font-semibold">
+//               Goal {filters.goal_id} Indicators
+//             </h2>
+//             <button
+//               onClick={() => handleGoalFilterChange(null)}
+//               className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-md text-sm transition-colors"
+//             >
+//               Back to All Goals
+//             </button>
+//           </div>
+//
+//           {indicatorsLoading ? (
+//             <p className="my-4">Loading indicators...</p>
+//           ) : indicators.length === 0 ? (
+//             <p className="my-4 text-gray-600">No indicators found for this goal.</p>
+//           ) : (
+//             <div className="mt-4 space-y-4">
+//               {indicators.map(indicator => (
+//                 <div
+//                   key={indicator.indicator_id}
+//                   className="border rounded-md p-4 bg-white hover:shadow-md transition-shadow"
+//                 >
+//                   <div
+//                     className="cursor-pointer"
+//                     onClick={() => handleIndicatorSelect(indicator.indicator_id)}
+//                   >
+//                     <h3 className="text-lg font-medium flex items-center">
+//                       <span
+//                         className="w-3 h-3 rounded-full mr-2"
+//                         style={{ backgroundColor: getCurrentGoalColor() }}
+//                       ></span>
+//                       {indicator.indicator_code}: {indicator.name}
+//                     </h3>
+//                     <p className="text-gray-600 mt-1">{indicator.description || 'No description available.'}</p>
+//
+//                     {/* ProgressBar with dynamic target */}
+//                     <div className="mt-3">
+//                       <ProgressBar
+//                         value={indicator.current_value || 0}
+//                         target={indicator.global_target_value !== undefined ? indicator.global_target_value : 100}
+//                         baseline={indicator.global_baseline_value || 0}
+//                         showBaseline={true}
+//                         color={getCurrentGoalColor()}
+//                         // label="Progress"
+//                         valueSuffix={indicator.unit_of_measurement || ''}
+//                         targetSuffix={indicator.unit_of_measurement || ''}
+//                         indicatorType="indicator"
+//                         progressDirection={indicator.progress_direction || 'up'}
+//                         className="mt-2"
+//                       />
+//                     </div>
+//                   </div>
+//
+//                   {/* Sub-indicators with indent */}
+//                   {indicator.sub_indicators && indicator.sub_indicators.length > 0 && (
+//                     <div className="mt-3 pl-5 border-l-2 space-y-2" style={{ borderColor: getCurrentGoalColor() }}>
+//                       <p className="text-sm text-gray-500 font-medium">Sub-indicators:</p>
+//                       {indicator.sub_indicators.map(subInd => (
+//                         <div
+//                           key={subInd.sub_indicator_id}
+//                           className="py-2 px-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer"
+//                           onClick={() => handleSubIndicatorSelect(subInd.sub_indicator_id)}
+//                         >
+//                           <p className="font-medium">{subInd.sub_indicator_code}: {subInd.name}</p>
+//                           {subInd.description && (
+//                             <p className="text-sm text-gray-600 mt-1">{subInd.description}</p>
+//                           )}
+//
+//                           {/* ProgressBar for sub-indicators with dynamic target */}
+//                           <ProgressBar
+//                             value={subInd.current_value || 0}
+//                             target={subInd.global_target_value !== undefined ? subInd.global_target_value : 100}
+//                             baseline={subInd.global_baseline_value || 0}
+//                             color={getCurrentGoalColor()}
+//                             height="0.5rem"
+//                             valueSuffix={subInd.unit_of_measurement || ''}
+//                             targetSuffix={subInd.unit_of_measurement || ''}
+//                             indicatorType="sub-indicator"
+//                             progressDirection={subInd.progress_direction || 'up'}
+//                             showBaseline={false}
+//                             className="mt-2"
+//                           />
+//                         </div>
+//                       ))}
+//                     </div>
+//                   )}
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+//         </div>
+//       )}
+//
+//       {/* Project Contributions - Shows when an indicator/sub-indicator is selected */}
+//       {(filters.indicator_id || filters.sub_indicator_id) && (
+//         <div className="mt-6 mb-8">
+//           <div className="flex items-center justify-between">
+//             <h2 className="text-xl font-semibold">
+//               {getSelectedIndicatorName()}
+//             </h2>
+//             <button
+//               onClick={() => filters.indicator_id ? handleIndicatorSelect(null) : handleSubIndicatorSelect(null)}
+//               className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-md text-sm transition-colors"
+//             >
+//               Back to {filters.indicator_id ? `Goal ${filters.goal_id} Indicators` : 'Indicator'}
+//             </button>
+//           </div>
+//
+//           {/* Line chart above the project contributions section */}
+//           <div className="mt-4 border rounded-lg p-4 bg-white shadow-sm">
+//             <SDGLineChart
+//               data={data}
+//               height={350}
+//               goalId={filters.goal_id}
+//               indicatorId={filters.indicator_id}
+//               subIndicatorId={filters.sub_indicator_id}
+//               projectId={filters.project_id}
+//             />
+//           </div>
+//
+//           {projectsLoading ? (
+//             <p className="my-4">Loading projects data...</p>
+//           ) : (
+//             <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+//               {/* Projects Contribution Pie Chart */}
+//               <div className="border rounded-lg p-4 bg-white shadow-sm">
+//                 <h3 className="text-lg font-medium mb-4">Project Contributions</h3>
+//                 {projectContributions.length > 0 ? (
+//                   <div className="h-64">
+//                     <ResponsiveContainer width="100%" height="100%">
+//                       <PieChart>
+//                         <Pie
+//                           data={projectContributions}
+//                           dataKey="contribution"
+//                           nameKey="project_name"
+//                           cx="50%"
+//                           cy="50%"
+//                           outerRadius={80}
+//                           label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+//                         >
+//                           {projectContributions.map((entry, index) => (
+//                             <Cell
+//                               key={`cell-${index}`}
+//                               fill={getProjectColors(projectContributions.length)[index % getProjectColors(projectContributions.length).length]}
+//                             />
+//                           ))}
+//                         </Pie>
+//                         <Tooltip formatter={(value) => `${value}%`} />
+//                         <Legend />
+//                       </PieChart>
+//                     </ResponsiveContainer>
+//                   </div>
+//                 ) : (
+//                   <p className="text-center text-gray-500 my-10">No project contribution data available</p>
+//                 )}
+//               </div>
+//
+//               {/* Projects List */}
+//               <div className="border rounded-lg p-4 bg-white shadow-sm">
+//                 <h3 className="text-lg font-medium mb-4">Projects</h3>
+//                 {projects.length > 0 ? (
+//                   <div className="overflow-y-auto max-h-64">
+//                     <table className="min-w-full">
+//                       <thead className="bg-gray-50">
+//                         <tr>
+//                           <th className="py-2 px-3 text-left text-sm font-medium text-gray-500">Project</th>
+//                           <th className="py-2 px-3 text-right text-sm font-medium text-gray-500">Value</th>
+//                           <th className="py-2 px-3 text-right text-sm font-medium text-gray-500">Contribution</th>
+//                         </tr>
+//                       </thead>
+//                       <tbody className="divide-y divide-gray-200">
+//                         {projects.map(project => {
+//                           const contribution = projectContributions.find(p => p.project_id === project.project_id);
+//
+//                           // Get project's target and baseline values for the current indicator/sub-indicator
+//                           const projectTarget = project.project_target_value !== undefined ?
+//                             project.project_target_value :
+//                             (filters.sub_indicator_id ?
+//                               indicators.find(i => i.sub_indicators?.some(s => s.sub_indicator_id === filters.sub_indicator_id))
+//                                 ?.sub_indicators?.find(s => s.sub_indicator_id === filters.sub_indicator_id)?.global_target_value :
+//                               indicators.find(i => i.indicator_id === filters.indicator_id)?.global_target_value);
+//
+//                           const projectBaseline = project.project_baseline_value || 0;
+//
+//                           return (
+//                             <tr
+//                               key={project.project_id}
+//                               className="hover:bg-gray-50 cursor-pointer"
+//                               onClick={() => handleProjectSelect(project.project_id)}
+//                             >
+//                               <td className="py-2 px-3 text-sm">{project.name}</td>
+//                               <td className="py-2 px-3 text-sm text-right">{project.current_value || '-'}</td>
+//                               <td className="py-2 px-3 text-sm text-right">
+//                                 {contribution ? `${contribution.contribution}%` : '-'}
+//                               </td>
+//                               <td className="py-2 px-3">
+//                                 {/* Add dynamic ProgressBar for project indicators */}
+//                                 {project.current_value !== undefined && (
+//                                   <ProgressBar
+//                                     value={project.current_value}
+//                                     target={projectTarget || 100}
+//                                     baseline={projectBaseline}
+//                                     color={getProjectColors(projects.length)[projects.indexOf(project) % getProjectColors(projects.length).length]}
+//                                     height="0.5rem"
+//                                     showValue={false}
+//                                     showTarget={false}
+//                                     indicatorType={filters.sub_indicator_id ? "project-sub-indicator" : "project-indicator"}
+//                                     progressDirection={project.progress_direction || 'up'}
+//                                   />
+//                                 )}
+//                               </td>
+//                             </tr>
+//                           );
+//                         })}
+//                       </tbody>
+//                     </table>
+//                   </div>
+//                 ) : (
+//                   <p className="text-center text-gray-500 my-10">No projects found for this indicator</p>
+//                 )}
+//               </div>
+//             </div>
+//           )}
+//
+//           {/* Recorded Values Table */}
+//           <div className="mt-6 border rounded-lg p-4 bg-white shadow-sm">
+//             <h3 className="text-lg font-medium mb-4">Recorded Values</h3>
+//             <div className="overflow-x-auto">
+//               <table className="min-w-full bg-white">
+//                 <thead className="bg-gray-50">
+//                   <tr>
+//                     <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Date</th>
+//                     <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Location</th>
+//                     <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Project</th>
+//                     <th className="py-2 px-4 text-right text-sm font-medium text-gray-500">Value</th>
+//                     <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">Source</th>
+//                   </tr>
+//                 </thead>
+//                 <tbody className="divide-y divide-gray-200">
+//                   {data.length > 0 ? (
+//                     data.map(item => (
+//                       <tr key={item.value_id} className="hover:bg-gray-50">
+//                         <td className="py-2 px-4 text-sm">{new Date(item.measurement_date).toLocaleDateString()}</td>
+//                         <td className="py-2 px-4 text-sm">{item.location}</td>
+//                         <td className="py-2 px-4 text-sm">{item.project_name || '-'}</td>
+//                         <td className="py-2 px-4 text-sm text-right">{item.value}</td>
+//                         <td className="py-2 px-4 text-sm">{item.source || '-'}</td>
+//                       </tr>
+//                     ))
+//                   ) : (
+//                     <tr>
+//                       <td colSpan={5} className="py-4 text-center text-gray-500">No data available for the selected filters</td>
+//                     </tr>
+//                   )}
+//                 </tbody>
+//               </table>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//
+//       {/* Map or Table View - Only show if no indicator is selected */}
+//       {!filters.indicator_id && !filters.sub_indicator_id && (
+//         <>
+//           {loading ? (
+//             <p className="text-center my-8">Loading data...</p>
+//           ) : (
+//             <>
+//               {viewMode === 'table' ? (
+//                 <div className="overflow-x-auto mt-6">
+//                   <table className="min-w-full bg-white border border-gray-200">
+//                     <thead className="bg-gray-50">
+//                       <tr>
+//                         <th className="py-2 px-4 border-b text-left">Goal</th>
+//                         <th className="py-2 px-4 border-b text-left">Indicator</th>
+//                         <th className="py-2 px-4 border-b text-left">Value</th>
+//                         <th className="py-2 px-4 border-b text-left">Date</th>
+//                         <th className="py-2 px-4 border-b text-left">Location</th>
+//                       </tr>
+//                     </thead>
+//                     <tbody>
+//                       {data.length > 0 ? (
+//                         data.map(item => (
+//                           <tr key={item.value_id} className="hover:bg-gray-50">
+//                             <td className="py-2 px-4 border-b">{item.goal_name}</td>
+//                             <td className="py-2 px-4 border-b">{item.indicator_name}</td>
+//                             <td className="py-2 px-4 border-b">{item.value}</td>
+//                             <td className="py-2 px-4 border-b">{new Date(item.measurement_date).toLocaleDateString()}</td>
+//                             <td className="py-2 px-4 border-b">{item.location}</td>
+//                           </tr>
+//                         ))
+//                       ) : (
+//                         <tr>
+//                           <td colSpan={5} className="py-4 text-center text-gray-500">No data available for the selected filters</td>
+//                         </tr>
+//                       )}
+//                     </tbody>
+//                   </table>
+//                 </div>
+//               ) : viewMode === 'chart' ? (
+//                 // Add a new view option for the chart
+//                 <div className="mt-6 border rounded-lg p-4 bg-white shadow-sm">
+//                   <SDGLineChart
+//                     data={data}
+//                     height={500}
+//                     goalId={filters.goal_id}
+//                     indicatorId={filters.indicator_id}
+//                     subIndicatorId={filters.sub_indicator_id}
+//                     projectId={filters.project_id}
+//                     timeScale={filters.timeScale || 'monthly'}
+//                   />
+//                 </div>
+//               ) : (
+//                 <div className="mt-6">
+//                   <h2 className="text-xl font-semibold mb-4">
+//                     {filters.goal_id ? `Goal ${filters.goal_id} Geographic Performance` : 'Geographic Performance Overview'}
+//                     <span className="text-sm font-normal ml-2 text-gray-600">(Click on a location to filter data)</span>
+//                   </h2>
+//                   <ChoroplethMapNoSSR
+//                     filters={filters}
+//                     height="600px"
+//                     onLocationSelect={handleLocationSelect}
+//                   />
+//                 </div>
+//               )}
+//             </>
+//           )}
+//         </>
+//       )}
+//     </div>
+//   );
+// }
+//
+// export default Dashboard;
 
 
 
@@ -1183,7 +1182,7 @@ export default Dashboard;
 //           ))}
 //         </select>
 //       </div>
-      
+
 //       {selectedProject && (
 //         <button 
 //           onClick={onClearProject}
@@ -1202,7 +1201,7 @@ export default Dashboard;
 //   const displayedGoals = selectedProject 
 //     ? sdgData.filter(goal => goal.projects?.some(p => p.id === selectedProject))
 //     : sdgData;
-  
+
 //   return (
 //     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
 //       {displayedGoals.map((goal) => {
@@ -1210,7 +1209,7 @@ export default Dashboard;
 //         const progress = selectedProject 
 //           ? calculateOverallProgress(goal, selectedProject) 
 //           : calculateOverallProgress(goal);
-        
+
 //         return (
 //           <div 
 //             key={goal.goal_id}
@@ -1235,7 +1234,7 @@ export default Dashboard;
 //           </div>
 //         );
 //       })}
-      
+
 //       {displayedGoals.length === 0 && (
 //         <div className="col-span-full text-center p-6 bg-gray-50 rounded-lg">
 //           <p className="text-gray-500">No SDG data available for the selected project.</p>
@@ -1255,19 +1254,19 @@ export default Dashboard;
 // }) => {
 //   // Apply filters if provided
 //   let displayProjects = [...projects];
-  
+
 //   // Filter by status if specified
 //   if (projectFilters.status) {
 //     displayProjects = displayProjects.filter(p => p.status === projectFilters.status);
 //   }
-  
+
 //   // Filter by SDG if specified
 //   if (projectFilters.sdgId && !selectedGoalId) {
 //     displayProjects = displayProjects.filter(p => 
 //       p.sdgContributions && p.sdgContributions.some(s => s.goalId === projectFilters.sdgId)
 //     );
 //   }
-  
+
 //   // Sort by contribution percentage if viewing in SDG context
 //   if (selectedGoalId) {
 //     displayProjects.sort((a, b) => {
@@ -1294,11 +1293,11 @@ export default Dashboard;
 //             const contribution = selectedGoalId 
 //               ? project.sdgContributions?.find(s => s.goalId === selectedGoalId)?.contribution || 0
 //               : project.completion;
-            
+
 //             const contributionLabel = selectedGoalId 
 //               ? `Contribution to SDG ${selectedGoalId}: ${contribution.toFixed(1)}%`
 //               : `Overall completion: ${contribution.toFixed(1)}%`;
-            
+
 //             return (
 //               <li 
 //                 key={project.id} 
@@ -1322,7 +1321,7 @@ export default Dashboard;
 //                       </span>
 //                     </div>
 //                     <p className="text-xs text-gray-500">{contributionLabel}</p>
-                    
+
 //                     {!selectedGoalId && project.sdgContributions && (
 //                       <div className="flex flex-wrap gap-1 mt-1">
 //                         {project.sdgContributions
@@ -1393,7 +1392,7 @@ export default Dashboard;
 //         color="#E5243B" // Red
 //         />
 //         </div>
-        
+
 //         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 //           <ScoreCard 
 //             title="Total Metrics Tracked" 
@@ -1416,7 +1415,7 @@ export default Dashboard;
 //         </div>
 //       </>
 //     ));
-    
+
 //     // Indicator Progress Bar List component
 //     const IndicatorProgressBars = React.memo(({ 
 //       indicators, 
@@ -1428,12 +1427,12 @@ export default Dashboard;
 //       <ProgressBarList 
 //         items={indicators.map((indicator, index) => {
 //           const colorIndex = (index + colorOffset) % indicatorColors.length;
-          
+
 //           // Create label that includes project source if available
 //           const projectLabel = sourceProject ? ` (${sourceProject})` : '';
 //           const itemLabel = indicator.label || indicator.name;
 //           const label = sourceProject ? `${itemLabel}${projectLabel}` : itemLabel;
-          
+
 //           return {
 //             label: label,
 //             progress: indicator.progress || getMostRecentValue(indicator.current),
@@ -1446,7 +1445,7 @@ export default Dashboard;
 //         })}
 //       />
 //     ));
-    
+
 //     // Project Contribution Chart component - NEW
 //     const ProjectContributionChart = React.memo(({ 
 //       projectContributions = [], 
@@ -1460,16 +1459,16 @@ export default Dashboard;
 //           </div>
 //         );
 //       }
-    
+
 //       // Sort contributions by percentage
 //       const sortedContributions = [...projectContributions].sort((a, b) => b.contribution - a.contribution);
-      
+
 //       return (
 //         <div className="bg-white p-4 rounded-lg shadow">
 //           <h3 className="text-lg font-semibold mb-3">
 //             {goalId ? `Project Contributions to SDG ${goalId}` : "Project Contributions by SDG"}
 //           </h3>
-          
+
 //           <div className="space-y-3">
 //             {sortedContributions.map((item, index) => (
 //               <div key={item.projectId || index} className="relative">
@@ -1496,7 +1495,7 @@ export default Dashboard;
 // const extractDateOptions = (sdgData) => {
 //   const years = new Set();
 //   const months = new Set();
-  
+
 //   sdgData.forEach(goal => {
 //     goal.indicators.forEach(indicator => {
 //       indicator.current.forEach(dataPoint => {
@@ -1508,7 +1507,7 @@ export default Dashboard;
 //           }
 //         }
 //       });
-      
+
 //       if (indicator.sub_indicators) {
 //         indicator.sub_indicators.forEach(subInd => {
 //           subInd.current.forEach(dataPoint => {
@@ -1524,7 +1523,7 @@ export default Dashboard;
 //       }
 //     });
 //   });
-  
+
 //   return {
 //     years: Array.from(years).sort(),
 //     months: Array.from(months).sort()
@@ -1534,13 +1533,13 @@ export default Dashboard;
 // // Helper function to filter data by date
 // const filterDataByDate = (data, selectedYear, selectedMonth) => {
 //   if (!selectedYear && !selectedMonth) return data;
-  
+
 //   const monthIndex = selectedMonth ? monthNames.indexOf(selectedMonth) + 1 : null;
 //   const monthStr = monthIndex ? String(monthIndex).padStart(2, '0') : null;
-  
+
 //   // Create a deep copy of the data to avoid mutating the original
 //   const filteredData = JSON.parse(JSON.stringify(data));
-  
+
 //   filteredData.forEach(goal => {
 //     // Filter indicator data
 //     goal.indicators.forEach(indicator => {
@@ -1551,7 +1550,7 @@ export default Dashboard;
 //           (!monthStr || month === monthStr)
 //         );
 //       });
-      
+
 //       // Recalculate achievement percentage based on filtered data
 //       if (indicator.current.length > 0) {
 //         const latestValue = getMostRecentValue(indicator.current);
@@ -1560,7 +1559,7 @@ export default Dashboard;
 //           100
 //         );
 //       }
-      
+
 //       // Filter sub-indicators data if they exist
 //       if (indicator.sub_indicators) {
 //         indicator.sub_indicators.forEach(subInd => {
@@ -1571,7 +1570,7 @@ export default Dashboard;
 //               (!monthStr || month === monthStr)
 //             );
 //           });
-          
+
 //           // Recalculate achievement percentage based on filtered data
 //           if (subInd.current.length > 0) {
 //             const latestValue = getMostRecentValue(subInd.current);
@@ -1583,7 +1582,7 @@ export default Dashboard;
 //         });
 //       }
 //     });
-    
+
 //     // Filter goal's global values
 //     goal.global_current_value = goal.global_current_value.filter(dataPoint => {
 //       const [year, month] = dataPoint.date.split('-');
@@ -1593,7 +1592,7 @@ export default Dashboard;
 //       );
 //     });
 //   });
-  
+
 //   return filteredData;
 // };
 
@@ -1607,11 +1606,11 @@ export default Dashboard;
 //   const [loading, setLoading] = useState<boolean>(true);
 //   const [selectedProject, setSelectedProject] = useState<string | null>(null);
 //   const [selectedProjectIndicator, setSelectedProjectIndicator] = useState<string | null>(null);
-  
+
 //   // Date filter states
 //   const [selectedYear, setSelectedYear] = useState<string | null>(null);
 //   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-  
+
 //   // Extract date options once when data loads
 //   const dateOptions = useMemo(() => {
 //     return sdgData.length > 0 ? extractDateOptions(sdgData) : { years: [], months: [] };
@@ -1634,7 +1633,7 @@ export default Dashboard;
 
 //     fetchData();
 //   }, []);
-  
+
 //   // Apply filters when date selection changes
 //   useEffect(() => {
 //     if (sdgData.length > 0) {
@@ -1648,13 +1647,13 @@ export default Dashboard;
 //     filteredSdgData.find((goal) => goal.goal_id === selectedGoalId) || null, 
 //     [filteredSdgData, selectedGoalId]
 //   );
-  
+
 //   // Memoize summary metrics calculation 
 //   const summaryMetrics = useMemo(() => 
 //     calculateSummaryMetrics(filteredSdgData, selectedGoalData),
 //     [filteredSdgData, selectedGoalData]
 //   );
-  
+
 //   // Memoize indicators data
 //   const allIndicatorsData = useMemo(() => 
 //     getAllIndicatorsData(filteredSdgData, sdgColors),
@@ -1669,16 +1668,16 @@ export default Dashboard;
 //   const handleSelectIndicator = useCallback((indicatorName: string) => {
 //     setSelectedIndicator(prevIndicator => prevIndicator === indicatorName ? "" : indicatorName);
 //   }, []);
-  
+
 //   const handleYearChange = useCallback((year: string | null) => {
 //     setSelectedYear(year);
 //     if (!year) setSelectedMonth(null);
 //   }, []);
-  
+
 //   const handleMonthChange = useCallback((month: string | null) => {
 //     setSelectedMonth(month);
 //   }, []);
-  
+
 //   const handleResetFilters = useCallback(() => {
 //     setSelectedYear(null);
 //     setSelectedMonth(null);
@@ -1688,7 +1687,7 @@ export default Dashboard;
 //     setSelectedProject(prev => prev === projectId ? null : projectId);
 //     setSelectedProjectIndicator(null);
 //   }, []);
-  
+
 //   const handleProjectIndicatorSelect = useCallback((indicatorName) => {
 //     setSelectedProjectIndicator(prev => prev === indicatorName ? null : indicatorName);
 //   }, []);
@@ -1711,7 +1710,7 @@ export default Dashboard;
 //   // New memoized project data
 //   const projectData = useMemo(() => {
 //     if (!selectedGoalId || !selectedProject || !sdgData) return null;
-    
+
 //     return getProjectContributionToGoal(
 //       parseInt(selectedProject), // Convert string ID to number
 //       selectedGoalId,
@@ -1731,9 +1730,9 @@ export default Dashboard;
 // // Project sub-indicators
 // const projectSubIndicators = useMemo(() => {
 //   if (!projectData || !selectedProjectIndicator) return [];
-  
+
 //   const indicator = projectData.indicators?.find(ind => ind.name === selectedProjectIndicator);
-  
+
 //   return indicator?.sub_indicators?.map(subInd => ({
 //     ...subInd,
 //     label: `${subInd.name} (${projectData.name})`
@@ -1743,12 +1742,12 @@ export default Dashboard;
 //   // Memoize chart data
 //   const selectedGoalChartData = useMemo(() => {
 //     if (!selectedGoalData) return [];
-    
+
 //     // If an indicator is selected, only show that indicator in the chart
 //     if (selectedIndicator) {
 //       const selectedIndicatorObj = selectedGoalData.indicators.find(ind => ind.name === selectedIndicator);
 //       if (!selectedIndicatorObj) return [];
-      
+
 //       return [{
 //         x: selectedIndicatorObj.current.map(item => item.date),
 //         y: selectedIndicatorObj.current.map(item => 'value' in item ? item.value : item.current),
@@ -1759,7 +1758,7 @@ export default Dashboard;
 //         name: selectedIndicatorObj.name,
 //       }];
 //     }
-    
+
 //     // Otherwise, show all indicators
 //     return selectedGoalData.indicators.map((indicator, index) => {
 //       const colorIndex = index % indicatorColors.length;
@@ -1778,10 +1777,10 @@ export default Dashboard;
 //   // Memoize sub-indicator chart data for the selected indicator
 //   const selectedSubIndicatorsChartData = useMemo(() => {
 //     if (!selectedGoalData || !selectedIndicator) return [];
-    
+
 //     const selectedIndicatorObj = selectedGoalData.indicators.find(ind => ind.name === selectedIndicator);
 //     if (!selectedIndicatorObj || !selectedIndicatorObj.sub_indicators) return [];
-    
+
 //     return selectedIndicatorObj.sub_indicators.map((subInd, index) => {
 //       const colorIndex = (index + 3) % indicatorColors.length; // Offset to use different colors
 //       return {
@@ -1805,23 +1804,23 @@ export default Dashboard;
 //           .filter(item => item?.date) // Ensure item and item.date exist
 //           .map(item => item.date.split('-')[0]) 
 //       );
-  
+
 //       const uniqueYears = [...new Set(allDates)].sort();
-  
+
 //       const yearlyAverages = uniqueYears.map(year => {
 //         const yearData = goal.indicators.flatMap(ind => 
 //           ind.current
 //             .filter(item => item?.date?.startsWith(year)) // Ensure date exists
 //             .map(item => ('value' in item ? item.value : item.current))
 //         );
-  
+
 //         return yearData.length > 0 
 //           ? yearData.reduce((sum, val) => sum + val, 0) / yearData.length 
 //           : 0;
 //       });
-      
+
 //       const goalColor = sdgColors[goal.title] || indicatorColors[index % indicatorColors.length];
-      
+
 //       return {
 //         x: uniqueYears,
 //         y: yearlyAverages,
@@ -1855,7 +1854,7 @@ export default Dashboard;
 //         </div>
 //       );
 //     }
-  
+
 //     return (
 //       <div className="mt-6">
 //         <div className="flex items-center gap-4 mb-6">
@@ -1869,7 +1868,7 @@ export default Dashboard;
 //             Clear Selection
 //           </button>
 //         </div>
-    
+
 //         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 //           {/* Project Indicators */}
 //           <div>
@@ -1884,7 +1883,7 @@ export default Dashboard;
 //                 </button>
 //               )}
 //             </h3>
-            
+
 //             {selectedProjectIndicator ? (
 //               projectSubIndicators.length > 0 ? (
 //                 <IndicatorProgressBars 
@@ -1910,7 +1909,7 @@ export default Dashboard;
 //               )
 //             )}
 //           </div>
-    
+
 //           {/* Project Charts */}
 //           <div>
 //             <h3 className="text-lg font-semibold mb-3">
@@ -1918,7 +1917,7 @@ export default Dashboard;
 //                 ? `${selectedProjectIndicator} Progress`
 //                 : 'Project Indicators Progress'}
 //             </h3>
-            
+
 //             <LineChart 
 //               data={selectedProjectIndicator
 //                 ? projectSubIndicators.map((subInd, idx) => ({
@@ -1943,7 +1942,7 @@ export default Dashboard;
 //             />
 //           </div>
 //         </div>
-    
+
 //         {/* Project Contribution */}
 //         <div className="mt-6">
 //           <h3 className="text-lg font-semibold mb-3">
@@ -1970,7 +1969,7 @@ export default Dashboard;
 //   return (
 //     <div className="p-6">
 //       <h1 className="text-2xl font-bold mb-4">LGU SDG Dashboard</h1>
-      
+
 //       {/* Date Filter Component */}
 //       <DateFilter 
 //         availableYears={dateOptions.years} 
@@ -1981,14 +1980,14 @@ export default Dashboard;
 //         onMonthChange={handleMonthChange}
 //         onResetFilters={handleResetFilters}
 //       />
-      
+
 //       {/* Summary Scorecards */}
 //       <SummaryCards 
 //         summaryMetrics={summaryMetrics} 
 //         selectedGoalId={selectedGoalId} 
 //         selectedGoalData={selectedGoalData} 
 //       />
-      
+
 //       {/* SDG Goal Gauges */}
 //       <div className="mb-8">
 //         <h2 className="text-xl font-semibold mb-4">SDG Progress Overview</h2>
@@ -1999,14 +1998,14 @@ export default Dashboard;
 //           selectedProject={selectedProject}
 //         />
 //       </div>
-  
+
 //       {selectedGoalId ? (
 //         <>
 //           <h2 className="text-xl font-semibold mb-4">
 //             Details for SDG {selectedGoalId}: {selectedGoalData?.title}
 //             {selectedIndicator && ` → ${selectedIndicator}`}
 //           </h2>
-          
+
 //           {/* Add Project Filter */}
 //           <ProjectFilter 
 //             availableProjects={sdgData ? sdgData.flatMap(goal => 
@@ -2043,7 +2042,7 @@ export default Dashboard;
 //               selectedGoalId={selectedGoalId}
 //             />
 //           </div>
-  
+
 //           {/* Render either project view or regular SDG view */}
 //           {selectedProject ? renderProjectView() : (
 //             <>
@@ -2056,7 +2055,7 @@ export default Dashboard;
 //                   </span>
 //                 </div>
 //               )}
-                
+
 //               {/* Two-column layout */}
 //               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 //                 {/* Indicators progress bars */}
@@ -2072,7 +2071,7 @@ export default Dashboard;
 //                       </button>
 //                     )}
 //                   </h3>
-                  
+
 //                   {selectedIndicator ? (
 //                     selectedGoalData && 
 //                     selectedGoalData.indicators.find(ind => ind.name === selectedIndicator)?.sub_indicators?.length > 0 ? (
@@ -2099,7 +2098,7 @@ export default Dashboard;
 //                     )
 //                   )}
 //                 </div>
-                
+
 //                 {/* Line Chart */}
 //                 <div>
 //                   <h3 className="text-lg font-semibold mb-3">
@@ -2114,7 +2113,7 @@ export default Dashboard;
 //                       No time series data available for the selected time period.
 //                     </div>
 //                   )}
-  
+
 //                   {/* Sub-indicators Chart section */}
 //                   {selectedIndicator && selectedSubIndicatorsChartData.length > 0 && (
 //                     <div className="mt-6">
@@ -2124,7 +2123,7 @@ export default Dashboard;
 //                   )}
 //                 </div>
 //               </div>
-              
+
 //               <button 
 //                 onClick={() => {
 //                   setSelectedGoalId(null);
@@ -2159,7 +2158,7 @@ export default Dashboard;
 //                   </div>
 //                 )}
 //               </div>
-              
+
 //               {/* Bottom Indicators */}
 //               <div className="mt-6">
 //                 <h2 className="text-lg font-semibold mb-3">Needs Attention</h2>
@@ -2178,7 +2177,7 @@ export default Dashboard;
 //                 )}
 //               </div>
 //             </div>
-            
+
 //             {/* Line Chart column */}
 //             <div>
 //               <h2 className="text-lg font-semibold mb-3">Overall SDG Progress Over Time</h2>
@@ -2197,3 +2196,15 @@ export default Dashboard;
 //   )};
 
 //   export default Dashboard;
+//
+//
+
+const Dashboard = () => {
+  return (
+    <>
+      <div>Hello Dashboard</div>
+    </>
+  )
+}
+
+export default Dashboard

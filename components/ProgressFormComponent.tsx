@@ -1,7 +1,5 @@
 "use client";
 
-import { updateValues } from "@/app/actions/actions";
-import { useState } from "react";
 import EditIndicatorValues from "./EditIndicatorValues";
 
 interface RequiredData {

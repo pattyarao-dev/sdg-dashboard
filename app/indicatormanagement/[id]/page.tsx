@@ -1,9 +1,8 @@
 import { getGoal, getRequiredDataList } from "@/app/actions/actions";
 import { getAvailableIndicatorsNoSub } from "@/app/actions/actions_indicatormanagement";
-import AddIndicator from "@/components/AddIndicator";
 import GoBackButton from "@/components/GoBackButton";
 import IndicatorManagementComponent from "@/components/indicatormanagement/IndicatorManagementComponent";
-import prisma from "@/utils/prisma";
+import { Goal, Indicator } from "@/types/goal.types";
 
 export default async function AddGoalIndicator({
   params,
@@ -29,9 +28,9 @@ export default async function AddGoalIndicator({
         requiredData={requiredData}
       /> */}
       <IndicatorManagementComponent
-        goal={goal}
+        goal={goal as unknown as Goal}
         requiredData={requiredData}
-        availableIndicators={availableIndicators}
+        availableIndicators={availableIndicators as unknown as Indicator[]}
       />
     </div>
   );

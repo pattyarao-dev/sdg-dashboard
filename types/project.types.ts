@@ -1,4 +1,3 @@
-import { ComputationRule, IRequiredData } from "./indicator.types";
 
 export interface IProject {
   project_id: number;
@@ -13,6 +12,7 @@ export interface IProjectProgressForm {
   projectId: number;
   name: string;
   description: string | null;
+  project_location_id?: number;
   status: string | null;
   startDate: Date | null;
   endDate: Date | null;

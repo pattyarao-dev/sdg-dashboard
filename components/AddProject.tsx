@@ -6,7 +6,7 @@ import {
   IGoalWithIndicators,
 } from "@/types/indicator.types";
 import { IProject } from "@/types/project.types";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const AddProject = ({
   project,

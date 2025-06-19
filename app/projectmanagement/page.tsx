@@ -1,5 +1,4 @@
-import { IProject } from "@/types/project.types";
-import { getProjectIndicators, getProjects } from "../actions/actions";
+import { getProjects } from "../actions/actions";
 import Link from "next/link";
 
 export default async function ProjectManagement() {

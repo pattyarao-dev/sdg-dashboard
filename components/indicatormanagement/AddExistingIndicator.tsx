@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Goal, GoalIndicator, RequiredData } from "@/types/goal.types";
 
 const AddExistingIndicator = ({
-  goal,
   availableIndicators,
   requiredData,
 }: {
@@ -21,13 +20,13 @@ const AddExistingIndicator = ({
     sub_indicators: [{}],
   });
 
-  const handleSelectIndicator = (indicator: GoalIndicator) => {
-    setSelectedIndicator({
-      ...indicator,
-      sub_indicators: indicator.sub_indicators || [],
-    });
-    setRequiredDataList([]);
-  };
+  // const handleSelectIndicator = (indicator: GoalIndicator) => {
+  //   setSelectedIndicator({
+  //     ...indicator,
+  //     sub_indicators: indicator.sub_indicators || [],
+  //   });
+  //   setRequiredDataList([]);
+  // };
 
   const [requiredDataList, setRequiredDataList] = useState<RequiredData[]>([]);
 

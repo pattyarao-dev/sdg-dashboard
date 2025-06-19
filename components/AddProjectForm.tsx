@@ -1,6 +1,5 @@
 "use client";
 
-import { addProject } from "@/app/actions/actions";
 import { useState } from "react";
 import { IoMdAdd } from "react-icons/io";
 
@@ -51,7 +50,7 @@ export default function AddProjectForm({ indicatorsList }: AddProjectProps) {
               );
             }
           }
-          await addProject(formData);
+          // await addProject(formData);
         }}
         className="w-full flex flex-col items-start justify-center gap-6"
       >

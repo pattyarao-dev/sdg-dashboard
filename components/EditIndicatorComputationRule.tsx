@@ -10,7 +10,7 @@ const EditIndicatorComputationRule = ({
 }: {
   indicator: Indicator;
 }) => {
-  const { success, loading, createFormula, successMessage } =
+  const { createFormula } =
     useCreateFormula();
 
   const [formula, setFormula] = useState("");
@@ -31,7 +31,6 @@ const EditIndicatorComputationRule = ({
     }
   };
 
-  const userId = 1;
 
   return (
     <div

@@ -1,40 +1,33 @@
 import { useState } from "react";
 import { SubIndicator } from "./ProgressFormComponent";
-import useCreateFormula from "@/hooks/useCreateFormula";
 import useUpdateValues from "@/hooks/useUpdateValues";
 import useCalculateValue from "@/hooks/useCalculateValue";
 
 const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
   console.log(sub);
-  const { success, loading, createFormula } = useCreateFormula();
-  const [formula, setFormula] = useState("");
 
-  function formatFormula(input: string): string {
-    return input.replace(/\b[a-zA-Z\s]+\b/g, (match) => {
-      // Only replace if it's not an operator/number
-      if (!/^\d+$/.test(match.trim())) {
-        return match.trim().replace(/\s+/g, "_").toLowerCase();
-      }
-      return match;
-    });
-  }
+  // function formatFormula(input: string): string {
+  //   return input.replace(/\b[a-zA-Z\s]+\b/g, (match) => {
+  //     // Only replace if it's not an operator/number
+  //     if (!/^\d+$/.test(match.trim())) {
+  //       return match.trim().replace(/\s+/g, "_").toLowerCase();
+  //     }
+  //     return match;
+  //   });
+  // }
 
-  const submitFormulaChange = () => {
-    if (sub.goalSubIndicatorId) {
-      const formattedFormula = formatFormula(formula);
-      createFormula(formattedFormula, sub.goalSubIndicatorId, "subIndicator");
-    }
-  };
+  // const submitFormulaChange = () => {
+  //   if (sub.goalSubIndicatorId) {
+  //     const formattedFormula = formatFormula(formula);
+  //     createFormula(formattedFormula, sub.goalSubIndicatorId, "subIndicator");
+  //   }
+  // };
 
   const {
-    success: subIndicatorValueSuccess,
-    loading: subIndicatorValueLoading,
     updateValues,
   } = useUpdateValues();
 
   const {
-    success: calculateSubIndicatorSuccess,
-    loading: calculateSubIndicatorLoading,
     calculateValue,
   } = useCalculateValue();
 
@@ -176,7 +169,7 @@ const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
                               onChange={(e) =>
                                 handleValueChange(
                                   data.requiredDataId,
-                                  parseFloat(e.target.value),
+                                  e.target.value,
                                 )
                               }
                               value={

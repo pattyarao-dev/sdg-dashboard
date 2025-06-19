@@ -2,16 +2,11 @@
 
 import { prisma } from "@/utils/prisma";
 import {
-  IGoalIndicator,
   IGoalIndicatorSimple,
   IGoalSubIndicatorSimple,
   IGoalWithIndicators,
 } from "@/types/indicator.types";
 import { IProject } from "@/types/project.types";
-import { Goal } from "@/types/goal.types";
-import { describe } from "node:test";
-import { subtle } from "crypto";
-import { Indicator } from "@/components/ProgressFormComponent";
 
 export async function createProject(project: IProject) {
   console.log(typeof project.start_date);
@@ -119,26 +114,26 @@ export async function getAllGoalIndicators() {
         indicators:
           goal.td_goal_indicator.length > 0
             ? goal.td_goal_indicator.map((indicator) => {
-                return {
-                  goal_indicator_id: indicator.goal_indicator_id,
-                  indicator_name: indicator.md_indicator.name,
-                  indicator_target: indicator.global_target_value,
-                  sub_indicators:
-                    indicator.td_goal_sub_indicator.length > 0
-                      ? indicator.td_goal_sub_indicator.map((subIndi) => {
-                          return {
-                            sub_indicator_id:
-                              subIndi.md_sub_indicator.sub_indicator_id,
-                            goal_sub_indicator_id:
-                              subIndi.goal_sub_indicator_id,
-                            indicator_name: subIndi.md_sub_indicator.name,
-                            indicator_target: subIndi.global_target_value,
-                            sub_indicators: [],
-                          } as IGoalSubIndicatorSimple;
-                        })
-                      : [],
-                } as IGoalIndicatorSimple;
-              })
+              return {
+                goal_indicator_id: indicator.goal_indicator_id,
+                indicator_name: indicator.md_indicator.name,
+                indicator_target: indicator.global_target_value,
+                sub_indicators:
+                  indicator.td_goal_sub_indicator.length > 0
+                    ? indicator.td_goal_sub_indicator.map((subIndi) => {
+                      return {
+                        sub_indicator_id:
+                          subIndi.md_sub_indicator.sub_indicator_id,
+                        goal_sub_indicator_id:
+                          subIndi.goal_sub_indicator_id,
+                        indicator_name: subIndi.md_sub_indicator.name,
+                        indicator_target: subIndi.global_target_value,
+                        sub_indicators: [],
+                      } as IGoalSubIndicatorSimple;
+                    })
+                    : [],
+              } as IGoalIndicatorSimple;
+            })
             : [],
       } as IGoalWithIndicators;
     });

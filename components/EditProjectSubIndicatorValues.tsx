@@ -1,23 +1,16 @@
 import { useState } from "react";
-import { SubIndicator } from "./ProgressFormComponent";
-import useCreateFormula from "@/hooks/useCreateFormula";
 import useUpdateValues from "@/hooks/useUpdateValues";
 import useCalculateValue from "@/hooks/useCalculateValue";
 import { IProjectSubIndicator } from "@/types/project.types";
 
 const EditSubIndicatorValues = ({ sub }: { sub: IProjectSubIndicator }) => {
   console.log(sub);
-  const [formula, setFormula] = useState("");
 
   const {
-    success: subIndicatorValueSuccess,
-    loading: subIndicatorValueLoading,
     updateValues,
   } = useUpdateValues();
 
   const {
-    success: calculateSubIndicatorSuccess,
-    loading: calculateSubIndicatorLoading,
     calculateValue,
   } = useCalculateValue();
 
@@ -156,7 +149,7 @@ const EditSubIndicatorValues = ({ sub }: { sub: IProjectSubIndicator }) => {
                               onChange={(e) =>
                                 handleValueChange(
                                   data.requiredDataId,
-                                  parseFloat(e.target.value),
+                                  e.target.value,
                                 )
                               }
                               value={

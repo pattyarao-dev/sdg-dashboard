@@ -4,8 +4,7 @@ import { useState } from "react";
 import AddExistingIndicator from "./AddExistingIndicator";
 import AddNewIndicator from "./AddNewIndicator";
 import EditIndicators from "./EditIndicators";
-import { Goal, RequiredData, Indicator } from "@/types/goal.types";
-import AddNewIndicatorRecursive from "./AddNewIndicatorRecursive";
+import { Goal, RequiredData, Indicator, GoalIndicator } from "@/types/goal.types";
 
 const IndicatorManagementComponent = ({
   goal,
@@ -47,15 +46,15 @@ const IndicatorManagementComponent = ({
         {task === "Create a New Indicator" ? (
           <AddNewIndicator goal={goal} requiredData={requiredData} />
         ) : // <AddNewIndicatorRecursive goal={goal} requiredData={requiredData} />
-        task === "Add an Existing Indicator" ? (
-          <AddExistingIndicator
-            goal={goal}
-            availableIndicators={availableIndicators}
-            requiredData={requiredData}
-          />
-        ) : task === "Edit Indicators" ? (
-          <EditIndicators />
-        ) : null}
+          task === "Add an Existing Indicator" ? (
+            <AddExistingIndicator
+              goal={goal}
+              availableIndicators={availableIndicators as unknown as GoalIndicator[]}
+              requiredData={requiredData}
+            />
+          ) : task === "Edit Indicators" ? (
+            <EditIndicators />
+          ) : null}
       </div>
     </div>
   );
