@@ -37,6 +37,17 @@ export async function getProjects() {
               },
             },
           },
+          td_goal_sub_indicator: {
+            include: {
+              md_sub_indicator: true,
+              td_goal_sub_indicator_required_data: {
+                include: {
+                  ref_required_data: true,
+                },
+              },
+              md_computation_rule: true,
+            },
+          },
           td_project_sub_indicator: {
             include: {
               md_sub_indicator: {
@@ -59,23 +70,31 @@ export async function getProjects() {
     status: project.project_status,
     startDate: project.start_date,
     endDate: project.end_date,
-
     projectIndicators: project.td_project_indicator.map((pi) => ({
       projectIndicatorId: pi.project_indicator_id,
-      goalIndicatorId: pi.td_goal_indicator?.goal_indicator_id,
-      indicatorName: pi.td_goal_indicator?.md_indicator.name,
-      requiredData: pi.td_goal_indicator.td_goal_indicator_required_data.map(
-        (rd) => ({
+      goalIndicatorId: pi.td_goal_indicator?.goal_indicator_id || null,
+      goalSubIndicatorId: pi.td_goal_sub_indicator?.goal_sub_indicator_id || null,
+      indicatorName: pi.td_goal_indicator?.md_indicator?.name || pi.td_goal_sub_indicator?.md_sub_indicator?.name || null,
+      requiredData: [
+        ...(pi.td_goal_indicator?.td_goal_indicator_required_data?.map((rd) => ({
           requiredDataId: rd.ref_required_data.required_data_id,
           requiredDataName: rd.ref_required_data.name,
-        }),
-      ),
-
-      computationRule: pi.td_goal_indicator.md_computation_rule.map((cr) => ({
-        ruleId: cr.rule_id,
-        ruleFormula: cr.formula,
-      })),
-
+        })) || []),
+        ...(pi.td_goal_sub_indicator?.td_goal_sub_indicator_required_data?.map((rd) => ({
+          requiredDataId: rd.ref_required_data.required_data_id,
+          requiredDataName: rd.ref_required_data.name,
+        })) || [])
+      ],
+      computationRule: [
+        ...(pi.td_goal_indicator?.md_computation_rule?.map((cr) => ({
+          ruleId: cr.rule_id,
+          ruleFormula: cr.formula,
+        })) || []),
+        ...(pi.td_goal_sub_indicator?.md_computation_rule?.map((cr) => ({
+          ruleId: cr.rule_id,
+          ruleFormula: cr.formula,
+        })) || [])
+      ],
       projectSubIndicators: pi.td_project_sub_indicator.map((psi) => ({
         projectSubIndicatorId: psi.project_sub_indicator_id,
         subIndicatorId: psi.md_sub_indicator.sub_indicator_id,
@@ -86,7 +105,6 @@ export async function getProjects() {
 
   return processedProjects;
 }
-
 export async function getProject(id: number) {
   const project = await prisma.td_project.findUnique({
     where: {

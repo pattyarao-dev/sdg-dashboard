@@ -107,44 +107,54 @@ export async function getAllGoalIndicators() {
       },
       orderBy: { goal_id: "asc" },
     });
-    const typedGoalIndicators = goalIndicators.map((goal) => {
-      return {
-        goal_id: goal.goal_id,
-        name: goal.name,
-        indicators:
-          goal.td_goal_indicator.length > 0
-            ? goal.td_goal_indicator.map((indicator) => {
-              return {
-                goal_indicator_id: indicator.goal_indicator_id,
-                indicator_name: indicator.md_indicator.name,
-                indicator_target: indicator.global_target_value,
-                sub_indicators:
-                  indicator.td_goal_sub_indicator.length > 0
-                    ? indicator.td_goal_sub_indicator.map((subIndi) => {
-                      return {
-                        sub_indicator_id:
-                          subIndi.md_sub_indicator.sub_indicator_id,
-                        goal_sub_indicator_id:
-                          subIndi.goal_sub_indicator_id,
-                        indicator_name: subIndi.md_sub_indicator.name,
-                        indicator_target: subIndi.global_target_value,
-                        sub_indicators: [],
-                      } as IGoalSubIndicatorSimple;
-                    })
-                    : [],
-              } as IGoalIndicatorSimple;
-            })
-            : [],
-      } as IGoalWithIndicators;
-    });
+
+    const typedGoalIndicators = await Promise.all(
+      goalIndicators.map(async (goal) => {
+        return {
+          goal_id: goal.goal_id,
+          name: goal.name,
+          indicators:
+            goal.td_goal_indicator.length > 0
+              ? await Promise.all(
+                goal.td_goal_indicator.map(async (indicator) => {
+                  return {
+                    goal_indicator_id: indicator.goal_indicator_id,
+                    indicator_name: indicator.md_indicator.name,
+                    indicator_target: indicator.global_target_value,
+                    sub_indicators:
+                      indicator.td_goal_sub_indicator.length > 0
+                        ? await Promise.all(
+                          indicator.td_goal_sub_indicator.map(async (subIndi) => {
+                            // Get all nested sub-indicators recursively
+                            const nestedSubIndicators = await getBabyIndicator(
+                              subIndi.md_sub_indicator.sub_indicator_id
+                            );
+
+                            return {
+                              sub_indicator_id: subIndi.md_sub_indicator.sub_indicator_id,
+                              goal_sub_indicator_id: subIndi.goal_sub_indicator_id,
+                              indicator_name: subIndi.md_sub_indicator.name,
+                              indicator_target: subIndi.global_target_value,
+                              sub_indicators: nestedSubIndicators, // This now contains all nested levels
+                            } as IGoalSubIndicatorSimple;
+                          })
+                        )
+                        : [],
+                  } as IGoalIndicatorSimple;
+                })
+              )
+              : [],
+        } as IGoalWithIndicators;
+      })
+    );
+
     return typedGoalIndicators;
   } catch (error) {
     console.error("Error getting goal indicators:", error);
     throw error;
   }
 }
-
-export async function getBabyIndicator(subIndicatorId: number) {
+export async function getBabyIndicator(subIndicatorId: number): Promise<IGoalSubIndicatorSimple[]> {
   try {
     const subIndicators = await prisma.md_sub_indicator.findMany({
       where: {
@@ -154,15 +164,27 @@ export async function getBabyIndicator(subIndicatorId: number) {
         td_goal_sub_indicator: true,
       },
     });
-    const typedSubIndicators = subIndicators.map((subIndi) => {
-      return {
-        indicator_name: subIndi.name,
-        goal_sub_indicator_id:
-          subIndi.td_goal_sub_indicator[0].goal_sub_indicator_id,
-        indicator_target: subIndi.td_goal_sub_indicator[0].global_target_value,
-        sub_indicator_id: subIndi.sub_indicator_id,
-      } as IGoalSubIndicatorSimple;
-    });
+
+    // Base case: if no sub-indicators found, return empty array
+    if (subIndicators.length === 0) {
+      return [];
+    }
+
+    // Process each sub-indicator and recursively get its children
+    const typedSubIndicators: IGoalSubIndicatorSimple[] = await Promise.all(
+      subIndicators.map(async (subIndi) => {
+        // Recursively get all nested sub-indicators
+        const nestedSubIndicators = await getBabyIndicator(subIndi.sub_indicator_id);
+
+        return {
+          indicator_name: subIndi.name,
+          goal_sub_indicator_id: subIndi.td_goal_sub_indicator[0].goal_sub_indicator_id,
+          indicator_target: subIndi.td_goal_sub_indicator[0].global_target_value,
+          sub_indicator_id: subIndi.sub_indicator_id,
+          sub_indicators: nestedSubIndicators, // This contains all nested levels
+        } as IGoalSubIndicatorSimple;
+      })
+    );
 
     console.log(typedSubIndicators);
     return typedSubIndicators;
@@ -170,4 +192,28 @@ export async function getBabyIndicator(subIndicatorId: number) {
     console.error("Error getting goal indicators:", error);
     throw error;
   }
+}
+
+export async function addProjectIndicator(
+  indicator: IGoalIndicatorSimple,
+  projectId: number,
+) {
+  await prisma.td_project_indicator.create({
+    data: {
+      project_id: projectId,
+      goal_indicator_id: indicator.goal_indicator_id,
+    }
+  })
+}
+
+export async function addProjectSubIndicators(
+  subIndicators: IGoalSubIndicatorSimple[],
+  projectId: number
+) {
+  await prisma.td_project_indicator.createMany({
+    data: subIndicators.map((indicator) => ({
+      project_id: projectId,
+      goal_sub_indicator_id: indicator.goal_sub_indicator_id
+    }))
+  })
 }

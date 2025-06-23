@@ -31,13 +31,12 @@ model md_goal {
 }
 
 model md_indicator {
-  indicator_id         Int                    @id @default(autoincrement())
-  name                 String                 @unique @db.VarChar(100)
-  description          String?
-  status               status
-  md_sub_indicator     md_sub_indicator[]
-  td_goal_indicator    td_goal_indicator[]
-  td_project_indicator td_project_indicator[]
+  indicator_id      Int                 @id @default(autoincrement())
+  name              String              @unique @db.VarChar(100)
+  description       String?
+  status            status
+  md_sub_indicator  md_sub_indicator[]
+  td_goal_indicator td_goal_indicator[]
 }
 
 model md_location {
@@ -136,6 +135,7 @@ model td_goal_sub_indicator {
   td_goal_indicator                   td_goal_indicator                     @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   md_sub_indicator                    md_sub_indicator                      @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_goal_sub_indicator_required_data td_goal_sub_indicator_required_data[]
+  td_project_indicator                td_project_indicator[]
   td_required_data_value              td_required_data_value[]
   td_sub_indicator_value              td_sub_indicator_value[]
 
@@ -178,21 +178,16 @@ model td_project {
 model td_project_indicator {
   project_indicator_id       Int                          @id @default(autoincrement())
   project_id                 Int
-  indicator_id               Int?
-  goal_indicator_id          Int
-  project_target_value       Float?
-  project_baseline_value     Float?
+  goal_indicator_id          Int?
   project_location_id        Int?
+  goal_sub_indicator_id      Int?
+  td_goal_sub_indicator      td_goal_sub_indicator?       @relation(fields: [goal_sub_indicator_id], references: [goal_sub_indicator_id], onDelete: Cascade, map: "fk_goal_sub_indicator")
   td_project_location        td_project_location?         @relation(fields: [project_location_id], references: [project_location_id], onUpdate: NoAction, map: "fk_project_location")
-  td_goal_indicator          td_goal_indicator            @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
-  md_indicator               md_indicator?                @relation(fields: [indicator_id], references: [indicator_id], onDelete: Cascade, onUpdate: NoAction)
+  td_goal_indicator          td_goal_indicator?           @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   td_project                 td_project                   @relation(fields: [project_id], references: [project_id], onDelete: Cascade, onUpdate: NoAction)
   td_project_indicator_value td_project_indicator_value[]
   td_project_sub_indicator   td_project_sub_indicator[]
   td_required_data_value     td_required_data_value[]
-
-  @@unique([project_id, indicator_id])
-  @@unique([project_id, indicator_id, project_location_id], map: "unique_project_indicator_location")
 }
 
 model td_project_indicator_value {
