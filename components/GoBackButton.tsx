@@ -5,7 +5,7 @@ import { IoArrowBack } from "react-icons/io5";
 const GoBackButton = () => {
   const router = useRouter();
   return (
-    <button onClick={() => router.back()} className="button-style">
+    <button onClick={() => router.back()} className="navigation-button">
       <IoArrowBack className="" />
       <p>Go Back</p>
     </button>

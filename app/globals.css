@@ -11,3 +11,7 @@ body {
 .button-style {
     @apply w-fit px-8 py-2 bg-gradient-to-r from-green-100 to-orange-200 flex items-center gap-2 uppercase font-bold text-[#614124];
 }
+
+.navigation-button {
+    @apply w-fit px-4 py-2 bg-orange-300 flex items-center gap-2 text-sm font-semibold rounded-md;
+}

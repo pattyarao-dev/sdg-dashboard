@@ -35,6 +35,15 @@ export default async function AddGoalIndicator({
         indicators={availableIndicators}
         requiredData={requiredData}
       /> */}
+      <div>
+        {goal ? (
+          <p className="text-3xl font-bold uppercase underline text-green-800">
+            {goal.name}
+          </p>
+        ) : (
+          <p>Loading...</p>
+        )}
+      </div>
       <IndicatorManagementComponent
         goal={goal as unknown as Goal}
         requiredData={requiredData}

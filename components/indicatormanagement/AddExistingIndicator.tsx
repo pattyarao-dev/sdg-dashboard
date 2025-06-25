@@ -1,53 +1,3 @@
-// "use client";
-
-// import { useState } from "react";
-// import { Goal, GoalIndicator, RequiredData } from "@/types/goal.types";
-
-// const AddExistingIndicator = ({
-//   availableIndicators,
-//   requiredData,
-// }: {
-//   goal: Goal;
-//   availableIndicators: GoalIndicator[];
-//   requiredData: RequiredData[];
-// }) => {
-//   const [selectedIndicator, setSelectedIndicator] = useState({
-//     name: "",
-//     description: "",
-//     global_target_value: 0,
-//     global_baseline_value: 0,
-//     requiredData: [{}],
-//     sub_indicators: [{}],
-//   });
-
-//   console.log(availableIndicators.map((ind) => ind.md_indicator.name));
-
-//   return (
-//     <div className="w-full p-10 bg-white drop-shadow-lg flex flex-col gap-10">
-//       <div className="w-full flex flex-col gap-2">
-//         <p className="text-lg font-semibold text-orange-400">
-//           Add an existing indicator to this goal.
-//         </p>
-//         <hr className="w-full border border-orange-400" />
-//       </div>
-//       <div className="w-full flex items-start gap-10">
-//         <div className="w-1/4 h-[600px] overflow-y-scroll flex flex-col gap-2">
-//           {availableIndicators.map((indicator, index) => (
-//             <div
-//               key={index}
-//               className="w-full p-2 border border-gray-300 text-left"
-//             >
-//               <button>{indicator.md_indicator.name}</button>
-//             </div>
-//           ))}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default AddExistingIndicator;
-
 "use client";
 
 import { useState, useRef } from "react";
@@ -62,6 +12,8 @@ import {
   createNewMainSubIndicator,
   createNewSubSubIndicator,
 } from "@/app/actions/actions_indicatormanagement";
+
+type IndicatorType = "sub" | "main";
 
 const AddExistingIndicator = ({
   goal,
@@ -85,7 +37,7 @@ const AddExistingIndicator = ({
   const [allRequiredData, setAllRequiredData] =
     useState<RequiredData[]>(requiredData);
 
-  // Convert GoalIndicator to Indicator format for consistency
+  // FIXED: Convert GoalIndicator to Indicator format - start with empty sub_indicators
   const convertToIndicator = (goalIndicator: GoalIndicator): Indicator => {
     return {
       indicator_id: goalIndicator.md_indicator.indicator_id,
@@ -94,9 +46,7 @@ const AddExistingIndicator = ({
       global_target_value: goalIndicator.target_value || 0,
       global_baseline_value: goalIndicator.baseline_value || 0,
       required_data: goalIndicator.md_indicator.required_data || [],
-      sub_indicators:
-        goalIndicator.md_indicator.sub_indicators?.map(convertSubIndicator) ||
-        [],
+      sub_indicators: [], // ✅ Start with empty - let user choose what to add
     };
   };
 
@@ -108,8 +58,7 @@ const AddExistingIndicator = ({
       global_target_value: subIndicator.target_value || 0,
       global_baseline_value: subIndicator.baseline_value || 0,
       required_data: subIndicator.required_data || [],
-      sub_indicators:
-        subIndicator.sub_indicators?.map(convertSubIndicator) || [],
+      sub_indicators: [], // ✅ Start with empty - let user choose what to add
     };
   };
 
@@ -280,6 +229,203 @@ const AddExistingIndicator = ({
     });
   };
 
+  // Handle adding existing sub-indicators
+  const handleAddExistingSubIndicator = (
+    parentIndicator: Indicator,
+    existingSubIndicator: Indicator,
+  ) => {
+    if (!goalSpecificIndicator) return;
+
+    // Create a copy of the existing sub-indicator with new temporary ID for this goal
+    const goalSpecificSubIndicator: Indicator = {
+      ...existingSubIndicator,
+      indicator_id: Number(Date.now()), // New temporary ID for goal-specific instance
+      global_target_value: 0, // Reset goal-specific values
+      global_baseline_value: 0,
+      required_data: [], // Start with empty required data for this goal
+    };
+
+    setGoalSpecificIndicator((prev: Indicator | null) => {
+      if (!prev) return null;
+
+      const updateIndicators = (indicator: Indicator): Indicator => {
+        if (indicator.indicator_id === parentIndicator.indicator_id) {
+          return {
+            ...indicator,
+            sub_indicators: [
+              ...(indicator.sub_indicators ?? []),
+              goalSpecificSubIndicator,
+            ],
+          };
+        }
+        return {
+          ...indicator,
+          sub_indicators: indicator.sub_indicators?.map(updateIndicators) ?? [],
+        };
+      };
+
+      return updateIndicators(prev);
+    });
+  };
+
+  // Handle adding new sub-indicators
+  const handleAddNewSubIndicator = (parentIndicator: Indicator) => {
+    const newSubIndicator: Indicator = {
+      indicator_id: Number(Date.now()), // Unique temporary ID
+      name: "",
+      description: "",
+      global_target_value: 0,
+      global_baseline_value: 0,
+      required_data: [] as RequiredData[],
+      sub_indicators: [] as Indicator[],
+    };
+
+    setGoalSpecificIndicator((prev: Indicator | null) => {
+      if (!prev) return null;
+
+      const updateIndicators = (indicator: Indicator): Indicator => {
+        if (indicator.indicator_id === parentIndicator.indicator_id) {
+          return {
+            ...indicator,
+            sub_indicators: [
+              ...(indicator.sub_indicators ?? []),
+              newSubIndicator,
+            ],
+          };
+        }
+        return {
+          ...indicator,
+          sub_indicators: indicator.sub_indicators?.map(updateIndicators) ?? [],
+        };
+      };
+
+      return updateIndicators(prev);
+    });
+  };
+
+  const handleRemoveSubIndicator = (
+    parentIndicator: Indicator,
+    index: number,
+  ) => {
+    if (!goalSpecificIndicator) return;
+
+    setGoalSpecificIndicator((prev: Indicator | null) => {
+      if (!prev) return null;
+
+      const updateIndicators = (indicator: Indicator): Indicator => {
+        if (indicator === parentIndicator) {
+          return {
+            ...indicator,
+            sub_indicators: indicator.sub_indicators.filter(
+              (_, i) => i !== index,
+            ),
+          };
+        }
+        return {
+          ...indicator,
+          sub_indicators: indicator.sub_indicators.map(updateIndicators),
+        };
+      };
+      return updateIndicators(prev);
+    });
+  };
+
+  // FIXED: Get only direct children sub-indicators that aren't already added
+  const getAvailableSubIndicators = (
+    parentIndicator: Indicator,
+    originalIndicator: GoalIndicator,
+  ) => {
+    const currentSubIndicatorIds = parentIndicator.sub_indicators.map(
+      (sub) => sub.indicator_id,
+    );
+
+    // Helper function to find direct children of a specific indicator
+    const findDirectChildren = (searchIndicatorName: string): any[] => {
+      // Search by name instead of ID since added sub-indicators have new temporary IDs
+      const searchInHierarchy = (indicators: any[]): any[] => {
+        for (const indicator of indicators) {
+          // Match by name since temporary IDs won't match original structure
+          if (indicator.name === searchIndicatorName) {
+            return indicator.sub_indicators || [];
+          }
+
+          // Recursively search in sub-indicators
+          if (indicator.sub_indicators && indicator.sub_indicators.length > 0) {
+            const found = searchInHierarchy(indicator.sub_indicators);
+            if (found.length > 0) return found;
+          }
+        }
+        return [];
+      };
+
+      // First check if it's the main indicator
+      if (parentIndicator.name === originalIndicator.md_indicator.name) {
+        return originalIndicator.md_indicator.sub_indicators || [];
+      }
+
+      // Otherwise search in the hierarchy
+      return searchInHierarchy(
+        originalIndicator.md_indicator.sub_indicators || [],
+      );
+    };
+
+    // Get direct children of the parent indicator by name
+    const directChildren = findDirectChildren(parentIndicator.name);
+
+    // Filter out already added sub-indicators (compare by name since IDs are different)
+    const currentSubIndicatorNames = parentIndicator.sub_indicators.map(
+      (sub) => sub.name,
+    );
+
+    return directChildren.filter(
+      (subInd) => !currentSubIndicatorNames.includes(subInd.name),
+    );
+  };
+
+  // ADDED: Missing renderSubIndicatorOptions function
+  const renderSubIndicatorOptions = (
+    availableSubIndicators: any[],
+  ): JSX.Element[] => {
+    return availableSubIndicators.map((subInd) => (
+      <option key={subInd.indicator_id} value={subInd.indicator_id}>
+        {subInd.name}
+      </option>
+    ));
+  };
+
+  const travelIndicator = async (
+    subIndicator: Indicator,
+    parentIndicatorId: number,
+    goalIndicatorId: number,
+    type: IndicatorType,
+  ) => {
+    // we place the logic over here!
+    let newSubIndicator: number = -1;
+    if (type === "main") {
+      newSubIndicator = await createNewMainSubIndicator(
+        subIndicator,
+        parentIndicatorId,
+        goalIndicatorId,
+      );
+    } else if (type === "sub") {
+      newSubIndicator = await createNewSubSubIndicator(
+        subIndicator,
+        parentIndicatorId,
+        goalIndicatorId,
+      );
+    }
+
+    // exit over here!
+    if (subIndicator.sub_indicators.length <= 0) {
+      return;
+    }
+
+    // if there are more we keep going
+    for (const sub of subIndicator.sub_indicators) {
+      await travelIndicator(sub, newSubIndicator, goalIndicatorId, "sub");
+    }
+  };
+
   const handleSubmitIndicator = async () => {
     if (!goalSpecificIndicator) {
       alert("Please select an indicator first");
@@ -288,9 +434,21 @@ const AddExistingIndicator = ({
 
     try {
       // Create goal-indicator relationship with the existing indicator
-      // You'll need to create a new action for this specific case
-      // For now, using the existing createNewIndicator but you might want a different action
-      await createNewIndicator(goalSpecificIndicator, goal.goal_id);
+      const newlyCreateIndicator = await createNewIndicator(
+        goalSpecificIndicator,
+        goal.goal_id,
+      );
+
+      if (goalSpecificIndicator.sub_indicators.length > 0) {
+        for (const sub of goalSpecificIndicator.sub_indicators) {
+          await travelIndicator(
+            sub,
+            newlyCreateIndicator.newIndicatorId,
+            newlyCreateIndicator.newGoalIndicatorId,
+            "main",
+          );
+        }
+      }
 
       console.log("Indicator added to goal:", goalSpecificIndicator);
 
@@ -307,13 +465,19 @@ const AddExistingIndicator = ({
   const renderIndicatorForm = (
     indicator: Indicator,
     parentIndicator?: Indicator,
-    isReadOnly: boolean = false,
+    originalIndicator?: GoalIndicator,
   ) => {
     const isRequiredDataSelected = (data: RequiredData) => {
       return indicator.required_data.some(
         (rd) => rd.required_data_id === data.required_data_id,
       );
     };
+
+    // Check if this is an existing indicator (has a name that can't be changed)
+    const isExistingIndicator = indicator.name !== "";
+    const availableSubIndicators = originalIndicator
+      ? getAvailableSubIndicators(indicator, originalIndicator)
+      : [];
 
     return (
       <div
@@ -335,8 +499,14 @@ const AddExistingIndicator = ({
               type="text"
               placeholder="Indicator Name"
               value={indicator.name}
-              readOnly={true}
-              className="w-full p-2 border border-gray-300 bg-gray-100 cursor-not-allowed"
+              onChange={(e) =>
+                !isExistingIndicator &&
+                handleInputChange(indicator, "name", e.target.value)
+              }
+              readOnly={isExistingIndicator}
+              className={`w-full p-2 border border-gray-300 ${
+                isExistingIndicator ? "bg-gray-100 cursor-not-allowed" : ""
+              }`}
             />
           </div>
 
@@ -348,8 +518,14 @@ const AddExistingIndicator = ({
               type="text"
               placeholder="Indicator Description"
               value={indicator.description}
-              readOnly={true}
-              className="w-full p-2 border border-gray-300 bg-gray-100 cursor-not-allowed"
+              onChange={(e) =>
+                !isExistingIndicator &&
+                handleInputChange(indicator, "description", e.target.value)
+              }
+              readOnly={isExistingIndicator}
+              className={`w-full p-2 border border-gray-300 ${
+                isExistingIndicator ? "bg-gray-100 cursor-not-allowed" : ""
+              }`}
             />
           </div>
 
@@ -495,13 +671,131 @@ const AddExistingIndicator = ({
               )}
             </div>
           </div>
+
+          {/* FIXED: Sub-Indicator Management */}
+          <div className="mt-4 w-full flex flex-col gap-4">
+            <div className="w-full flex flex-col gap-2">
+              <h3 className="text-sm text-green-800 font-semibold uppercase">
+                Sub-Indicator Management:
+              </h3>
+
+              {/* Show current sub-indicators if any */}
+              {indicator.sub_indicators &&
+                indicator.sub_indicators.length > 0 && (
+                  <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded">
+                    <p className="text-xs text-gray-600 mb-2">
+                      Current Sub-Indicators ({indicator.sub_indicators.length}
+                      ):
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {indicator.sub_indicators.map((sub, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                        >
+                          {sub.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+            </div>
+
+            <div className="w-full flex gap-4 items-center justify-end">
+              {/* Add New Sub-Indicator Button */}
+              <button
+                onClick={() => handleAddNewSubIndicator(indicator)}
+                className="px-4 py-2 bg-green-800 rounded-md font-semibold text-white uppercase text-sm hover:bg-green-600 transition-colors"
+              >
+                Add New Sub-Indicator
+              </button>
+
+              {/* Add Existing Sub-Indicator Dropdown */}
+              {availableSubIndicators.length > 0 ? (
+                <div className="relative">
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const selectedSubInd = availableSubIndicators.find(
+                          (sub) =>
+                            sub.indicator_id.toString() === e.target.value,
+                        );
+                        if (selectedSubInd && originalIndicator) {
+                          handleAddExistingSubIndicator(
+                            indicator,
+                            convertSubIndicator(selectedSubInd),
+                          );
+                        }
+                        e.target.value = ""; // Reset select
+                      }
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md font-semibold uppercase text-sm appearance-none pr-8 hover:bg-blue-700 transition-colors cursor-pointer"
+                  >
+                    <option value="">Add Existing Sub-Indicator</option>
+                    {renderSubIndicatorOptions(availableSubIndicators)}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                    <svg
+                      className="w-4 h-4 text-white"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              ) : (
+                <div className="px-4 py-2 bg-gray-300 text-gray-600 rounded-md font-semibold uppercase text-sm cursor-not-allowed">
+                  No Available Sub-Indicators
+                </div>
+              )}
+
+              {/* Remove Button (only for sub-indicators) */}
+              {parentIndicator && (
+                <button
+                  onClick={() =>
+                    handleRemoveSubIndicator(
+                      parentIndicator,
+                      parentIndicator.sub_indicators.indexOf(indicator),
+                    )
+                  }
+                  className="px-4 py-2 bg-red-500 text-white rounded-md font-semibold uppercase text-sm hover:bg-red-600 transition-colors"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+
+            {/* Available Sub-Indicators Info */}
+            {availableSubIndicators.length > 0 && (
+              <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded">
+                <p className="text-xs text-blue-800 mb-2">
+                  Available Sub-Indicators for "{indicator.name}":
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {availableSubIndicators.map((sub) => (
+                    <span
+                      key={sub.indicator_id}
+                      className="px-2 py-1 bg-white text-blue-800 text-xs rounded border"
+                    >
+                      {sub.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Render sub-indicators (read-only) */}
+        {/* Render sub-indicators */}
         <div className="mt-6 ml-6">
           {indicator.sub_indicators.map((subIndicator, index) => (
             <div key={index}>
-              {renderIndicatorForm(subIndicator, indicator, true)}
+              {renderIndicatorForm(subIndicator, indicator, originalIndicator)}
             </div>
           ))}
         </div>
@@ -543,6 +837,13 @@ const AddExistingIndicator = ({
                     {indicator.md_indicator.description}
                   </div>
                 )}
+                {indicator.md_indicator.sub_indicators &&
+                  indicator.md_indicator.sub_indicators.length > 0 && (
+                    <div className="text-xs text-blue-600 mt-1">
+                      {indicator.md_indicator.sub_indicators.length}{" "}
+                      sub-indicator(s) available
+                    </div>
+                  )}
               </button>
             </div>
           ))}
@@ -556,12 +857,19 @@ const AddExistingIndicator = ({
                 <p className="text-sm text-blue-800">
                   <strong>Note:</strong> You're adding an existing indicator to
                   this goal. The indicator name and description cannot be
-                  changed, but you can set goal-specific targets, baselines, and
-                  required data.
+                  changed, but you can set goal-specific targets, baselines,
+                  required data, and add/modify sub-indicators.
                 </p>
               </div>
 
-              {renderIndicatorForm(goalSpecificIndicator)}
+              {renderIndicatorForm(
+                goalSpecificIndicator,
+                undefined,
+                availableIndicators.find(
+                  (ind) =>
+                    ind.md_indicator.indicator_id === selectedIndicatorId,
+                ),
+              )}
 
               <button
                 onClick={handleSubmitIndicator}
