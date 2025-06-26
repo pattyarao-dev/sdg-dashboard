@@ -509,3 +509,129 @@ export async function createNewSubSubIndicator(
 
   return newSubIndicator.sub_indicator_id;
 }
+
+export async function CreateOldMainSubIndicatorRelationship(
+  subIndicator: Indicator,
+  parentIndicatorId: number,
+  goalIndicatorId: number,
+) {
+  console.log(parentIndicatorId)
+  // create new required data list where it's new only
+  const newRequiredDataClient = subIndicator.required_data.filter(
+    (req) => req.newRD,
+  );
+  const oldRequiredDataClient = subIndicator.required_data.filter(
+    (req) => req.newRD === false,
+  );
+
+  const newRequiredDataPromises = newRequiredDataClient.map((req) =>
+    prisma.ref_required_data.create({
+      data: { name: req.name },
+    }),
+  );
+
+  const newRequiredData = await Promise.all(newRequiredDataPromises);
+
+  const completeRequiredData = [...newRequiredData, ...oldRequiredDataClient];
+  const newGoalSubIndicator = await prisma.td_goal_sub_indicator.create({
+    data: {
+      sub_indicator_id: subIndicator.indicator_id,
+      goal_indicator_id: goalIndicatorId,
+      global_target_value: subIndicator.global_target_value,
+      global_baseline_value: subIndicator.global_baseline_value,
+    },
+  });
+
+
+  await prisma.td_goal_sub_indicator_required_data.createMany({
+    data: completeRequiredData.map((req) => ({
+      required_data_id: req.required_data_id,
+      goal_sub_indicator_id: newGoalSubIndicator.goal_sub_indicator_id,
+    })),
+  });
+
+  return subIndicator.indicator_id;
+}
+
+export async function createOldSubIndicatorRelationship(
+  subIndicator: Indicator,
+  parentIndicatorId: number,
+  goalIndicatorId: number,
+) {
+  console.log(parentIndicatorId)
+  // create new required data list where it's new only
+  const newRequiredDataClient = subIndicator.required_data.filter(
+    (req) => req.newRD,
+  );
+  const oldRequiredDataClient = subIndicator.required_data.filter(
+    (req) => req.newRD === false,
+  );
+
+  const newRequiredDataPromises = newRequiredDataClient.map((req) =>
+    prisma.ref_required_data.create({
+      data: { name: req.name },
+    }),
+  );
+
+  const newRequiredData = await Promise.all(newRequiredDataPromises);
+
+  const completeRequiredData = [...newRequiredData, ...oldRequiredDataClient];
+  const newGoalSubIndicator = await prisma.td_goal_sub_indicator.create({
+    data: {
+      sub_indicator_id: subIndicator.indicator_id,
+      goal_indicator_id: goalIndicatorId,
+      global_target_value: subIndicator.global_target_value,
+      global_baseline_value: subIndicator.global_baseline_value,
+    },
+  });
+
+  await prisma.td_goal_sub_indicator_required_data.createMany({
+    data: completeRequiredData.map((req) => ({
+      required_data_id: req.required_data_id,
+      goal_sub_indicator_id: newGoalSubIndicator.goal_sub_indicator_id,
+    })),
+  });
+
+  return subIndicator.indicator_id
+}
+
+export async function createMainOldIndicatorGoal(indicator: Indicator, goalId: number) {
+
+  // create new required data list where it's new only
+  const newRequiredDataClient = indicator.required_data.filter(
+    (req) => req.newRD,
+  );
+  const oldRequiredDataClient = indicator.required_data.filter(
+    (req) => req.newRD === false,
+  );
+
+  const newRequiredDataPromises = newRequiredDataClient.map((req) =>
+    prisma.ref_required_data.create({
+      data: { name: req.name },
+    }),
+  );
+
+  const newRequiredData = await Promise.all(newRequiredDataPromises);
+
+  const completeRequiredData = [...newRequiredData, ...oldRequiredDataClient];
+  const newGoalIndicator = await prisma.td_goal_indicator.create({
+    data: {
+      indicator_id: indicator.indicator_id,
+      goal_id: goalId,
+      global_target_value: indicator.global_target_value,
+      global_baseline_value: indicator.global_baseline_value,
+    },
+  });
+
+  await prisma.td_goal_indicator_required_data.createMany({
+    data: completeRequiredData.map((req) => ({
+      required_data_id: req.required_data_id,
+      goal_indicator_id: newGoalIndicator.goal_indicator_id,
+    })),
+  });
+
+  return {
+    newIndicatorId: indicator.indicator_id,
+    newGoalIndicatorId: newGoalIndicator.goal_indicator_id,
+  };
+}
