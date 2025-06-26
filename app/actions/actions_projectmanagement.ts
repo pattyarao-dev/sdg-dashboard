@@ -217,3 +217,9 @@ export async function addProjectSubIndicators(
     }))
   })
 }
+
+export async function addProjectIndicatorValues(projectSubIndicators: IGoalSubIndicatorSimple[], projectId: number){
+  await prisma.td_required_data_value.createMany({
+    data:
+  })
+}
