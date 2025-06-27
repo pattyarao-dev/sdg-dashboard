@@ -2,199 +2,209 @@
 
 import { useState } from "react";
 import { IProjectIndicator } from "@/types/project.types";
-import useUpdateValues from "@/hooks/useUpdateValues";
-import useCalculateValue from "@/hooks/useCalculateValue";
-
+import { saveProjectIndicatorValues } from "@/app/actions/actions_projectmanagement";
 const EditProjectIndicatorValues = ({
   indicator,
 }: {
   indicator: IProjectIndicator;
 }) => {
-  const { updateValues } = useUpdateValues();
-
-  const {
-    loading: calculateIndicatorLoading,
-    calculateValue,
-    calculatedValue,
-  } = useCalculateValue();
-
   const [newValues, setNewValues] = useState<
     Array<{
-      goalIndicatorId: number;
       requiredDataId: number;
       value: number;
-      createdBy: number;
+      measurementDate: string;
+      location: string;
+      notes: string;
     }>
   >([]);
 
-  const userId = 1;
+  const [isLoading, setIsLoading] = useState(false);
+  const userId = 1; // You might want to get this from context or props
 
-  const [finalCalculatedValue, setFinalCalculatedValue] = useState<
-    number | null
-  >();
-
-  const handleValueChange = (requiredDataId: number, value: string) => {
-    const numericValue = value === "" ? 0 : parseFloat(value);
-
+  const handleValueChange = (
+    requiredDataId: number,
+    field: string,
+    value: string,
+  ) => {
     const existingIndex = newValues.findIndex(
       (item) => item.requiredDataId === requiredDataId,
     );
+
+    const updatedValue = {
+      requiredDataId,
+      value: field === "value" ? (value === "" ? 0 : parseFloat(value)) : 0,
+      measurementDate: field === "measurementDate" ? value : "",
+      location: field === "location" ? value : "",
+      notes: field === "notes" ? value : "",
+    };
 
     if (existingIndex >= 0) {
       const updatedValues = [...newValues];
       updatedValues[existingIndex] = {
         ...updatedValues[existingIndex],
-        value: numericValue,
+        [field]:
+          field === "value" ? (value === "" ? 0 : parseFloat(value)) : value,
       };
       setNewValues(updatedValues);
     } else {
-      setNewValues([
-        ...newValues,
-        {
-          goalIndicatorId: indicator.projectIndicatorId,
-          requiredDataId: requiredDataId,
-          value: numericValue,
-          createdBy: userId,
-        },
-      ]);
+      setNewValues([...newValues, updatedValue]);
     }
   };
 
   const submitNewValues = async () => {
-    const validValues = newValues.filter((item) => item.value !== null);
+    const validValues = newValues.filter(
+      (item) => item.value !== null && item.value !== 0,
+    );
 
     if (validValues.length === 0) {
-      alert("Please input a value.");
+      alert("Please input at least one value.");
       return;
     }
 
+    setIsLoading(true);
     try {
-      await updateValues(validValues, "projectIndicator");
+      const dataToSave = validValues.map((item) => ({
+        requiredDataId: item.requiredDataId,
+        projectIndicatorId: indicator.projectIndicatorId,
+        value: item.value,
+        measurementDate:
+          item.measurementDate || new Date().toISOString().split("T")[0],
+        location: item.location || "",
+        notes: item.notes || "",
+        createdBy: userId,
+      }));
 
-      if (indicator.computationRule && indicator.computationRule.length > 0) {
-        const rule = indicator.computationRule[0];
+      await saveProjectIndicatorValues(dataToSave);
 
-        const valuesToCalculate: Array<{
-          requiredDataName: string;
-          requiredDataValue: number;
-        }> = [];
-        validValues.forEach((item) => {
-          const requiredData = indicator.requiredData.find(
-            (data) => data.requiredDataId === item.requiredDataId,
-          );
-
-          if (requiredData) {
-            const formattedName = requiredData.requiredDataName
-              .replace(/\s+/g, "_")
-              .toLowerCase();
-
-            if (formattedName.trim() !== "") {
-              valuesToCalculate.push({
-                requiredDataName: formattedName,
-                requiredDataValue: item.value,
-              });
-            }
-          }
-        });
-
-        // await calculateValue(
-        //   rule.ruleId,
-        //   valuesToCalculate,
-        //   userId,
-        //   "projectIndicator",
-        //   indicator.projectIndicatorId,
-        // );
-
-        const computedResult = await calculateValue(
-          rule.ruleId,
-          valuesToCalculate,
-          userId,
-          "projectIndicator",
-          indicator.projectIndicatorId,
-        );
-
-        if (computedResult?.computedValue !== undefined) {
-          setFinalCalculatedValue(computedResult.computedValue);
-        }
-
-        // if (computedResult?.calculatedValue !== undefined) {
-        //   setFinalCalculatedValue(computedResult.calculatedValue);
-        // }
-        // console.log("Calculated Value:", computedResult?.computedValue);
-        // console.log("Final Calculated Value:", finalCalculatedValue);
-      }
-
+      alert("Values saved successfully!");
       setNewValues([]);
     } catch (error) {
       console.error("Failed to save values:", error);
+      alert("Failed to save values. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const getCurrentValue = (requiredDataId: number, field: string) => {
+    const found = newValues.find((v) => v.requiredDataId === requiredDataId);
+    return found ? found[field] || "" : "";
   };
 
   return (
     <div className="w-full">
       {indicator.requiredData.length > 0 ? (
         <div className="w-full flex flex-col gap-6">
-          <div className="w-full p-4 bg-gray-300 flex flex-col gap-2">
-            <p className="text-sm font-bold text-green-800">
-              Computation Rule for {indicator.indicatorName}:
-            </p>
-            {indicator.computationRule.map((rule) => (
-              <p
-                key={rule.ruleId}
-                className="w-full font-black font-mono text-xl"
-              >
-                {rule.ruleFormula}
-              </p>
-            ))}
-          </div>
           <div className="w-full p-4 flex flex-col gap-6">
-            <div className="w-full flex flex-col gap-2">
+            <div className="w-full flex flex-col gap-4">
               {indicator.requiredData.map((data) => (
                 <div
                   key={data.requiredDataId}
-                  className="w-full flex items-start justify-between"
+                  className="w-full p-4 border border-gray-300 rounded-lg flex flex-col gap-3"
                 >
-                  <p>{data.requiredDataName}</p>
-                  <div className="flex items-center gap-4">
-                    <p>Current value for {data.requiredDataName}</p>
-                    <input
-                      type="number"
-                      className="w-[100px] border border-gray-700"
-                      onChange={(e) =>
-                        handleValueChange(data.requiredDataId, e.target.value)
-                      }
-                      value={
-                        newValues.find(
-                          (v) => v.requiredDataId === data.requiredDataId,
-                        )?.value ?? ""
-                      }
-                    />
+                  <h4 className="font-semibold text-lg">
+                    {data.requiredDataName}
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium text-gray-700">
+                        Value
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter value"
+                        onChange={(e) =>
+                          handleValueChange(
+                            data.requiredDataId,
+                            "value",
+                            e.target.value,
+                          )
+                        }
+                        value={getCurrentValue(data.requiredDataId, "value")}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium text-gray-700">
+                        Measurement Date
+                      </label>
+                      <input
+                        type="date"
+                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(e) =>
+                          handleValueChange(
+                            data.requiredDataId,
+                            "measurementDate",
+                            e.target.value,
+                          )
+                        }
+                        value={getCurrentValue(
+                          data.requiredDataId,
+                          "measurementDate",
+                        )}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium text-gray-700">
+                        Location
+                      </label>
+                      <input
+                        type="text"
+                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter location"
+                        onChange={(e) =>
+                          handleValueChange(
+                            data.requiredDataId,
+                            "location",
+                            e.target.value,
+                          )
+                        }
+                        value={getCurrentValue(data.requiredDataId, "location")}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium text-gray-700">
+                        Notes
+                      </label>
+                      <input
+                        type="text"
+                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter notes"
+                        onChange={(e) =>
+                          handleValueChange(
+                            data.requiredDataId,
+                            "notes",
+                            e.target.value,
+                          )
+                        }
+                        value={getCurrentValue(data.requiredDataId, "notes")}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
+
             <div className="w-full flex justify-end">
               <button
                 onClick={submitNewValues}
-                className="w-fit px-4 py-2 bg-orange-200 font-bold"
+                disabled={isLoading}
+                className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Submit Values and Compute
+                {isLoading ? "Saving..." : "Save Values"}
               </button>
-            </div>
-            <div className="w-full">
-              {calculateIndicatorLoading ? (
-                <p>Calculating...</p>
-              ) : calculatedValue !== null ? (
-                <div className="w-full p-4 bg-gray-200">
-                  <p className="font-bold text-green-800">Computed Value:</p>
-                  <p className="text-xl font-mono">{finalCalculatedValue}</p>
-                </div>
-              ) : null}
             </div>
           </div>
         </div>
       ) : (
-        <div>No required data identified for this indicator.</div>
+        <div className="text-gray-500 text-center py-8">
+          No required data identified for this indicator.
+        </div>
       )}
     </div>
   );
