@@ -93,8 +93,8 @@ const AddNewIndicator = ({
 
           const updatedRequiredData = isSelected
             ? current.required_data.filter(
-              (rd) => rd.required_data_id !== data.required_data_id,
-            )
+                (rd) => rd.required_data_id !== data.required_data_id,
+              )
             : [...current.required_data, data];
 
           return { ...current, required_data: updatedRequiredData };
@@ -130,7 +130,7 @@ const AddNewIndicator = ({
     const newRequiredData: RequiredData = {
       required_data_id: Number(Date.now()), // Temporary ID
       name: inputValue,
-      newRD: true
+      newRD: true,
       // Add other properties as needed based on your RequiredData type
     };
 
@@ -425,32 +425,36 @@ const AddNewIndicator = ({
                 <div className="w-full flex justify-end"></div>
               </div>
             </div>
-            <div className="w-full h-auto overflow-y-scroll flex flex-col gap-2">
+            <div className="w-full flex flex-col gap-2">
               <p className="uppercase text-sm text-green-800 font-bold">
                 Select existing required data:
               </p>
-              {requiredData.length > 0 ? (
-                requiredData.map((data, index) => (
-                  <div
-                    key={index}
-                    className={`w-full p-2 flex items-center gap-2 ${isRequiredDataSelected(data) ? "bg-green-50 border border-green-800" : "border border-gray-200"}`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleSelectRequiredData(indicator, data)}
-                      className="w-full text-left"
+              <div className="w-full h-[265px] overflow-y-scroll flex flex-col gap-2">
+                {requiredData.length > 0 ? (
+                  requiredData.map((data, index) => (
+                    <div
+                      key={index}
+                      className={`w-full p-2 flex items-center gap-2 ${isRequiredDataSelected(data) ? "bg-green-50 border border-green-800" : "border border-gray-200"}`}
                     >
-                      {data.name}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleSelectRequiredData(indicator, data)
+                        }
+                        className="w-full text-left"
+                      >
+                        {data.name}
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="w-full p-2 flex items-center gap-2">
+                    <p className="italic text-gray-600">
+                      No required data available
+                    </p>
                   </div>
-                ))
-              ) : (
-                <div className="w-full p-2 flex items-center gap-2">
-                  <p className="italic text-gray-600">
-                    No required data available
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <div className="w-full flex flex-col gap-2">
