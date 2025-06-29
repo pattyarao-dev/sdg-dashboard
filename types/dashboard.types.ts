@@ -1,46 +1,86 @@
-export interface Goal {
-  name: any;
-  goal_id: number;
-  goal_name: string;
-  color?: string;
+export interface DashboardRequiredData {
+  requiredDataId: number;
+  requiredDataName: string;
 }
-export interface GeoJSONFeature {
-    type: string;
-    geometry: {
-      type: string;
-      coordinates: number[][][];
-    };
-    properties: {
-      NAME_3: string;
-      [key: string]: any;
-    };
-  }
-export interface IndicatorValue {
-    value_id: number;
-    indicator_id: number;
-    goal_id: number;
-    value: number;
-    measurement_date: string;
-    location: string;
-    goal_name: string;
-    indicator_name: string;
-  }
 
-export interface GoalSummary {
-    goal_id: number;
-    goal_name: string;
-    count: number;
-    avg_value: number;
-    median_value: number;
-    min_value: number;
-    max_value: number;
-    std_dev: number;
-    unique_values: number;
-    latest_value: number;
-    latest_measurement_date: string;
-    project_avg_value?: number;
-    project_median_value?: number;
-    project_min_value?: number;
-    project_max_value?: number;
-    project_values_count?: number;
-  }
+export interface DashboardComputationRule {
+  ruleId: number;
+  ruleFormula: string;
+}
+
+export interface DashboardSubIndicator {
+  goalSubIndicatorId: number;
+  subIndicatorId: number;
+  subIndicatorName: string;
+  requiredData: DashboardRequiredData[];
+  subIndicatorComputationRule: DashboardComputationRule[];
+}
+
+export interface DashboardIndicator {
+  goalIndicatorId: number;
+  indicatorId: number;
+  indicatorName: string;
+  requiredData: DashboardRequiredData[];
+  subIndicators: DashboardSubIndicator[];
+  computationRule: DashboardComputationRule[];
+}
+
+export interface DashboardProcessedGoal {
+  goalId: number;
+  goalName: string;
+  indicators: DashboardIndicator[];
+}
+
+export interface DashboardProcessedGoals extends Array<DashboardProcessedGoal> { }
+
+
+export interface DashboardRequiredDataRef {
+  required_data_id: number;
+  name: string;
+}
+
+export interface DashboardGoalIndicatorRequiredData {
+  ref_required_data: DashboardRequiredDataRef;
+}
+
+export interface DashboardSubIndicatorHierarchy {
+  indicator_id: number;
+  name: string;
+  description: string | null;
+  status: string;
+  required_data: any[];
+  sub_indicators: DashboardSubIndicatorHierarchy[];
+}
+
+export interface DashboardMdIndicator {
+  indicator_id: number;
+  name: string;
+  description?: string | null;
+  status?: string;
+}
+
+export interface DashboardMdSubIndicator {
+  sub_indicator_id: number;
+  name: string;
+  description?: string | null;
+  status?: string;
+  parent_indicator_id?: number | null;
+  parent_sub_indicator_id?: number | null;
+}
+
+export interface DashboardGoalSubIndicator {
+  md_sub_indicator: DashboardMdSubIndicator;
+}
+
+export interface DashboardAvailableIndicator {
+  goal_indicator_id: number;
+  goal_id: number;
+  md_indicator: DashboardMdIndicator;
+  td_goal_sub_indicator: DashboardGoalSubIndicator[];
+  td_goal_indicator_required_data: DashboardGoalIndicatorRequiredData[];
+}
+
+export interface DashboardGetAvailableIndicatorsResponse {
+  availableIndicators: DashboardAvailableIndicator[];
+  getCompleteSubIndicatorHierarchy: (indicatorId: number) => Promise<DashboardSubIndicatorHierarchy[]>;
+}
