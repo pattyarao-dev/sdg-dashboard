@@ -8,6 +8,49 @@ import {
 } from "@/types/indicator.types";
 import { IProject } from "@/types/project.types";
 
+interface ProjectIndicatorValueData {
+  requiredDataId: number;
+  projectIndicatorId: number;
+  value: number;
+  measurementDate: string;
+  location: string;
+  notes: string;
+  createdBy: number;
+}
+
+export async function saveProjectIndicatorValues(
+  values: ProjectIndicatorValueData[],
+) {
+  try {
+    // Insert multiple values using createMany
+    const result = await prisma.td_required_data_value.createMany({
+      data: values.map((item) => ({
+        required_data_id: item.requiredDataId,
+        project_indicator_id: item.projectIndicatorId,
+        value: item.value,
+        measurement_date: new Date(item.measurementDate),
+        location: item.location,
+        notes: item.notes,
+        created_by: item.createdBy,
+        // Set other fields to null since they're not being used for project indicators
+        goal_indicator_id: null,
+        sub_indicator_id: null,
+        goal_sub_indicator_id: null,
+      })),
+      skipDuplicates: true, // Skip if duplicate entries exist
+    });
+
+    return {
+      success: true,
+      count: result.count,
+      message: `Successfully saved ${result.count} values`,
+    };
+  } catch (error) {
+    console.error("Error saving project indicator values:", error);
+    throw new Error("Failed to save project indicator values");
+  }
+}
+
 export async function createProject(project: IProject) {
   console.log(typeof project.start_date);
   try {
@@ -116,36 +159,43 @@ export async function getAllGoalIndicators() {
           indicators:
             goal.td_goal_indicator.length > 0
               ? await Promise.all(
-                goal.td_goal_indicator.map(async (indicator) => {
-                  return {
-                    goal_indicator_id: indicator.goal_indicator_id,
-                    indicator_name: indicator.md_indicator.name,
-                    indicator_target: indicator.global_target_value,
-                    sub_indicators:
-                      indicator.td_goal_sub_indicator.length > 0
-                        ? await Promise.all(
-                          indicator.td_goal_sub_indicator.map(async (subIndi) => {
-                            // Get all nested sub-indicators recursively
-                            const nestedSubIndicators = await getBabyIndicator(
-                              subIndi.md_sub_indicator.sub_indicator_id
-                            );
+                  goal.td_goal_indicator.map(async (indicator) => {
+                    return {
+                      goal_indicator_id: indicator.goal_indicator_id,
+                      indicator_name: indicator.md_indicator.name,
+                      indicator_target: indicator.global_target_value,
+                      sub_indicators:
+                        indicator.td_goal_sub_indicator.length > 0
+                          ? await Promise.all(
+                              indicator.td_goal_sub_indicator.map(
+                                async (subIndi) => {
+                                  // Get all nested sub-indicators recursively
+                                  const nestedSubIndicators =
+                                    await getBabyIndicator(
+                                      subIndi.md_sub_indicator.sub_indicator_id,
+                                    );
 
-                            return {
-                              sub_indicator_id: subIndi.md_sub_indicator.sub_indicator_id,
-                              goal_sub_indicator_id: subIndi.goal_sub_indicator_id,
-                              indicator_name: subIndi.md_sub_indicator.name,
-                              indicator_target: subIndi.global_target_value,
-                              sub_indicators: nestedSubIndicators, // This now contains all nested levels
-                            } as IGoalSubIndicatorSimple;
-                          })
-                        )
-                        : [],
-                  } as IGoalIndicatorSimple;
-                })
-              )
+                                  return {
+                                    sub_indicator_id:
+                                      subIndi.md_sub_indicator.sub_indicator_id,
+                                    goal_sub_indicator_id:
+                                      subIndi.goal_sub_indicator_id,
+                                    indicator_name:
+                                      subIndi.md_sub_indicator.name,
+                                    indicator_target:
+                                      subIndi.global_target_value,
+                                    sub_indicators: nestedSubIndicators, // This now contains all nested levels
+                                  } as IGoalSubIndicatorSimple;
+                                },
+                              ),
+                            )
+                          : [],
+                    } as IGoalIndicatorSimple;
+                  }),
+                )
               : [],
         } as IGoalWithIndicators;
-      })
+      }),
     );
 
     return typedGoalIndicators;
@@ -154,7 +204,9 @@ export async function getAllGoalIndicators() {
     throw error;
   }
 }
-export async function getBabyIndicator(subIndicatorId: number): Promise<IGoalSubIndicatorSimple[]> {
+export async function getBabyIndicator(
+  subIndicatorId: number,
+): Promise<IGoalSubIndicatorSimple[]> {
   try {
     const subIndicators = await prisma.md_sub_indicator.findMany({
       where: {
@@ -174,16 +226,20 @@ export async function getBabyIndicator(subIndicatorId: number): Promise<IGoalSub
     const typedSubIndicators: IGoalSubIndicatorSimple[] = await Promise.all(
       subIndicators.map(async (subIndi) => {
         // Recursively get all nested sub-indicators
-        const nestedSubIndicators = await getBabyIndicator(subIndi.sub_indicator_id);
+        const nestedSubIndicators = await getBabyIndicator(
+          subIndi.sub_indicator_id,
+        );
 
         return {
           indicator_name: subIndi.name,
-          goal_sub_indicator_id: subIndi.td_goal_sub_indicator[0].goal_sub_indicator_id,
-          indicator_target: subIndi.td_goal_sub_indicator[0].global_target_value,
+          goal_sub_indicator_id:
+            subIndi.td_goal_sub_indicator[0].goal_sub_indicator_id,
+          indicator_target:
+            subIndi.td_goal_sub_indicator[0].global_target_value,
           sub_indicator_id: subIndi.sub_indicator_id,
           sub_indicators: nestedSubIndicators, // This contains all nested levels
         } as IGoalSubIndicatorSimple;
-      })
+      }),
     );
 
     console.log(typedSubIndicators);
@@ -202,18 +258,49 @@ export async function addProjectIndicator(
     data: {
       project_id: projectId,
       goal_indicator_id: indicator.goal_indicator_id,
-    }
-  })
+    },
+  });
 }
 
 export async function addProjectSubIndicators(
   subIndicators: IGoalSubIndicatorSimple[],
-  projectId: number
+  projectId: number,
 ) {
   await prisma.td_project_indicator.createMany({
     data: subIndicators.map((indicator) => ({
       project_id: projectId,
-      goal_sub_indicator_id: indicator.goal_sub_indicator_id
-    }))
-  })
+      goal_sub_indicator_id: indicator.goal_sub_indicator_id,
+    })),
+  });
+}
+
+export async function addProjectIndicatorValues(
+  projectSubIndicators: IGoalSubIndicatorSimple[],
+  projectId: number,
+) {
+  await prisma.td_required_data_value.createMany({
+    data: projectSubIndicators.map((indicator) => ({
+      project_id: projectId,
+      goal_sub_indicator_id: indicator.goal_sub_indicator_id,
+      value: indicator.indicator_target,
+    })),
+  });
+}
+
+export async function updateProjectStatus(projectId, status) {
+  try {
+    const updatedProject = await prisma.td_project.update({
+      where: {
+        project_id: projectId,
+      },
+      data: {
+        project_status: status,
+      },
+    });
+
+    return updatedProject;
+  } catch (error) {
+    console.error("Error updating project status:", error);
+    throw new Error("Failed to update project status");
+  }
 }
