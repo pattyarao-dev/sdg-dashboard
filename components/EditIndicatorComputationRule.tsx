@@ -10,10 +10,11 @@ const EditIndicatorComputationRule = ({
 }: {
   indicator: Indicator;
 }) => {
-  const { createFormula } =
-    useCreateFormula();
+  const { createFormula } = useCreateFormula();
 
   const [formula, setFormula] = useState("");
+  const [includeSubIndicators, setIncludeSubIndicators] = useState(false); // Add state
+
   function formatFormula(input: string): string {
     return input.replace(/\b[a-zA-Z\s]+\b/g, (match) => {
       // Only replace if it's not an operator/number
@@ -27,10 +28,14 @@ const EditIndicatorComputationRule = ({
   const submitFormulaChange = () => {
     if (indicator.goalIndicatorId) {
       const formattedFormula = formatFormula(formula);
-      createFormula(formattedFormula, indicator.goalIndicatorId, "indicator");
+      createFormula(
+        formattedFormula,
+        indicator.goalIndicatorId,
+        "indicator",
+        includeSubIndicators, // Pass the checkbox value
+      );
     }
   };
-
 
   return (
     <div
@@ -45,57 +50,74 @@ const EditIndicatorComputationRule = ({
           </div>
           <hr />
         </div>
-        <div className="flex flex-col gap-10">
-          {/* Computation Rule Section - Always visible */}
-          {indicator.computationRule.length > 0 ? (
-            <div className="w-full p-4 flex flex-col gap-2 bg-gray-100">
-              <p className="text-sm font-semibold text-green-800">
-                Computation Rule for {indicator.indicatorName}:
-              </p>
-              {indicator.computationRule.map((rule) => (
-                <p
-                  key={rule.ruleId}
-                  className="w-fit font-mono bg-gray-300 py-2 px-4"
-                >
-                  {rule.ruleFormula}
-                </p>
-              ))}
-            </div>
-          ) : (
-            <div className="w-full p-4 flex flex-col gap-4 bg-gray-100">
-              <div className="w-full flex flex-col gap-2">
-                <p className="text-sm font-semibold text-green-800">
-                  Input the computational formula for this indicator.
-                </p>
-                <div className="w-full flex items-center justify-center gap-4">
-                  <input
-                    type="text"
-                    className="grow p-2 border border-gray-300 rounded-md flex items-center"
-                    onChange={(e) => setFormula(e.target.value)}
-                    placeholder="Enter formula"
-                  />
-                  <button
-                    onClick={submitFormulaChange}
-                    className="w-fit py-2 px-4 bg-gradient-to-br from-green-200 to-orange-100 rounded-md"
-                  >
-                    Submit Formula
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Required Data Section - Conditional */}
+        <div className="w-full">
           {indicator.requiredData.length > 0 ? (
-            <div className="w-full flex flex-col gap-1">
-              <p className="w-full text-sm font-semibold text-green-800">
-                Required Data:
-              </p>
-              <div className="w-full pl-3 flex flex-col">
-                {indicator.requiredData.map((data) => (
-                  <p key={data.requiredDataId}>{data.requiredDataName}</p>
-                ))}
-              </div>
+            <div className="flex flex-col gap-10">
+              {indicator.computationRule.length > 0 ? (
+                <div className="w-full p-4 flex flex-col gap-2 bg-gray-100">
+                  <p className="text-sm font-semibold text-green-800">
+                    Computation Rule for {indicator.indicatorName}:
+                  </p>
+                  {indicator.computationRule.map((rule) => (
+                    <p
+                      key={rule.ruleId}
+                      className="w-fit font-mono bg-gray-300 py-2 px-4"
+                    >
+                      {rule.ruleFormula}
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <div className="w-full p-4 flex flex-col gap-4 bg-gray-100">
+                  <div className="w-full flex flex-col gap-2">
+                    <p className="text-sm font-semibold text-green-800">
+                      Input the computational formula for this indicator.
+                    </p>
+                    <div className="w-full flex items-center justify-center gap-4">
+                      <input
+                        type="text"
+                        className="grow p-2 border border-gray-300 rounded-md flex items-center"
+                        onChange={(e) => setFormula(e.target.value)}
+                        placeholder="Enter formula"
+                      />
+                      <button
+                        onClick={submitFormulaChange}
+                        className="w-fit py-2 px-4 bg-gradient-to-br from-green-200 to-orange-100 rounded-md"
+                      >
+                        Submit Formula
+                      </button>
+                    </div>
+                    {/* Add checkbox for includeSubIndicators */}
+                    <div className="w-full flex items-center gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        id="includeSubIndicators"
+                        checked={includeSubIndicators}
+                        onChange={(e) =>
+                          setIncludeSubIndicators(e.target.checked)
+                        }
+                        className="w-4 h-4"
+                      />
+                      <label
+                        htmlFor="includeSubIndicators"
+                        className="text-sm text-green-800"
+                      >
+                        Include sub-indicators in computation
+                      </label>
+                    </div>
+                  </div>
+                  <div className="w-full flex flex-col gap-1">
+                    <p className="w-full text-sm font-semibold text-green-800">
+                      Required Data:
+                    </p>
+                    <div className="w-full pl-3 flex flex-col">
+                      {indicator.requiredData.map((data) => (
+                        <p key={data.requiredDataId}>{data.requiredDataName}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-gray-500 italic">No required data</p>
