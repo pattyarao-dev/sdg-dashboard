@@ -10,10 +10,11 @@ const EditIndicatorComputationRule = ({
 }: {
   indicator: Indicator;
 }) => {
-  const { createFormula } =
-    useCreateFormula();
+  const { createFormula } = useCreateFormula();
 
   const [formula, setFormula] = useState("");
+  const [includeSubIndicators, setIncludeSubIndicators] = useState(false); // Add state
+
   function formatFormula(input: string): string {
     return input.replace(/\b[a-zA-Z\s]+\b/g, (match) => {
       // Only replace if it's not an operator/number
@@ -27,10 +28,14 @@ const EditIndicatorComputationRule = ({
   const submitFormulaChange = () => {
     if (indicator.goalIndicatorId) {
       const formattedFormula = formatFormula(formula);
-      createFormula(formattedFormula, indicator.goalIndicatorId, "indicator");
+      createFormula(
+        formattedFormula,
+        indicator.goalIndicatorId,
+        "indicator",
+        includeSubIndicators, // Pass the checkbox value
+      );
     }
   };
-
 
   return (
     <div
@@ -81,6 +86,24 @@ const EditIndicatorComputationRule = ({
                       >
                         Submit Formula
                       </button>
+                    </div>
+                    {/* Add checkbox for includeSubIndicators */}
+                    <div className="w-full flex items-center gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        id="includeSubIndicators"
+                        checked={includeSubIndicators}
+                        onChange={(e) =>
+                          setIncludeSubIndicators(e.target.checked)
+                        }
+                        className="w-4 h-4"
+                      />
+                      <label
+                        htmlFor="includeSubIndicators"
+                        className="text-sm text-green-800"
+                      >
+                        Include sub-indicators in computation
+                      </label>
                     </div>
                   </div>
                   <div className="w-full flex flex-col gap-1">

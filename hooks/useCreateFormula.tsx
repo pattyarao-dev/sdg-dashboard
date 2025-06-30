@@ -12,12 +12,14 @@ const useCreateFormula = () => {
     formula: string,
     goalIndicatorId: number,
     indicatorType: "subIndicator" | "indicator",
+    includeSubIndicators: boolean = false,
   ) => {
     setLoading(true);
     if (indicatorType === "subIndicator") {
       const formulaTable = await updateSubIndicatorComputationRule(
         goalIndicatorId,
         formula,
+        includeSubIndicators,
       );
       setSuccess(true);
       return formulaTable;
@@ -25,6 +27,7 @@ const useCreateFormula = () => {
       const formulaTable = await updateIndicatorComputationRule(
         goalIndicatorId,
         formula,
+        includeSubIndicators,
       );
       setSuccess(true);
       return formulaTable;
