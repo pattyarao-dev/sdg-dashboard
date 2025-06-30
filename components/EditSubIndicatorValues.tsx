@@ -4,7 +4,6 @@ import useUpdateValues from "@/hooks/useUpdateValues";
 import useCalculateValue from "@/hooks/useCalculateValue";
 
 const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
-  console.log(sub);
 
   // function formatFormula(input: string): string {
   //   return input.replace(/\b[a-zA-Z\s]+\b/g, (match) => {
@@ -113,6 +112,7 @@ const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
           valuesToCalculate,
           userId,
           "subIndicator",
+          rule.includeSubIndicators, // Add this line
         );
       }
       setNewValues([]);
@@ -120,7 +120,6 @@ const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
       console.error("Failed to save values:", error);
     }
   };
-
   return (
     <div
       key={sub.subIndicatorId}

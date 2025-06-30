@@ -1,32 +1,97 @@
 "use server";
 
+import { DashboardAvailableIndicatorWithHierarchy } from "@/types/dashboard.types";
 import { Indicator } from "@/types/goal.types";
 import prisma from "@/utils/prisma";
 
-// export async function getAvailableIndicators(goalId: number) {
-//   const availableIndicators = await prisma.td_goal_indicator.findMany({
-//     include: {
-//       md_indicator: true,
-//       td_goal_sub_indicator: {
-//         include: {
-//           md_sub_indicator: true,
-//         },
-//       },
-//       td_goal_indicator_required_data: {
-//         include: {
-//           ref_required_data: true,
-//         },
-//       },
-//     },
-//     where: {
-//       NOT: {
-//         goal_id: goalId,
-//       },
-//     },
-//   });
 
-//   return availableIndicators;
-// }
+export async function getGoalIndicators(goalId: number): Promise<DashboardAvailableIndicatorWithHierarchy[]> {
+  // First get the main indicators not assigned to this goal
+  const availableIndicators = await prisma.td_goal_indicator.findMany({
+    include: {
+      md_indicator: true,
+      td_goal_sub_indicator: {
+        include: {
+          md_sub_indicator: true,
+        },
+      },
+      td_goal_indicator_required_data: {
+        include: {
+          ref_required_data: true,
+        },
+      },
+    },
+    where: {
+      goal_id: goalId,
+    },
+  });
+
+  // Fallback approach using regular Prisma queries (guaranteed to work)
+  const getCompleteSubIndicatorHierarchy = async (indicatorId: number) => {
+    // Get all direct sub-indicators for this indicator
+    const directSubIndicators = await prisma.md_sub_indicator.findMany({
+      where: {
+        parent_indicator_id: indicatorId,
+      },
+    });
+
+    // Recursively get sub-indicators for each direct sub-indicator
+    const getSubIndicatorChildren = async (
+      subIndicatorId: number,
+    ): Promise<any[]> => {
+      const children = await prisma.md_sub_indicator.findMany({
+        where: {
+          parent_sub_indicator_id: subIndicatorId,
+        },
+      });
+
+      const childrenWithSubIndicators = await Promise.all(
+        children.map(async (child) => ({
+          indicator_id: child.sub_indicator_id, // Maintain consistency with your naming
+          name: child.name,
+          description: child.description,
+          status: child.status,
+          required_data: [], // Will be populated if needed
+          sub_indicators: await getSubIndicatorChildren(child.sub_indicator_id),
+        })),
+      );
+
+      return childrenWithSubIndicators;
+    };
+
+    // Build complete hierarchy
+    const completeHierarchy = await Promise.all(
+      directSubIndicators.map(async (subIndicator) => ({
+        indicator_id: subIndicator.sub_indicator_id, // Maintain consistency
+        name: subIndicator.name,
+        description: subIndicator.description,
+        status: subIndicator.status,
+        required_data: [], // Will be populated if needed
+        sub_indicators: await getSubIndicatorChildren(
+          subIndicator.sub_indicator_id,
+        ),
+      })),
+    );
+
+    return completeHierarchy;
+  };
+
+  // Build complete hierarchy for each indicator
+  const indicatorsWithCompleteHierarchy = await Promise.all(
+    availableIndicators.map(async (indicator) => ({
+      ...indicator,
+      md_indicator: {
+        ...indicator.md_indicator,
+        sub_indicators: await getCompleteSubIndicatorHierarchy(
+          indicator.md_indicator.indicator_id,
+        ),
+      },
+    })),
+  );
+
+  return indicatorsWithCompleteHierarchy;
+}
+
 
 export async function getAvailableIndicators(goalId: number) {
   // First get the main indicators not assigned to this goal

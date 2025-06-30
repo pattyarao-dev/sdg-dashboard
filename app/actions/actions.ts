@@ -383,7 +383,6 @@ export async function getGoalsInformation() {
       },
     },
   });
-
   // Transform data for easier frontend use
   const processedGoals = goals.map((goal) => ({
     goalId: goal.goal_id,
@@ -392,35 +391,31 @@ export async function getGoalsInformation() {
       goalIndicatorId: gi.goal_indicator_id,
       indicatorId: gi.md_indicator.indicator_id,
       indicatorName: gi.md_indicator.name,
-
       requiredData: gi.td_goal_indicator_required_data.map((rd) => ({
         requiredDataId: rd.ref_required_data.required_data_id,
         requiredDataName: rd.ref_required_data.name, // Ensure this name field is correct
       })),
-
       subIndicators: gi.td_goal_sub_indicator.map((gs) => ({
         goalSubIndicatorId: gs.goal_sub_indicator_id,
         subIndicatorId: gs.md_sub_indicator.sub_indicator_id,
         subIndicatorName: gs.md_sub_indicator.name,
-
         requiredData: gs.td_goal_sub_indicator_required_data.map((rd) => ({
           requiredDataId: rd.ref_required_data.required_data_id,
           requiredDataName: rd.ref_required_data.name, // Ensure this name field is correct
         })),
-
         subIndicatorComputationRule: gs.md_computation_rule.map((scr) => ({
           ruleId: scr.rule_id,
           ruleFormula: scr.formula,
+          includeSubIndicators: scr.includesubindicators,
         })),
       })),
-
       computationRule: gi.md_computation_rule.map((cr) => ({
         ruleId: cr.rule_id,
         ruleFormula: cr.formula,
+        includeSubIndicators: cr.includesubindicators,
       })),
     })),
   }));
-
   return processedGoals;
 }
 

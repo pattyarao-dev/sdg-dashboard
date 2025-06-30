@@ -84,3 +84,15 @@ export interface DashboardGetAvailableIndicatorsResponse {
   availableIndicators: DashboardAvailableIndicator[];
   getCompleteSubIndicatorHierarchy: (indicatorId: number) => Promise<DashboardSubIndicatorHierarchy[]>;
 }
+
+export interface DashboardMdIndicatorWithHierarchy extends DashboardMdIndicator {
+  sub_indicators?: DashboardSubIndicatorHierarchy[];
+}
+
+export interface DashboardAvailableIndicatorWithHierarchy {
+  goal_indicator_id: number;
+  goal_id: number;
+  md_indicator: DashboardMdIndicatorWithHierarchy; // Use the extended type
+  td_goal_sub_indicator: DashboardGoalSubIndicator[];
+  td_goal_indicator_required_data: DashboardGoalIndicatorRequiredData[];
+}

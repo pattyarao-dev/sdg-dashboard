@@ -1,4 +1,5 @@
 "use client"
+import { useEffect, useState } from "react";
 import { DashboardProcessedGoal } from "@/types/dashboard.types";
 import Link from "next/link";
 import dynamic from 'next/dynamic';
@@ -7,7 +8,9 @@ import dynamic from 'next/dynamic';
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 export default function MainDashboard({ goals }: { goals: DashboardProcessedGoal[] }) {
-  const series = [67];
+  const [goalProgress, setGoalProgress] = useState<{ [key: number]: number }>({});
+  const [loading, setLoading] = useState(true);
+
   const sdgColors = [
     '#E5243B', // Goal 1: No Poverty
     '#DDA63A', // Goal 2: Zero Hunger
@@ -30,7 +33,7 @@ export default function MainDashboard({ goals }: { goals: DashboardProcessedGoal
 
   const baseOptions = {
     chart: {
-      height: 350,
+      height: 360,
       type: 'radialBar' as const,
     },
     plotOptions: {
@@ -49,7 +52,10 @@ export default function MainDashboard({ goals }: { goals: DashboardProcessedGoal
             show: true,
             color: '#333',
             offsetY: 70,
-            fontSize: '22px'
+            fontSize: '22px',
+            formatter: function(val: string | number) {
+              return parseInt(val.toString(), 10) + '%';
+            }
           }
         }
       }
@@ -60,12 +66,68 @@ export default function MainDashboard({ goals }: { goals: DashboardProcessedGoal
     labels: ['Progress'],
   };
 
-  console.log(goals)
+  // Fetch progress data for all goals
+  useEffect(() => {
+    const fetchGoalProgress = async () => {
+      setLoading(true);
+
+      try {
+        const progressPromises = goals.map(async (goal) => {
+          try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/goal_progress/${goal.goalId}`);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            return {
+              goalId: goal.goalId,
+              progress: Math.round(data.averageProgress || 0)
+            };
+          } catch (error) {
+            console.error(`Error fetching progress for goal ${goal.goalId}:`, error);
+            return { goalId: goal.goalId, progress: 0 };
+          }
+        });
+
+        const results = await Promise.all(progressPromises);
+        const progressMap = results.reduce((acc, result) => {
+          acc[result.goalId] = result.progress;
+          return acc;
+        }, {} as { [key: number]: number });
+
+        setGoalProgress(progressMap);
+      } catch (error) {
+        console.error("Error fetching goal progress data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (goals.length > 0) {
+      fetchGoalProgress();
+    } else {
+      setLoading(false);
+    }
+  }, [goals]);
+
+  console.log(goals);
+
+  if (loading) {
+    return (
+      <div className="w-full flex justify-center items-center h-64">
+        <div className="text-lg text-gray-600">Loading goal progress...</div>
+      </div>
+    );
+  }
 
   return (
     <>
       {goals.map((goal, index) => {
         const goalColor = sdgColors[goal.goalId - 1] || sdgColors[0];
+
+        // Get dynamic progress for this goal
+        const progressPercentage = goalProgress[goal.goalId] || 0;
+        const series = [progressPercentage];
 
         // Format the goal ID to match your file naming (E_WEB_01.png, E_WEB_02.png, etc.)
         const goalIdFormatted = goal.goalId.toString().padStart(2, '0');
@@ -76,6 +138,7 @@ export default function MainDashboard({ goals }: { goals: DashboardProcessedGoal
           title: {
             text: goal.goalName,
             align: 'center' as const,
+            offsetY: 310, // Move title to bottom
             style: {
               fontSize: '16px',
               fontWeight: 'bold',
@@ -101,16 +164,18 @@ export default function MainDashboard({ goals }: { goals: DashboardProcessedGoal
         };
 
         return (
-          <Link key={goal.goalId || index} href={`/dashboard/${goal.goalId}`}>
-            <Chart
-              options={options}
-              series={series}
-              type="radialBar"
-              height={350}
-            />
+          <Link key={goal.goalId || index} href={`/dashboard/goalprogress/${goal.goalId}`}>
+            <div className="relative">
+              <Chart
+                options={options}
+                series={series}
+                type="radialBar"
+                height={350}
+              />
+            </div>
           </Link>
         );
       })}
     </>
-  )
+  );
 }

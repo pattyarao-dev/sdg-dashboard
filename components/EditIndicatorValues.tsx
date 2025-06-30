@@ -313,6 +313,7 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
   const submitNewValues = async () => {
     const validValues = newValues.filter((item) => item.value !== null);
 
+    console.log(indicator)
     if (validValues.length === 0) {
       alert("Please input a value.");
       return;
@@ -353,6 +354,7 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
           valuesToCalculate,
           userId,
           "indicator",
+          rule.includeSubIndicators, // Add this - use the flag from the computation rule
         );
 
         console.log("Raw computed result:", computedResult);
