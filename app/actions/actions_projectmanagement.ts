@@ -71,6 +71,55 @@ export async function createProject(project: IProject) {
   }
 }
 
+export async function getLocations() {
+  const locations = await prisma.md_location.findMany({
+    select: {
+      location_id: true,
+      name: true,
+    },
+  });
+  return locations;
+}
+export async function getProjectLocations(projectId: number) {
+  const projectLocations = await prisma.td_project_location.findMany({
+    where: {
+      project_id: projectId,
+    },
+    include: {
+      md_location: {
+        select: {
+          location_id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  return projectLocations.map((pl) => pl.md_location);
+}
+
+export async function addProjectLocations(
+  projectId: number,
+  locationIds: number[],
+) {
+  try {
+    const data = locationIds.map((locationId) => ({
+      project_id: projectId,
+      location_id: locationId,
+    }));
+
+    await prisma.td_project_location.createMany({
+      data,
+      skipDuplicates: true, // optional: in case you don't want duplicates
+    });
+
+    console.log("Project locations added successfully.");
+  } catch (error) {
+    console.error("Error assigning locations to project:", error);
+    throw error;
+  }
+}
+
 export async function addProjectIndicators(
   indicators: IGoalIndicatorSimple[],
   projectId: number,
