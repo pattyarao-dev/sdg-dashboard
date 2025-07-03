@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { IoTrophy } from "react-icons/io5";
 import { TbStarsFilled } from "react-icons/tb";
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
 
 // Dynamic import to avoid SSR issues
-const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
+const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 export default function HomeDashboard() {
   const [totalProgress, setTotalProgress] = useState<number>(0);
@@ -17,7 +17,9 @@ export default function HomeDashboard() {
   useEffect(() => {
     const fetchTotalProgress = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/total_sdg_progress`);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/total_sdg_progress`,
+        );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -39,62 +41,62 @@ export default function HomeDashboard() {
   const chartOptions = {
     chart: {
       height: 400,
-      type: 'radialBar' as const,
+      type: "radialBar" as const,
     },
     plotOptions: {
       radialBar: {
         hollow: {
           margin: 15,
-          size: '60%',
-          imageClipped: false
+          size: "60%",
+          imageClipped: false,
         },
         track: {
-          background: '#f1f5f9',
-          strokeWidth: '67%',
+          background: "#f1f5f9",
+          strokeWidth: "67%",
         },
         dataLabels: {
           name: {
             show: true,
-            fontSize: '16px',
-            fontWeight: 'bold',
-            color: '#1e293b',
-            offsetY: -10
+            fontSize: "16px",
+            fontWeight: "bold",
+            color: "#1e293b",
+            offsetY: -10,
           },
           value: {
             show: true,
-            color: '#1e293b',
+            color: "#1e293b",
             offsetY: 10,
-            fontSize: '32px',
-            fontWeight: 'bold',
-            formatter: function(val: string | number) {
-              return parseInt(val.toString(), 10) + '%';
-            }
-          }
-        }
-      }
+            fontSize: "32px",
+            fontWeight: "bold",
+            formatter: function (val: string | number) {
+              return parseInt(val.toString(), 10) + "%";
+            },
+          },
+        },
+      },
     },
     fill: {
-      type: 'gradient',
+      type: "gradient",
       gradient: {
-        shade: 'light',
-        type: 'horizontal',
+        shade: "light",
+        type: "horizontal",
         shadeIntensity: 0.5,
-        gradientToColors: ['#10b981', '#059669'], // Green gradient
+        gradientToColors: ["#10b981", "#059669"], // Green gradient
         inverseColors: false,
         opacityFrom: 1,
         opacityTo: 1,
-        stops: [0, 100]
-      }
+        stops: [0, 100],
+      },
     },
     stroke: {
-      lineCap: 'round' as const
+      lineCap: "round" as const,
     },
-    labels: ['Overall SDG Progress'],
-    colors: ['#34d399'], // Light green start
+    labels: ["Overall SDG Progress"],
+    colors: ["#34d399"], // Light green start
   };
 
   return (
-    <>
+    <div className="w-full min-h-screen p-10">
       <div className="w-full flex justify-center mb-8">
         <p className="text-4xl font-bold uppercase text-gray-800">
           Indicators Data Progress Dashboard
@@ -152,6 +154,6 @@ export default function HomeDashboard() {
           </div>
         </Link>
       </div>
-    </>
+    </div>
   );
 }
