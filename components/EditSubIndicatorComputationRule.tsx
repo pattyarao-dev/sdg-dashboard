@@ -3,12 +3,20 @@
 import { SubIndicator } from "@/types/indicator.types";
 import { useState } from "react";
 import useCreateFormula from "@/hooks/useCreateFormula";
+import { updateComputationRule } from "@/app/actions/actions_indicatormanagement";
 
 const EditSubIndicatorComputationRule = ({ sub }: { sub: SubIndicator }) => {
   const { createFormula } = useCreateFormula();
 
   const [formula, setFormula] = useState("");
-  const [includeSubIndicators, setIncludeSubIndicators] = useState(false); // Add state
+  const [includeSubIndicators, setIncludeSubIndicators] = useState(false);
+
+  // New state for edit mode
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFormula, setEditFormula] = useState("");
+  const [editIncludeSubIndicators, setEditIncludeSubIndicators] =
+    useState(false);
+  const [isUpdating, setIsUpdating] = useState(false); // Loading state for updates
 
   function formatFormula(input: string): string {
     return input.replace(/\b[a-zA-Z\s]+\b/g, (match) => {
@@ -27,9 +35,51 @@ const EditSubIndicatorComputationRule = ({ sub }: { sub: SubIndicator }) => {
         formattedFormula,
         sub.goalSubIndicatorId,
         "subIndicator",
-        includeSubIndicators, // Pass the checkbox value
+        includeSubIndicators,
       );
     }
+  };
+
+  // Handle edit mode
+  const handleEditClick = () => {
+    if (sub.subIndicatorComputationRule.length > 0) {
+      setEditFormula(sub.subIndicatorComputationRule[0].ruleFormula);
+      setEditIncludeSubIndicators(
+        sub.subIndicatorComputationRule[0].includeSubIndicators || false,
+      );
+    }
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (sub.subIndicatorComputationRule.length > 0) {
+      setIsUpdating(true);
+      try {
+        const ruleId = sub.subIndicatorComputationRule[0].ruleId;
+        const formattedFormula = formatFormula(editFormula);
+
+        // Use the server action directly
+        await updateComputationRule(
+          ruleId,
+          formattedFormula,
+          editIncludeSubIndicators,
+        );
+
+        setIsEditing(false);
+        alert("Formula updated successfully!");
+      } catch (error) {
+        console.error("Error updating formula:", error);
+        alert("Failed to update formula. Please try again.");
+      } finally {
+        setIsUpdating(false);
+      }
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditFormula("");
+    setEditIncludeSubIndicators(false);
   };
 
   return (
@@ -45,17 +95,83 @@ const EditSubIndicatorComputationRule = ({ sub }: { sub: SubIndicator }) => {
               <p className="text-sm font-semibold text-green-800">
                 Computation Rule for {sub.subIndicatorName}:
               </p>
-              {sub.subIndicatorComputationRule.map((subRule) => (
-                <p
-                  key={subRule.ruleId}
-                  className="w-fit font-mono bg-gray-300 py-2 px-4"
-                >
-                  {subRule.ruleFormula}
-                </p>
-              ))}
-              <button className="mt-10 w-fit px-6 py-2 button-style">
-                Edit formula
-              </button>
+
+              {!isEditing ? (
+                // Display mode
+                <>
+                  {sub.subIndicatorComputationRule.map((subRule) => (
+                    <div key={subRule.ruleId} className="flex flex-col gap-2">
+                      <p className="w-fit font-mono bg-gray-300 py-2 px-4">
+                        {subRule.ruleFormula}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Include sub-indicators:{" "}
+                        {subRule.includeSubIndicators ? "Yes" : "No"}
+                      </p>
+                    </div>
+                  ))}
+                  <button
+                    onClick={handleEditClick}
+                    className="mt-10 w-fit px-6 py-2 button-style"
+                  >
+                    Edit formula
+                  </button>
+                </>
+              ) : (
+                // Edit mode
+                <div className="w-full flex flex-col gap-6">
+                  <div className="w-full flex flex-col gap-2">
+                    <div className="w-full flex items-center justify-center gap-4">
+                      <input
+                        type="text"
+                        className="grow p-2 border border-gray-300 rounded-md flex items-center"
+                        value={editFormula}
+                        onChange={(e) => setEditFormula(e.target.value)}
+                        placeholder="Enter formula"
+                        disabled={isUpdating}
+                      />
+                    </div>
+
+                    {/* Checkbox for edit mode */}
+                    <div className="w-full flex items-center gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        id={`editIncludeSubIndicators-${sub.goalSubIndicatorId}`}
+                        checked={editIncludeSubIndicators}
+                        onChange={(e) =>
+                          setEditIncludeSubIndicators(e.target.checked)
+                        }
+                        className="w-4 h-4"
+                        disabled={isUpdating}
+                      />
+                      <label
+                        htmlFor={`editIncludeSubIndicators-${sub.goalSubIndicatorId}`}
+                        className="text-sm text-green-800"
+                      >
+                        Include sub-indicators in computation
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Save/Cancel buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={isUpdating}
+                      className="w-fit py-2 px-4 bg-gradient-to-br from-green-200 to-orange-100 rounded-md disabled:opacity-50"
+                    >
+                      {isUpdating ? "Saving..." : "Save Changes"}
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={isUpdating}
+                      className="w-fit py-2 px-4 bg-gray-300 rounded-md hover:bg-gray-400 disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="w-full p-6 flex flex-col gap-6 border border-gray-300">

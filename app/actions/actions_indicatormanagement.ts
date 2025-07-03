@@ -3,9 +3,11 @@
 import { DashboardAvailableIndicatorWithHierarchy } from "@/types/dashboard.types";
 import { Indicator } from "@/types/goal.types";
 import prisma from "@/utils/prisma";
+import { revalidatePath } from "next/cache";
 
-
-export async function getGoalIndicators(goalId: number): Promise<DashboardAvailableIndicatorWithHierarchy[]> {
+export async function getGoalIndicators(
+  goalId: number,
+): Promise<DashboardAvailableIndicatorWithHierarchy[]> {
   // First get the main indicators not assigned to this goal
   const availableIndicators = await prisma.td_goal_indicator.findMany({
     include: {
@@ -91,7 +93,6 @@ export async function getGoalIndicators(goalId: number): Promise<DashboardAvaila
 
   return indicatorsWithCompleteHierarchy;
 }
-
 
 export async function getAvailableIndicators(goalId: number) {
   // First get the main indicators not assigned to this goal
@@ -580,7 +581,7 @@ export async function CreateOldMainSubIndicatorRelationship(
   parentIndicatorId: number,
   goalIndicatorId: number,
 ) {
-  console.log(parentIndicatorId)
+  console.log(parentIndicatorId);
   // create new required data list where it's new only
   const newRequiredDataClient = subIndicator.required_data.filter(
     (req) => req.newRD,
@@ -606,7 +607,6 @@ export async function CreateOldMainSubIndicatorRelationship(
       global_baseline_value: subIndicator.global_baseline_value,
     },
   });
-
 
   await prisma.td_goal_sub_indicator_required_data.createMany({
     data: completeRequiredData.map((req) => ({
@@ -623,7 +623,7 @@ export async function createOldSubIndicatorRelationship(
   parentIndicatorId: number,
   goalIndicatorId: number,
 ) {
-  console.log(parentIndicatorId)
+  console.log(parentIndicatorId);
   // create new required data list where it's new only
   const newRequiredDataClient = subIndicator.required_data.filter(
     (req) => req.newRD,
@@ -657,11 +657,13 @@ export async function createOldSubIndicatorRelationship(
     })),
   });
 
-  return subIndicator.indicator_id
+  return subIndicator.indicator_id;
 }
 
-export async function createMainOldIndicatorGoal(indicator: Indicator, goalId: number) {
-
+export async function createMainOldIndicatorGoal(
+  indicator: Indicator,
+  goalId: number,
+) {
   // create new required data list where it's new only
   const newRequiredDataClient = indicator.required_data.filter(
     (req) => req.newRD,
@@ -699,4 +701,33 @@ export async function createMainOldIndicatorGoal(indicator: Indicator, goalId: n
     newIndicatorId: indicator.indicator_id,
     newGoalIndicatorId: newGoalIndicator.goal_indicator_id,
   };
+}
+
+export async function updateComputationRule(
+  ruleId: number,
+  formula: string,
+  includeSubIndicators: boolean,
+) {
+  try {
+    const updatedRule = await prisma.md_computation_rule.update({
+      where: {
+        rule_id: ruleId,
+      },
+      data: {
+        formula: formula,
+        includesubindicators: includeSubIndicators,
+      },
+    });
+
+    revalidatePath("/indicatormanagement");
+    revalidatePath("/computationrules");
+
+    return {
+      success: true,
+      rule: updatedRule,
+    };
+  } catch (error) {
+    console.error("Error updating computation rule:", error);
+    throw new Error("Failed to update computation rule");
+  }
 }

@@ -1,5 +1,7 @@
 import ProgressFormComponent from "@/components/ProgressFormComponent";
 import { getGoalsInformation } from "@/app/actions/actions";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/libs/auth";
 
 interface RequiredData {
   requiredDataId: number;
@@ -20,7 +22,6 @@ interface SubIndicator {
   subIndicatorComputationRule: ComputationRule[];
 }
 
-
 interface Indicator {
   goalIndicatorId: number;
   indicatorId: number;
@@ -37,11 +38,15 @@ interface Goal {
 }
 
 export default async function ProgressForm() {
-  const processedGoals = await getGoalsInformation()
+  const processedGoals = await getGoalsInformation();
+  const session = await getServerSession(authOptions);
 
   return (
     <main className="w-full min-h-screen p-10 flex flex-col items-center ">
-      <ProgressFormComponent goals={processedGoals as Goal[]} />
+      <ProgressFormComponent
+        session={session}
+        goals={processedGoals as Goal[]}
+      />
     </main>
   );
 }

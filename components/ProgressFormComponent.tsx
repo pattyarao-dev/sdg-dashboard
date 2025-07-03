@@ -1,5 +1,6 @@
 "use client";
 
+import { Session } from "next-auth";
 import EditIndicatorValues from "./EditIndicatorValues";
 
 interface RequiredData {
@@ -10,7 +11,7 @@ interface RequiredData {
 interface ComputationRule {
   ruleId: number;
   ruleFormula: string;
-  includeSubIndicator?: boolean
+  includeSubIndicator?: boolean;
 }
 
 export interface SubIndicator {
@@ -38,9 +39,10 @@ interface Goal {
 
 interface ProgressFormProps {
   goals: Goal[];
+  session: Session;
 }
 
-const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
+const ProgressFormComponent = ({ goals, session }: ProgressFormProps) => {
   return (
     <div className="w-full flex flex-col gap-24">
       {goals.map((goal) => (
@@ -59,6 +61,7 @@ const ProgressFormComponent = ({ goals }: ProgressFormProps) => {
               <EditIndicatorValues
                 indicator={indicator}
                 key={indicator.indicatorId}
+                session={session}
               />
             ))}
           </div>

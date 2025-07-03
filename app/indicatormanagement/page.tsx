@@ -63,9 +63,12 @@ export default async function IndicatorManagement() {
           >
             <div className="w-full flex flex-col gap-4">
               <div className="w-full flex items-center justify-between">
-                <h1 className="text-3xl uppercase font-black">
-                  {goal.goalName}
-                </h1>
+                <div className="w-fit flex flex-col items-start gap-1">
+                  <p className="text-base font-black">Goal {goal.goalId}.</p>
+                  <h1 className="text-3xl uppercase font-black text-green-800">
+                    {goal.goalName}
+                  </h1>
+                </div>
                 <button className="w-fit px-6 py-2 bg-gradient-to-r from-green-100 to-orange-200 font-bold uppercase">
                   <Link href={`/indicatormanagement/${goal.goalId}`}>
                     Add Goal Indicators

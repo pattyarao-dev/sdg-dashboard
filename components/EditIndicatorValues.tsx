@@ -259,14 +259,19 @@ import EditSubIndicatorValues from "./EditSubIndicatorValues";
 import { Indicator } from "./ProgressFormComponent";
 import useUpdateValues from "@/hooks/useUpdateValues";
 import useCalculateValue from "@/hooks/useCalculateValue";
+import { Session } from "next-auth";
 
-const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
+const EditIndicatorValues = ({
+  indicator,
+  session,
+}: {
+  indicator: Indicator;
+  session: Session;
+}) => {
   const { updateValues } = useUpdateValues();
 
-  const {
-    loading: calculateIndicatorLoading,
-    calculateValue,
-  } = useCalculateValue();
+  const { loading: calculateIndicatorLoading, calculateValue } =
+    useCalculateValue();
 
   const [newValues, setNewValues] = useState<
     Array<{
@@ -276,6 +281,7 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
       createdBy: number;
     }>
   >([]);
+  const [notes, setNotes] = useState<string>("");
 
   const userId = 1; // Replace with actual user ID from your auth system
 
@@ -310,10 +316,44 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
     }
   };
 
+  const submitNotes = async () => {
+    if (!notes.trim()) {
+      alert("Please enter a description before submitting.");
+      return;
+    }
+    console.log((session.user as any).id);
+    try {
+      const response = await fetch("/api/goal_description", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          goalIndicatorId: indicator.goalIndicatorId,
+          explanation: notes,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Description created successfully:", result);
+        setNotes(""); // Clear the form
+        alert("Description submitted successfully!");
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to submit notes:", errorData);
+        alert(`Failed to submit: ${errorData.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error submitting notes:", error);
+      alert("Network error occurred. Please try again.");
+    }
+  };
+
   const submitNewValues = async () => {
     const validValues = newValues.filter((item) => item.value !== null);
 
-    console.log(indicator)
+    console.log(indicator);
     if (validValues.length === 0) {
       alert("Please input a value.");
       return;
@@ -480,7 +520,24 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
           )}
         </div>
       </div>
-
+      <div className="w-full p-8 bg-gray-100 flex flex-col gap-4">
+        <h1 className="uppercase text-green-800 font-bold text-sm">
+          Indicator Summary:
+        </h1>
+        <div className="w-full flex flex-col items-end gap-4">
+          <textarea
+            onChange={(e) => setNotes(e.target.value)}
+            value={notes}
+            className="w-full border-2 border-gray-200 rounded-md p-2"
+          />
+          <button
+            onClick={submitNotes}
+            className="w-fit bg-orange-300 px-4 py-1 rounded-md font-bold"
+          >
+            Submit
+          </button>
+        </div>
+      </div>
       <div className="w-full flex flex-col gap-4">
         {indicator.subIndicators.length > 0 ? (
           <div className="flex flex-col gap-4">

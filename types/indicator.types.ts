@@ -75,6 +75,7 @@ interface RequiredData {
 export interface ComputationRule {
   ruleId: number;
   ruleFormula: string;
+  includeSubIndicators: boolean;
 }
 
 export interface SubIndicator {
