@@ -21,6 +21,28 @@ interface TimeSeriesData {
   [year: string]: IndicatorProgress[];
 }
 
+// Add funnel interfaces
+interface FunnelStage {
+  stage: string;
+  value: number;
+  percentage: number;
+  description: string;
+  conversionRate?: number;
+}
+
+interface FunnelData {
+  projectId: number;
+  funnelType: string;
+  stages: FunnelStage[];
+  summary: {
+    totalIndicators: number;
+    completionRate: number;
+    dataQualityScore: number;
+    computationSuccessRate: number;
+  };
+  recommendations: string[];
+}
+
 interface Filters {
   selectedLocations: string[];
   selectedIndicators: string[];
@@ -34,6 +56,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
   const [indicatorProgress, setIndicatorProgress] = useState<IndicatorProgress[]>([]);
   const [locationData, setLocationData] = useState<LocationData>({});
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData>({});
+  const [funnelData, setFunnelData] = useState<FunnelData | null>(null); // Add funnel state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -147,18 +170,20 @@ export default function ProjectDashboard({ id }: { id: number }) {
       showCompleteDataOnly: false
     });
   };
-  // Fetch all project data
+
+  // Fetch all project data - Updated to include funnel
   useEffect(() => {
     const fetchProjectData = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        // Fetch all three endpoints in parallel
-        const [progressRes, locationRes, timeSeriesRes] = await Promise.all([
+        // Fetch all four endpoints in parallel
+        const [progressRes, locationRes, timeSeriesRes, funnelRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/project_indicator_progress/${id}`),
           fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/project_location_comparison/${id}`),
-          fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/project_progress_over_time/${id}`)
+          fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/project_progress_over_time/${id}`),
+          fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/project_implementation_funnel/${id}`) // Add funnel fetch
         ]);
 
         if (progressRes.ok) {
@@ -176,6 +201,11 @@ export default function ProjectDashboard({ id }: { id: number }) {
           setTimeSeriesData(timeData || {});
         }
 
+        if (funnelRes.ok) {
+          const funnelData = await funnelRes.json();
+          setFunnelData(funnelData);
+        }
+
       } catch (error) {
         console.error("Error fetching project data:", error);
         setError("Failed to load project data");
@@ -190,7 +220,104 @@ export default function ProjectDashboard({ id }: { id: number }) {
   // Chart colors
   const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#84cc16'];
 
-  // Multi-series Radial Bar Chart Options (All indicators and locations)
+  // Funnel Chart Options - Fixed types
+  const getFunnelChartOptions = () => {
+    if (!funnelData || !funnelData.stages) {
+      return {
+        series: [],
+        options: {
+          chart: {
+            type: 'bar' as const,
+            height: 400
+          },
+          title: {
+            text: 'Project Implementation Pipeline',
+            align: 'center' as const
+          }
+        }
+      };
+    }
+
+    const series = [{
+      name: 'Indicators',
+      data: funnelData.stages.map(stage => stage.value)
+    }];
+
+    return {
+      series,
+      options: {
+        chart: {
+          type: 'bar' as const,
+          height: 400
+        },
+        plotOptions: {
+          bar: {
+            horizontal: true,
+            distributed: true,
+            barHeight: '70%',
+            borderRadius: 5
+          }
+        },
+        colors: [
+          '#00E396', '#00D9FF', '#008FFB',
+          '#FEB019', '#FF4560', '#775DD0'
+        ],
+        xaxis: {
+          categories: funnelData.stages.map(stage => stage.stage),
+          labels: {
+            formatter: function(val: any): string {
+              return val.toString();
+            }
+          }
+        },
+        yaxis: {
+          title: {
+            text: 'Implementation Stages'
+          }
+        },
+        title: {
+          text: 'Project Implementation Pipeline',
+          align: 'center' as const,
+          style: {
+            fontSize: '18px',
+            fontWeight: 'bold'
+          }
+        },
+        dataLabels: {
+          enabled: true,
+          formatter: function(val: any, opts: any): string {
+            const stage = funnelData.stages[opts.dataPointIndex];
+            const percentage = stage.percentage;
+            return `${val} (${percentage}%)`;
+          },
+          style: {
+            colors: ['#fff'],
+            fontSize: '12px',
+            fontWeight: 'bold'
+          }
+        },
+        legend: {
+          show: false
+        },
+        tooltip: {
+          custom: function({ series, seriesIndex, dataPointIndex }: any) {
+            const stage = funnelData.stages[dataPointIndex];
+            const val = series[seriesIndex][dataPointIndex];
+            return `
+              <div style="padding: 10px; background: white; border: 1px solid #ccc; border-radius: 4px;">
+                <strong>${val} indicators</strong><br/>
+                ${stage.percentage}% of total<br/>
+                ${stage.conversionRate ? `${stage.conversionRate}% conversion` : ''}<br/>
+                <em>${stage.description}</em>
+              </div>
+            `;
+          }
+        }
+      }
+    };
+  };
+
+  // Multi-series Radial Bar Chart Options - Fixed types
   const getMultiRadialBarOptions = () => {
     // Collect all indicator data from all locations
     const allIndicatorData: { name: string; value: number; color: string }[] = [];
@@ -220,10 +347,10 @@ export default function ProjectDashboard({ id }: { id: number }) {
           radialBar: {
             hollow: {
               margin: 15,
-              size: '30%', // Smaller center to fit more rings
+              size: '30%',
             },
             track: {
-              margin: 5, // Space between rings
+              margin: 5,
             },
             dataLabels: {
               name: {
@@ -239,7 +366,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
                 offsetY: 5,
                 fontSize: '14px',
                 fontWeight: 'bold',
-                formatter: function(val: string | number) {
+                formatter: function(val: any): string {
                   return parseInt(val.toString(), 10) + '%';
                 }
               }
@@ -269,8 +396,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
           horizontalAlign: 'center' as const,
           fontSize: '12px',
           markers: {
-            width: 8,
-            height: 8
+            size: 8
           }
         }
       }
@@ -396,7 +522,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
           max: 100,
           tickAmount: 4,
           labels: {
-            formatter: function(val: number) {
+            formatter: function(val: number): string {
               return val + '%';
             },
             style: {
@@ -434,7 +560,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
         },
         tooltip: {
           y: {
-            formatter: function(val: number) {
+            formatter: function(val: number): string {
               return val + '%';
             }
           }
@@ -513,7 +639,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
       })
     )];
 
-    const series = indicatorNames.map((indicatorName, index) => ({
+    const series = indicatorNames.map((indicatorName) => ({
       name: indicatorName,
       data: years.map(year => {
         const yearIndicators = filteredTimeSeriesData[year];
@@ -594,6 +720,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
   const radarData = getRadarChartOptions();
   const lineData = getLineChartOptions();
   const multiRadialData = getMultiRadialBarOptions();
+  const funnelChartData = getFunnelChartOptions(); // Add funnel data
   const filteredLocationData = getFilteredLocationData();
 
   return (
@@ -768,6 +895,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
         )}
       </div>
 
+
       {/* Single Multi-Series Radial Bar Chart */}
       <div className="w-full">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
@@ -820,6 +948,63 @@ export default function ProjectDashboard({ id }: { id: number }) {
           ) : (
             <div className="h-96 flex items-center justify-center text-gray-500">
               No time series data available with current filters
+            </div>
+          )}
+        </div>
+      </div>
+
+
+      {/* Implementation Funnel Chart - NEW SECTION */}
+      <div className="w-full">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
+          Implementation Pipeline
+        </h2>
+        <div className="bg-white rounded-lg shadow-md p-6">
+          {funnelData ? (
+            <div className="space-y-6">
+              <Chart
+                options={funnelChartData.options}
+                series={funnelChartData.series}
+                type="bar"
+                height={400}
+              />
+              
+              {/* Funnel Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-blue-800">Completion Rate</h4>
+                  <p className="text-2xl font-bold text-blue-600">{funnelData.summary.completionRate}%</p>
+                  <p className="text-sm text-blue-600">Indicators meeting targets</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-green-800">Data Quality</h4>
+                  <p className="text-2xl font-bold text-green-600">{funnelData.summary.dataQualityScore}%</p>
+                  <p className="text-sm text-green-600">Complete data collection</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-purple-800">Computation Success</h4>
+                  <p className="text-2xl font-bold text-purple-600">{funnelData.summary.computationSuccessRate}%</p>
+                  <p className="text-sm text-purple-600">Successful calculations</p>
+                </div>
+              </div>
+
+              {/* Recommendations */}
+              {funnelData.recommendations && funnelData.recommendations.length > 0 && (
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-yellow-800 mb-2">Recommendations</h4>
+                  <ul className="space-y-1">
+                    {funnelData.recommendations.map((recommendation, index) => (
+                      <li key={index} className="text-yellow-700 text-sm">
+                        • {recommendation}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="h-96 flex items-center justify-center text-gray-500">
+              No funnel data available
             </div>
           )}
         </div>
