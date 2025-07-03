@@ -96,3 +96,29 @@ export interface DashboardAvailableIndicatorWithHierarchy {
   td_goal_sub_indicator: DashboardGoalSubIndicator[];
   td_goal_indicator_required_data: DashboardGoalIndicatorRequiredData[];
 }
+
+// types.ts
+export interface IndicatorProgress {
+  projectIndicatorId: number;
+  indicatorName: string;
+  targetValue: number;
+  calculatedValue: number;
+  progressPercentage: number;
+}
+
+export interface LocationData {
+  [location: string]: IndicatorProgress[];
+}
+
+export interface TimeSeriesData {
+  [year: string]: IndicatorProgress[];
+}
+
+export interface Filters {
+  selectedLocations: string[];
+  selectedIndicators: string[];
+  selectedYears: string[];
+  progressRange: { min: number; max: number };
+  targetAchievement: "all" | "above" | "ontrack" | "behind";
+  showCompleteDataOnly: boolean;
+}

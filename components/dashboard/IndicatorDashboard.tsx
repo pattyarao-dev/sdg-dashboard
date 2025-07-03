@@ -80,7 +80,7 @@ export default function IndicatorDashboard({
       description: subIndicator.md_sub_indicator.description,
       type: 'sub-indicator' as const,
       level: 1,
-      goalSubIndicatorId: subIndicator.goal_sub_indicator_id, // This should exist in your data
+      goalSubIndicatorId: subIndicator.md_sub_indicator.sub_indicator_id,// This should exist in your data
       goalIndicatorId: indicator.goal_indicator_id
     }));
 
@@ -218,18 +218,16 @@ export default function IndicatorDashboard({
 
           return (
             <div key={`${item.type}-${item.id}-${index}`} className="flex-shrink-0 bg-white rounded-lg shadow-md p-4 w-80">
-              <Link href={`/dashboard/${goaldId}/subindicator/${item.goalIndicatorId}`}>
-                <Chart
-                  options={options}
-                  series={series}
-                  type="radialBar"
-                  height={300}
-                />
-                {/* Title outside the chart */}
-                <h3 className="text-sm font-bold text-center mt-2 px-2" style={{ color: goalColor }}>
-                  {item.name}
-                </h3>
-              </Link>
+              <Chart
+                options={options}
+                series={series}
+                type="radialBar"
+                height={300}
+              />
+              {/* Title outside the chart */}
+              <h3 className="text-sm font-bold text-center mt-2 px-2" style={{ color: goalColor }}>
+                {item.name}
+              </h3>
 
               {/* Additional info */}
               <div className="mt-2 text-sm text-gray-600 text-center">

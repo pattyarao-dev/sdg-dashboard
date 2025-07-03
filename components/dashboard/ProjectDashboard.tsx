@@ -21,13 +21,132 @@ interface TimeSeriesData {
   [year: string]: IndicatorProgress[];
 }
 
+interface Filters {
+  selectedLocations: string[];
+  selectedIndicators: string[];
+  selectedYears: string[];
+  progressRange: { min: number; max: number };
+  targetAchievement: 'all' | 'above' | 'ontrack' | 'behind';
+  showCompleteDataOnly: boolean;
+}
+
 export default function ProjectDashboard({ id }: { id: number }) {
   const [indicatorProgress, setIndicatorProgress] = useState<IndicatorProgress[]>([]);
   const [locationData, setLocationData] = useState<LocationData>({});
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
+  // Filter states
+  const [filters, setFilters] = useState<Filters>({
+    selectedLocations: [],
+    selectedIndicators: [],
+    selectedYears: [],
+    progressRange: { min: 0, max: 100 },
+    targetAchievement: 'all',
+    showCompleteDataOnly: false
+  });
+
+  // Get available options for filters
+  const availableLocations = Object.keys(locationData);
+  const availableIndicators = [...new Set(
+    Object.values(locationData).flat().map(item => item.indicatorName)
+  )];
+  const availableYears = Object.keys(timeSeriesData).sort();
+
+  // Initialize filters when data loads
+  useEffect(() => {
+    if (Object.keys(locationData).length > 0) {
+      setFilters(prev => ({
+        ...prev,
+        selectedLocations: prev.selectedLocations.length === 0 ? availableLocations : prev.selectedLocations,
+        selectedIndicators: prev.selectedIndicators.length === 0 ? availableIndicators : prev.selectedIndicators,
+        selectedYears: prev.selectedYears.length === 0 ? availableYears : prev.selectedYears
+      }));
+    }
+  }, [locationData, timeSeriesData]);
+
+  // Filter data based on current filter settings
+  const getFilteredLocationData = (): LocationData => {
+    const filtered: LocationData = {};
+
+    availableLocations.forEach(location => {
+      if (filters.selectedLocations.length === 0 || filters.selectedLocations.includes(location)) {
+        const locationIndicators = locationData[location]?.filter(indicator => {
+          // Filter by selected indicators
+          if (filters.selectedIndicators.length > 0 && !filters.selectedIndicators.includes(indicator.indicatorName)) {
+            return false;
+          }
+
+          // Filter by progress range
+          if (indicator.progressPercentage < filters.progressRange.min || indicator.progressPercentage > filters.progressRange.max) {
+            return false;
+          }
+
+          // Filter by target achievement
+          if (filters.targetAchievement !== 'all') {
+            const progress = indicator.progressPercentage;
+            switch (filters.targetAchievement) {
+              case 'above':
+                if (progress <= 100) return false;
+                break;
+              case 'ontrack':
+                if (progress < 50 || progress > 100) return false;
+                break;
+              case 'behind':
+                if (progress >= 50) return false;
+                break;
+            }
+          }
+
+          return true;
+        }) || [];
+
+        if (locationIndicators.length > 0) {
+          filtered[location] = locationIndicators;
+        }
+      }
+    });
+
+    return filtered;
+  };
+
+  const getFilteredTimeSeriesData = (): TimeSeriesData => {
+    const filtered: TimeSeriesData = {};
+
+    availableYears.forEach(year => {
+      if (filters.selectedYears.length === 0 || filters.selectedYears.includes(year)) {
+        const yearIndicators = timeSeriesData[year]?.filter(indicator => {
+          return filters.selectedIndicators.length === 0 || filters.selectedIndicators.includes(indicator.indicatorName);
+        }) || [];
+
+        if (yearIndicators.length > 0) {
+          filtered[year] = yearIndicators;
+        }
+      }
+    });
+
+    return filtered;
+  };
+
+  const handleFilterChange = (filterType: keyof Filters, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      selectedLocations: availableLocations,
+      selectedIndicators: availableIndicators,
+      selectedYears: availableYears,
+      progressRange: { min: 0, max: 100 },
+      targetAchievement: 'all',
+      showCompleteDataOnly: false
+    });
+  };
   // Fetch all project data
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -160,8 +279,10 @@ export default function ProjectDashboard({ id }: { id: number }) {
 
   // Radar Chart Options (Location Comparison) - Flipped Structure
   const getRadarChartOptions = () => {
+    const filteredLocationData = getFilteredLocationData();
+
     // Guard against empty or invalid locationData
-    if (!locationData || typeof locationData !== 'object' || Object.keys(locationData).length === 0) {
+    if (!filteredLocationData || typeof filteredLocationData !== 'object' || Object.keys(filteredLocationData).length === 0) {
       return {
         series: [],
         options: {
@@ -221,7 +342,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
     // FLIPPED: Now each indicator is a series, and locations are the axes
     const series = indicatorNames.map((indicatorName) => {
       const data = locations.map(location => {
-        const locationIndicators = locationData[location];
+        const locationIndicators = filteredLocationData[location];
 
         if (!Array.isArray(locationIndicators)) return 0;
 
@@ -330,8 +451,10 @@ export default function ProjectDashboard({ id }: { id: number }) {
 
   // Line Chart Options (Progress Over Time)
   const getLineChartOptions = () => {
+    const filteredTimeSeriesData = getFilteredTimeSeriesData();
+
     // Guard against empty or invalid timeSeriesData
-    if (!timeSeriesData || typeof timeSeriesData !== 'object' || Object.keys(timeSeriesData).length === 0) {
+    if (!filteredTimeSeriesData || typeof filteredTimeSeriesData !== 'object' || Object.keys(filteredTimeSeriesData).length === 0) {
       return {
         series: [],
         options: {
@@ -378,12 +501,12 @@ export default function ProjectDashboard({ id }: { id: number }) {
       };
     }
 
-    const years = Object.keys(timeSeriesData).sort();
+    const years = Object.keys(filteredTimeSeriesData).sort();
 
     // Get all unique indicator names across all years
     const indicatorNames = [...new Set(
       years.flatMap(year => {
-        const yearIndicators = timeSeriesData[year];
+        const yearIndicators = filteredTimeSeriesData[year];
         return Array.isArray(yearIndicators)
           ? yearIndicators.map(item => item?.indicatorName).filter(Boolean)
           : [];
@@ -393,7 +516,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
     const series = indicatorNames.map((indicatorName, index) => ({
       name: indicatorName,
       data: years.map(year => {
-        const yearIndicators = timeSeriesData[year];
+        const yearIndicators = filteredTimeSeriesData[year];
 
         if (!Array.isArray(yearIndicators)) return 0;
 
@@ -471,6 +594,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
   const radarData = getRadarChartOptions();
   const lineData = getLineChartOptions();
   const multiRadialData = getMultiRadialBarOptions();
+  const filteredLocationData = getFilteredLocationData();
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 space-y-8">
@@ -481,12 +605,175 @@ export default function ProjectDashboard({ id }: { id: number }) {
         </h1>
       </div>
 
+      {/* Filter Controls */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            >
+              {showFilters ? 'Hide Filters' : 'Show Filters'}
+            </button>
+            <button
+              onClick={resetFilters}
+              className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Location Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Locations</label>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {availableLocations.map(location => (
+                  <label key={location} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.selectedLocations.includes(location)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          handleFilterChange('selectedLocations', [...filters.selectedLocations, location]);
+                        } else {
+                          handleFilterChange('selectedLocations', filters.selectedLocations.filter(l => l !== location));
+                        }
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">{location}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Indicator Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Indicators</label>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {availableIndicators.map(indicator => (
+                  <label key={indicator} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.selectedIndicators.includes(indicator)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          handleFilterChange('selectedIndicators', [...filters.selectedIndicators, indicator]);
+                        } else {
+                          handleFilterChange('selectedIndicators', filters.selectedIndicators.filter(i => i !== indicator));
+                        }
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">{indicator}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Year Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Years</label>
+              <div className="space-y-2">
+                {availableYears.map(year => (
+                  <label key={year} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.selectedYears.includes(year)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          handleFilterChange('selectedYears', [...filters.selectedYears, year]);
+                        } else {
+                          handleFilterChange('selectedYears', filters.selectedYears.filter(y => y !== year));
+                        }
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">{year}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Progress Range Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Progress Range</label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Min:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={filters.progressRange.min}
+                    onChange={(e) => handleFilterChange('progressRange', {
+                      ...filters.progressRange,
+                      min: parseInt(e.target.value) || 0
+                    })}
+                    className="w-16 px-2 py-1 border rounded text-sm"
+                  />
+                  <span className="text-sm">%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Max:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={filters.progressRange.max}
+                    onChange={(e) => handleFilterChange('progressRange', {
+                      ...filters.progressRange,
+                      max: parseInt(e.target.value) || 100
+                    })}
+                    className="w-16 px-2 py-1 border rounded text-sm"
+                  />
+                  <span className="text-sm">%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Target Achievement Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Target Achievement</label>
+              <select
+                value={filters.targetAchievement}
+                onChange={(e) => handleFilterChange('targetAchievement', e.target.value)}
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              >
+                <option value="all">All Indicators</option>
+                <option value="above">Above Target (&gt;100%)</option>
+                <option value="ontrack">On Track (50-100%)</option>
+                <option value="behind">Behind Target (&lt;50%)</option>
+              </select>
+            </div>
+
+            {/* Data Completeness Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Data Quality</label>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={filters.showCompleteDataOnly}
+                  onChange={(e) => handleFilterChange('showCompleteDataOnly', e.target.checked)}
+                  className="mr-2"
+                />
+                <span className="text-sm">Complete data only</span>
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Single Multi-Series Radial Bar Chart */}
       <div className="w-full">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
           Overall Project Progress
         </h2>
-        {Object.keys(locationData).length > 0 ? (
+        {Object.keys(filteredLocationData).length > 0 ? (
           <div className="flex justify-center">
             <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-4xl">
               <Chart
@@ -498,14 +785,14 @@ export default function ProjectDashboard({ id }: { id: number }) {
             </div>
           </div>
         ) : (
-          <div className="text-center text-gray-500">No project data available</div>
+          <div className="text-center text-gray-500">No project data available with current filters</div>
         )}
       </div>
 
       {/* Radar Chart - Location Comparison */}
       <div className="w-full">
         <div className="bg-white rounded-lg shadow-md p-6">
-          {Object.keys(locationData).length > 0 ? (
+          {Object.keys(filteredLocationData).length > 0 ? (
             <Chart
               options={radarData.options}
               series={radarData.series}
@@ -514,7 +801,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
             />
           ) : (
             <div className="h-96 flex items-center justify-center text-gray-500">
-              No location comparison data available
+              No location comparison data available with current filters
             </div>
           )}
         </div>
@@ -523,7 +810,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
       {/* Line Chart - Progress Over Time */}
       <div className="w-full">
         <div className="bg-white rounded-lg shadow-md p-6">
-          {Object.keys(timeSeriesData).length > 0 ? (
+          {Object.keys(getFilteredTimeSeriesData()).length > 0 ? (
             <Chart
               options={lineData.options}
               series={lineData.series}
@@ -532,7 +819,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
             />
           ) : (
             <div className="h-96 flex items-center justify-center text-gray-500">
-              No time series data available
+              No time series data available with current filters
             </div>
           )}
         </div>

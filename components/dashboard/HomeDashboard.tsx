@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { DashboardProcessedGoal } from "@/types/dashboard.types";
 import Link from "next/link";
 import { IoTrophy } from "react-icons/io5";
 import { TbStarsFilled } from "react-icons/tb";
