@@ -30,15 +30,15 @@ export interface IProjectIndicator {
   projectSubIndicators: IProjectSubIndicator[];
   requiredData: IProjectRequiredData[];
   computationRule: IProjectComputationRule[];
-  project_location_id: number;
+  project_location_id?: number;
 }
 
 export interface IProjectSubIndicator {
   projectSubIndicatorId: number;
-  goalSubIndicatorId: number;
+  goalSubIndicatorId?: number;
   subIndicatorName: string;
-  requiredData: IProjectRequiredData[];
-  computationRule: IProjectComputationRule[];
+  requiredData?: IProjectRequiredData[];
+  computationRule?: IProjectComputationRule[];
 }
 
 export interface IProjectRequiredData {

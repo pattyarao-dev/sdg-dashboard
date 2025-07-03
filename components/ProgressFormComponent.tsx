@@ -5,12 +5,12 @@ import EditIndicatorValues from "./EditIndicatorValues";
 interface RequiredData {
   requiredDataId: number;
   requiredDataName: string;
-  requiredDataValue: number;
+  requiredDataValue?: number; // Make this optional
 }
-
 interface ComputationRule {
   ruleId: number;
   ruleFormula: string;
+  includeSubIndicator?: boolean
 }
 
 export interface SubIndicator {

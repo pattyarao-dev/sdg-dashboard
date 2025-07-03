@@ -69,7 +69,7 @@ export interface IGoalWithIndicators {
 interface RequiredData {
   requiredDataId: number;
   requiredDataName: string;
-  requiredDataValue: number;
+  requiredDataValue?: number;
 }
 
 export interface ComputationRule {

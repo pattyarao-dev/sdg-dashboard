@@ -323,18 +323,18 @@ export async function addProjectSubIndicators(
   });
 }
 
-export async function addProjectIndicatorValues(
-  projectSubIndicators: IGoalSubIndicatorSimple[],
-  projectId: number,
-) {
-  await prisma.td_required_data_value.createMany({
-    data: projectSubIndicators.map((indicator) => ({
-      project_id: projectId,
-      goal_sub_indicator_id: indicator.goal_sub_indicator_id,
-      value: indicator.indicator_target,
-    })),
-  });
-}
+// export async function addProjectIndicatorValues(
+//   projectSubIndicators: IGoalSubIndicatorSimple[],
+//   projectId: number,
+// ) {
+//   await prisma.td_required_data_value.createMany({
+//     data: projectSubIndicators.map((indicator) => ({
+//       project_id: projectId,
+//       goal_sub_indicator_id: indicator.goal_sub_indicator_id,
+//       value: indicator.indicator_target,
+//     })),
+//   });
+// }
 
 export async function updateProjectStatus(projectId, status) {
   try {

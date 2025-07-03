@@ -9,7 +9,6 @@ import {
 } from "@/types/goal.types";
 import {
   createMainOldIndicatorGoal,
-  createNewIndicator,
   createNewMainSubIndicator,
   createNewSubSubIndicator,
   CreateOldMainSubIndicatorRelationship,
@@ -816,7 +815,7 @@ const AddExistingIndicator = ({
             {availableSubIndicators.length > 0 && (
               <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded">
                 <p className="text-xs text-blue-800 mb-2">
-                  Available Sub-Indicators for "{indicator.name}":
+                Available Sub-Indicators for &quot;{indicator.name}&quot;:
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {availableSubIndicators.map((sub) => (
@@ -896,7 +895,7 @@ const AddExistingIndicator = ({
             <div className="w-full flex flex-col gap-6">
               <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> You're adding an existing indicator to
+                  <strong>Note:</strong> You&apos;re adding an existing indicator to this goal.
                   this goal. The indicator name and description cannot be
                   changed, but you can set goal-specific targets, baselines,
                   required data, and add/modify sub-indicators.

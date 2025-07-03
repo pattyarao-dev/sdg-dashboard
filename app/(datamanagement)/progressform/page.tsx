@@ -4,7 +4,7 @@ import { getGoalsInformation } from "@/app/actions/actions";
 interface RequiredData {
   requiredDataId: number;
   requiredDataName: string;
-  requiredDataValue: number;
+  requiredDataValue?: number; // Make this optional
 }
 
 interface ComputationRule {

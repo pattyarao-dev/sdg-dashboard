@@ -73,8 +73,8 @@ export async function getProjects() {
     projectIndicators: project.td_project_indicator.map((pi) => ({
       projectIndicatorId: pi.project_indicator_id,
       goalIndicatorId: pi.td_goal_indicator?.goal_indicator_id || null,
-      goalSubIndicatorId:
-        pi.td_goal_sub_indicator?.goal_sub_indicator_id || null,
+      goalSubIndicatorId: pi.td_goal_sub_indicator?.goal_sub_indicator_id || null,
+      project_location_id: pi.project_location_id, // Add this line
       indicatorName:
         pi.td_goal_indicator?.md_indicator?.name ||
         pi.td_goal_sub_indicator?.md_sub_indicator?.name ||
@@ -113,6 +113,7 @@ export async function getProjects() {
 
   return processedProjects;
 }
+
 export async function getProject(id: number) {
   const project = await prisma.td_project.findUnique({
     where: {
@@ -430,7 +431,7 @@ export async function updateIndicatorComputationRule(
         data: {
           formula,
           goal_indicator_id: goalIndicatorId,
-          include_sub_indicators: includeSubIndicators,
+          includesubindicators: includeSubIndicators,
         },
       })
       .then()
@@ -455,7 +456,7 @@ export async function updateSubIndicatorComputationRule(
         data: {
           formula,
           goal_sub_indicator_id: goalSubIndicatorId,
-          include_sub_indicators: includeSubIndicators,
+          includesubindicators: includeSubIndicators,
         },
       })
       .then()

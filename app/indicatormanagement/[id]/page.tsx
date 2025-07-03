@@ -1,7 +1,6 @@
 import { getGoal, getRequiredDataList } from "@/app/actions/actions";
 import {
   getAvailableIndicators,
-  getAvailableIndicatorsNoSub,
 } from "@/app/actions/actions_indicatormanagement";
 import GoBackButton from "@/components/GoBackButton";
 import IndicatorManagementComponent from "@/components/indicatormanagement/IndicatorManagementComponent";

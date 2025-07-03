@@ -1,15 +1,13 @@
-import { getLocations, getProjects } from "@/app/actions/actions";
+import { getProjects } from "@/app/actions/actions";
 import ProjectProgressFormComponent from "@/components/ProjectProgressFormComponent";
-import { IProjectProgressForm } from "@/types/project.types";
 import { getProjectLocations } from "@/app/actions/actions_projectmanagement";
 
 export default async function ProjectProgressForm() {
   const projectList = await getProjects();
-  const locations = await getLocations();
 
   const projectsWithLocations = await Promise.all(
     projectList.map(async (project) => {
-      const assignedLocations = await getProjectLocations(project.project_id);
+      const assignedLocations = await getProjectLocations(project.projectId);
       return { ...project, assignedLocations };
     }),
   );

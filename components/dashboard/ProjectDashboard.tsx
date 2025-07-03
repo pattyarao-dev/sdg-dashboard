@@ -80,6 +80,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
 
   // Initialize filters when data loads
   useEffect(() => {
+    console.log(indicatorProgress)
     if (Object.keys(locationData).length > 0) {
       setFilters(prev => ({
         ...prev,

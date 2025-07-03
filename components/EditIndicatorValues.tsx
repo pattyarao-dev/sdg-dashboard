@@ -354,7 +354,7 @@ const EditIndicatorValues = ({ indicator }: { indicator: Indicator }) => {
           valuesToCalculate,
           userId,
           "indicator",
-          rule.includeSubIndicators, // Add this - use the flag from the computation rule
+          rule.includeSubIndicator, // Add this - use the flag from the computation rule
         );
 
         console.log("Raw computed result:", computedResult);

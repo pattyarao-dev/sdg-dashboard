@@ -112,7 +112,7 @@ const EditSubIndicatorValues = ({ sub }: { sub: SubIndicator }) => {
           valuesToCalculate,
           userId,
           "subIndicator",
-          rule.includeSubIndicators, // Add this line
+          rule.includeSubIndicator, // Add this line
         );
       }
       setNewValues([]);
