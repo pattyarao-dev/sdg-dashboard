@@ -5,7 +5,6 @@ import Link from "next/link";
 import { BiMath } from "react-icons/bi";
 import { TbStarsFilled } from "react-icons/tb";
 import { IoTrophy } from "react-icons/io5";
-import { PiTargetBold } from "react-icons/pi";
 
 export default async function DataConsolidationHomepage() {
   return (
