@@ -1,4 +1,3 @@
-
 export interface IProject {
   project_id: number;
   name: string;
@@ -6,6 +5,11 @@ export interface IProject {
   project_status: string;
   start_date: Date | null;
   end_date: Date | null;
+}
+
+export interface ILocation {
+  location_id: number;
+  name: string;
 }
 
 export interface IProjectProgressForm {

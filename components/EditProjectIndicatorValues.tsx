@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { IProjectIndicator } from "@/types/project.types";
+import { ILocation, IProjectIndicator } from "@/types/project.types";
 import { saveProjectIndicatorValues } from "@/app/actions/actions_projectmanagement";
 const EditProjectIndicatorValues = ({
   indicator,
+  assignedLocations,
 }: {
   indicator: IProjectIndicator;
+  assignedLocations: ILocation[];
 }) => {
   const [newValues, setNewValues] = useState<
     Array<{
@@ -152,10 +154,8 @@ const EditProjectIndicatorValues = ({
                       <label className="text-sm font-medium text-gray-700">
                         Location
                       </label>
-                      <input
-                        type="text"
+                      <select
                         className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter location"
                         onChange={(e) =>
                           handleValueChange(
                             data.requiredDataId,
@@ -164,7 +164,14 @@ const EditProjectIndicatorValues = ({
                           )
                         }
                         value={getCurrentValue(data.requiredDataId, "location")}
-                      />
+                      >
+                        <option value="">Select location</option>
+                        {assignedLocations.map((loc) => (
+                          <option key={loc.location_id} value={loc.name}>
+                            {loc.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="flex flex-col gap-1">

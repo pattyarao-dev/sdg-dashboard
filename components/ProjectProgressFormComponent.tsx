@@ -1,11 +1,15 @@
 import { IProjectProgressForm } from "@/types/project.types";
 import EditProjectIndicatorValues from "@/components/EditProjectIndicatorValues";
+import { ILocation } from "@/types/project.types";
+
+interface IProjectWithLocations extends IProjectProgressForm {
+  assignedLocations: ILocation[];
+}
 
 const ProjectProgressFormComponent = ({
   projectsList,
 }: {
-  projectsList: IProjectProgressForm[];
-  locations: { id: number; name: string }[];
+  projectsList: IProjectWithLocations[];
 }) => {
   // Filter out completed projects
   const ongoingProjects = projectsList.filter(
@@ -30,23 +34,20 @@ const ProjectProgressFormComponent = ({
               </div>
               <div className="w-full flex flex-col gap-10">
                 <div className="w-full ">
-                  {project.projectIndicators.length > 0 ? (
-                    <div className="w-full flex flex-col gap-4">
-                      {project.projectIndicators.map((indicator, index) => (
-                        <div
-                          key={index}
-                          className="w-full p-6 bg-gray-100 flex flex-col gap-4"
-                        >
-                          <p className="text-xl font-bold uppercase">
-                            {indicator.indicatorName}
-                          </p>
-                          <EditProjectIndicatorValues indicator={indicator} />
-                        </div>
-                      ))}
+                  {project.projectIndicators.map((indicator, index) => (
+                    <div
+                      key={index}
+                      className="w-full p-6 bg-gray-100 flex flex-col gap-4"
+                    >
+                      <p className="text-xl font-bold uppercase">
+                        {indicator.indicatorName}
+                      </p>
+                      <EditProjectIndicatorValues
+                        indicator={indicator}
+                        assignedLocations={project.assignedLocations}
+                      />
                     </div>
-                  ) : (
-                    <p>This project has no indicators yet.</p>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>
