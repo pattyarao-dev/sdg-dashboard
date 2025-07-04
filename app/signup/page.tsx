@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getUserRoles } from "../actions/actions";
+import Link from "next/link";
 
 interface UserRole {
   user_type_id: number;
@@ -62,7 +63,7 @@ const SignUp = () => {
   };
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center">
+    <div className="w-full min-h-screen flex flex-col items-center justify-center">
       <div className="w-[25%] h-fit p-10 bg-white/20 backdrop-blur rounded-lg flex flex-col items-center justify-center gap-10">
         <div className="w-full flex flex-col gap-6 items-center justify-center">
           <input
@@ -120,6 +121,12 @@ const SignUp = () => {
           </button>
         </div>
       </div>
+      <p>
+        Login to your account{" "}
+        <span className="text-blue-600 font-medium underline">
+          <Link href="/login">Sign in</Link>
+        </span>
+      </p>
     </div>
   );
 };
