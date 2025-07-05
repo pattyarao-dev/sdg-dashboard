@@ -168,6 +168,7 @@ const AddNewIndicator = ({
       description: "",
       global_target_value: 0,
       global_baseline_value: 0,
+      baseline_year: 2024,
       required_data: [] as RequiredData[],
       sub_indicators: [] as Indicator[],
     };
@@ -305,7 +306,7 @@ const AddNewIndicator = ({
     return (
       <div
         key={indicator.name}
-        className={`w-full p-4 border ${parentIndicator ? "border-gray-300" : "border-orange-400"}`}
+        className={`w-full p-4 border flex flex-col gap-6 ${parentIndicator ? "border-gray-300" : "border-orange-400"}`}
       >
         <h2
           className={`${parentIndicator ? "text-gray-600" : "text-orange-400"} font-bold`}
@@ -329,7 +330,7 @@ const AddNewIndicator = ({
             />
           </div>
 
-          <div className="w-full flex flex-col gap-4">
+          <div className="w-full flex flex-col gap-2">
             <p className="text-sm text-green-800 font-semibold uppercase">
               Indicator Description:
             </p>
@@ -344,7 +345,7 @@ const AddNewIndicator = ({
             />
           </div>
           <div className="w-full flex gap-4">
-            <div className="w-1/2 flex flex-col gap-4">
+            <div className="w-1/2 flex flex-col gap-2">
               <p className="text-sm text-green-800 font-semibold uppercase">
                 2030 Target
               </p>
@@ -362,23 +363,31 @@ const AddNewIndicator = ({
                 className="w-full p-2 border border-gray-300"
               />
             </div>
-            <div className="w-1/2 flex flex-col gap-4">
+            <div className="w-1/2 flex flex-col gap-2">
               <p className="text-sm text-green-800 font-semibold uppercase">
                 Baseline
               </p>
-              <input
-                type="number"
-                placeholder="Baseline"
-                value={indicator.global_baseline_value}
-                onChange={(e) =>
-                  handleInputChange(
-                    indicator,
-                    "global_baseline_value",
-                    Number(e.target.value),
-                  )
-                }
-                className="w-full p-2 border border-gray-300"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  placeholder="Baseline"
+                  value={indicator.global_baseline_value}
+                  onChange={(e) =>
+                    handleInputChange(
+                      indicator,
+                      "global_baseline_value",
+                      Number(e.target.value),
+                    )
+                  }
+                  className="w-full p-2 border border-gray-300"
+                />
+                <input
+                  type="number"
+                  placeholder="Baseline Year"
+                  value={indicator.baseline_year}
+                  className="w-full p-2 border border-gray-300"
+                />
+              </div>
             </div>
           </div>
           <div className="w-full flex flex-col flex-grow gap-4">

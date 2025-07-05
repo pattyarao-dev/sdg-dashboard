@@ -11,6 +11,7 @@ export interface Indicator {
   description?: string;
   global_target_value: number;
   global_baseline_value: number;
+  baseline_year: number;
   required_data: RequiredData[];
   sub_indicators: Indicator[];
   newIndicator?: boolean; // ✅ Added optional property to track if indicator is newly created
