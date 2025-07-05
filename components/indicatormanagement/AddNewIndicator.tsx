@@ -169,7 +169,7 @@ const AddNewIndicator = ({
       description: "",
       global_target_value: 0,
       global_baseline_value: 0,
-      baseline_year: 0,
+      baseline_year: new Date().getFullYear(),
       required_data: [] as RequiredData[],
       sub_indicators: [] as Indicator[],
     };

@@ -144,6 +144,7 @@ model td_goal_sub_indicator {
   sub_indicator_id                    Int
   global_target_value                 Float?
   global_baseline_value               Float?
+  baseline_year                       Int                                   @default(2024)
   md_computation_rule                 md_computation_rule[]
   td_goal_indicator                   td_goal_indicator                     @relation(fields: [goal_indicator_id], references: [goal_indicator_id], onDelete: Cascade, onUpdate: NoAction)
   md_sub_indicator                    md_sub_indicator                      @relation(fields: [sub_indicator_id], references: [sub_indicator_id], onDelete: Cascade, onUpdate: NoAction)
