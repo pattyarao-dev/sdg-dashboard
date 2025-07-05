@@ -292,6 +292,7 @@ const AddNewIndicator = ({
         );
       }
     }
+    alert("Indicators and Sub-Indicators created successfully!");
     console.log(newIndicator);
   };
 
