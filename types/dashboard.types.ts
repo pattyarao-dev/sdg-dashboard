@@ -69,7 +69,12 @@ export interface DashboardMdSubIndicator {
 }
 
 export interface DashboardGoalSubIndicator {
+  goal_sub_indicator_id?: number;                                              // Add this
+  global_target_value?: number | null;                                        // Add this  
+  global_baseline_value?: number | null;                                      // Add this
+  baseline_year?: number;                                                      // Add this
   md_sub_indicator: DashboardMdSubIndicator;
+  td_goal_sub_indicator_required_data?: DashboardGoalSubIndicatorRequiredData[]; // Add this
 }
 
 export interface DashboardAvailableIndicator {
@@ -92,7 +97,11 @@ export interface DashboardMdIndicatorWithHierarchy extends DashboardMdIndicator 
 export interface DashboardAvailableIndicatorWithHierarchy {
   goal_indicator_id: number;
   goal_id: number;
-  md_indicator: DashboardMdIndicatorWithHierarchy; // Use the extended type
+  indicator_id: number;                    // Added
+  global_target_value: number | null;     // Added
+  global_baseline_value: number | null;   // Added
+  baseline_year: number;                   // Added
+  md_indicator: DashboardMdIndicatorWithHierarchy;
   td_goal_sub_indicator: DashboardGoalSubIndicator[];
   td_goal_indicator_required_data: DashboardGoalIndicatorRequiredData[];
 }
@@ -121,4 +130,8 @@ export interface Filters {
   progressRange: { min: number; max: number };
   targetAchievement: "all" | "above" | "ontrack" | "behind";
   showCompleteDataOnly: boolean;
+}
+
+export interface DashboardGoalSubIndicatorRequiredData {
+  ref_required_data: DashboardRequiredDataRef;
 }

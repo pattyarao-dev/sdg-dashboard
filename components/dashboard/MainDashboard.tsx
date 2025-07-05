@@ -10,6 +10,7 @@ const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 export default function MainDashboard({ goals }: { goals: DashboardProcessedGoal[] }) {
   const [goalProgress, setGoalProgress] = useState<{ [key: number]: number }>({});
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
 
   const sdgColors = [
     '#E5243B', // Goal 1: No Poverty
@@ -64,6 +65,45 @@ export default function MainDashboard({ goals }: { goals: DashboardProcessedGoal
       lineCap: 'round' as const
     },
     labels: ['Progress'],
+  };
+
+  // Export to PDF function
+  const exportToPDF = async () => {
+    setIsExporting(true);
+
+    try {
+      const response = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          goals,
+          goalProgress
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sdg-goals-report-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Fetch progress data for all goals
@@ -122,60 +162,95 @@ export default function MainDashboard({ goals }: { goals: DashboardProcessedGoal
 
   return (
     <>
-      {goals.map((goal, index) => {
-        const goalColor = sdgColors[goal.goalId - 1] || sdgColors[0];
+      <div className="w-full min-h-full flex flex-col justify-center items-center">
 
-        // Get dynamic progress for this goal
-        const progressPercentage = goalProgress[goal.goalId] || 0;
-        const series = [progressPercentage];
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 sm:justify-between sm:items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">SDG Goals Dashboard</h1>
+            <p className="text-gray-600 text-sm mt-1">
+              Track progress across {goals.length} Sustainable Development Goals
+            </p>
+          </div>
+          <button
+            onClick={exportToPDF}
+            disabled={isExporting || loading || Object.keys(goalProgress).length === 0}
+            className="bg-blue-500 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors duration-200 shadow-sm"
+          >
+            {isExporting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export PDF Report
+              </>
+            )}
+          </button>
+        </div>
+        {/* Add Export Button */}
 
-        // Format the goal ID to match your file naming (E_WEB_01.png, E_WEB_02.png, etc.)
-        const goalIdFormatted = goal.goalId.toString().padStart(2, '0');
-        const sdgImagePath = `/sdg_images/E_WEB_${goalIdFormatted}.png`;
+        {/* Goals Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {goals.map((goal, index) => {
+            const goalColor = sdgColors[goal.goalId - 1] || sdgColors[0];
 
-        const options = {
-          ...baseOptions,
-          title: {
-            text: goal.goalName,
-            align: 'center' as const,
-            offsetY: 310, // Move title to bottom
-            style: {
-              fontSize: '16px',
-              fontWeight: 'bold',
-              color: goalColor
-            }
-          },
-          colors: [goalColor],
-          fill: {
-            colors: [goalColor]
-          },
-          plotOptions: {
-            ...baseOptions.plotOptions,
-            radialBar: {
-              ...baseOptions.plotOptions.radialBar,
-              hollow: {
-                ...baseOptions.plotOptions.radialBar.hollow,
-                image: sdgImagePath,
-                imageWidth: 80,
-                imageHeight: 80,
+            // Get dynamic progress for this goal
+            const progressPercentage = goalProgress[goal.goalId] || 0;
+            const series = [progressPercentage];
+
+            // Format the goal ID to match your file naming (E_WEB_01.png, E_WEB_02.png, etc.)
+            const goalIdFormatted = goal.goalId.toString().padStart(2, '0');
+            const sdgImagePath = `/sdg_images/E_WEB_${goalIdFormatted}.png`;
+
+            const options = {
+              ...baseOptions,
+              title: {
+                text: goal.goalName,
+                align: 'center' as const,
+                offsetY: 310, // Move title to bottom
+                style: {
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  color: goalColor
+                }
+              },
+              colors: [goalColor],
+              fill: {
+                colors: [goalColor]
+              },
+              plotOptions: {
+                ...baseOptions.plotOptions,
+                radialBar: {
+                  ...baseOptions.plotOptions.radialBar,
+                  hollow: {
+                    ...baseOptions.plotOptions.radialBar.hollow,
+                    image: sdgImagePath,
+                    imageWidth: 80,
+                    imageHeight: 80,
+                  }
+                }
               }
-            }
-          }
-        };
+            };
 
-        return (
-          <Link key={goal.goalId || index} href={`/dashboard/goalprogress/${goal.goalId}`}>
-            <div className="relative">
-              <Chart
-                options={options}
-                series={series}
-                type="radialBar"
-                height={350}
-              />
-            </div>
-          </Link>
-        );
-      })}
+            return (
+              <Link key={goal.goalId || index} href={`/dashboard/goalprogress/${goal.goalId}`}>
+                <div className="relative hover:shadow-lg transition-shadow duration-200 rounded-lg overflow-hidden">
+                  <Chart
+                    options={options}
+                    series={series}
+                    type="radialBar"
+                    height={350}
+                  />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
     </>
   );
 }

@@ -60,6 +60,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Filter states
   const [filters, setFilters] = useState<Filters>({
@@ -134,6 +135,53 @@ export default function ProjectDashboard({ id }: { id: number }) {
     });
 
     return filtered;
+  };
+
+  const exportToPDF = async () => {
+    setIsExporting(true);
+
+    try {
+      // Get filtered data to send to PDF
+      const filteredLocationData = getFilteredLocationData();
+      const filteredTimeSeriesData = getFilteredTimeSeriesData();
+
+      const response = await fetch('/api/export-project-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: id,
+          indicatorProgress,
+          locationData: filteredLocationData, // Send filtered data
+          timeSeriesData: filteredTimeSeriesData, // Send filtered data
+          funnelData,
+          filters,
+          projectName: `Project ${id}`
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `project-${id}-dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getFilteredTimeSeriesData = (): TimeSeriesData => {
@@ -274,14 +322,6 @@ export default function ProjectDashboard({ id }: { id: number }) {
         yaxis: {
           title: {
             text: 'Implementation Stages'
-          }
-        },
-        title: {
-          text: 'Project Implementation Pipeline',
-          align: 'center' as const,
-          style: {
-            fontSize: '18px',
-            fontWeight: 'bold'
           }
         },
         dataLabels: {
@@ -499,15 +539,6 @@ export default function ProjectDashboard({ id }: { id: number }) {
             show: false
           }
         },
-        title: {
-          text: 'Indicators Across Locations',
-          align: 'center' as const,
-          style: {
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: '#333'
-          }
-        },
         xaxis: {
           categories: locations, // Now locations are the axes
           labels: {
@@ -666,14 +697,6 @@ export default function ProjectDashboard({ id }: { id: number }) {
             enabled: false
           }
         },
-        title: {
-          text: 'Progress Over Time',
-          align: 'center' as const,
-          style: {
-            fontSize: '18px',
-            fontWeight: 'bold'
-          }
-        },
         dataLabels: {
           enabled: false
         },
@@ -726,11 +749,30 @@ export default function ProjectDashboard({ id }: { id: number }) {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 space-y-8">
-      {/* Header */}
-      <div className="w-full flex justify-center mb-8">
+      {/* Header with Export Button */}
+      <div className="w-full flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
         <h1 className="text-4xl font-bold uppercase text-gray-800">
           Project {id} Dashboard
         </h1>
+        <button
+          onClick={exportToPDF}
+          disabled={isExporting || loading}
+          className="bg-green-500 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-colors duration-200 shadow-lg"
+        >
+          {isExporting ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              Generating Report...
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export Dashboard Report
+            </>
+          )}
+        </button>
       </div>
 
       {/* Filter Controls */}
@@ -896,37 +938,38 @@ export default function ProjectDashboard({ id }: { id: number }) {
         )}
       </div>
 
-
-      {/* Single Multi-Series Radial Bar Chart */}
-      <div className="w-full">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-          Overall Project Progress
-        </h2>
-        {Object.keys(filteredLocationData).length > 0 ? (
-          <div className="flex justify-center">
-            <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-4xl">
-              <Chart
-                options={multiRadialData.options}
-                series={multiRadialData.series}
-                type="radialBar"
-                height={500}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="text-center text-gray-500">No project data available with current filters</div>
-        )}
-      </div>
-
-      {/* Radar Chart - Location Comparison */}
-      <div className="w-full">
+      {/* First Row: Radial Chart + Radar Chart (Side by Side) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Multi-Series Radial Bar Chart */}
         <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
+            Overall Project Progress
+          </h2>
+          {Object.keys(filteredLocationData).length > 0 ? (
+            <Chart
+              options={multiRadialData.options}
+              series={multiRadialData.series}
+              type="radialBar"
+              height={450}
+            />
+          ) : (
+            <div className="h-96 flex items-center justify-center text-gray-500">
+              No project data available with current filters
+            </div>
+          )}
+        </div>
+
+        {/* Radar Chart - Location Comparison */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
+            Indicators Across Locations
+          </h2>
           {Object.keys(filteredLocationData).length > 0 ? (
             <Chart
               options={radarData.options}
               series={radarData.series}
               type="radar"
-              height={400}
+              height={450}
             />
           ) : (
             <div className="h-96 flex items-center justify-center text-gray-500">
@@ -936,9 +979,12 @@ export default function ProjectDashboard({ id }: { id: number }) {
         </div>
       </div>
 
-      {/* Line Chart - Progress Over Time */}
+      {/* Second Row: Line Chart (Full Width) */}
       <div className="w-full">
         <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
+            Progress Over Time
+          </h2>
           {Object.keys(getFilteredTimeSeriesData()).length > 0 ? (
             <Chart
               options={lineData.options}
@@ -954,13 +1000,12 @@ export default function ProjectDashboard({ id }: { id: number }) {
         </div>
       </div>
 
-
-      {/* Implementation Funnel Chart - NEW SECTION */}
+      {/* Third Row: Implementation Funnel Chart (Full Width) */}
       <div className="w-full">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-          Implementation Pipeline
-        </h2>
         <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
+            Implementation Pipeline
+          </h2>
           {funnelData ? (
             <div className="space-y-6">
               <Chart
@@ -969,7 +1014,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
                 type="bar"
                 height={400}
               />
-              
+
               {/* Funnel Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                 <div className="bg-blue-50 p-4 rounded-lg">
@@ -1013,3 +1058,4 @@ export default function ProjectDashboard({ id }: { id: number }) {
     </div>
   );
 }
+

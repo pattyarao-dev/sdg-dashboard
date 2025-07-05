@@ -8,13 +8,18 @@ import { revalidatePath } from "next/cache";
 export async function getGoalIndicators(
   goalId: number,
 ): Promise<DashboardAvailableIndicatorWithHierarchy[]> {
-  // First get the main indicators not assigned to this goal
+  // First get the main indicators assigned to this goal
   const availableIndicators = await prisma.td_goal_indicator.findMany({
     include: {
       md_indicator: true,
       td_goal_sub_indicator: {
         include: {
           md_sub_indicator: true,
+          td_goal_sub_indicator_required_data: {  // ✅ ADD THIS!
+            include: {
+              ref_required_data: true,
+            },
+          },
         },
       },
       td_goal_indicator_required_data: {
@@ -93,7 +98,6 @@ export async function getGoalIndicators(
 
   return indicatorsWithCompleteHierarchy;
 }
-
 export async function getAvailableIndicators(goalId: number) {
   // First get the main indicators not assigned to this goal
   const availableIndicators = await prisma.td_goal_indicator.findMany({

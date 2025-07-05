@@ -53,7 +53,7 @@ const IndicatorManagementComponent = ({
               requiredData={requiredData}
             />
           ) : task === "Edit Indicators" ? (
-            <EditIndicators />
+            <EditIndicators goal={goal} />
           ) : null}
       </div>
     </div>
