@@ -608,6 +608,7 @@ export async function CreateOldMainSubIndicatorRelationship(
       goal_indicator_id: goalIndicatorId,
       global_target_value: subIndicator.global_target_value,
       global_baseline_value: subIndicator.global_baseline_value,
+      baseline_year: subIndicator.baseline_year,
     },
   });
 
@@ -650,6 +651,7 @@ export async function createOldSubIndicatorRelationship(
       goal_indicator_id: goalIndicatorId,
       global_target_value: subIndicator.global_target_value,
       global_baseline_value: subIndicator.global_baseline_value,
+      baseline_year: subIndicator.baseline_year,
     },
   });
 
@@ -690,6 +692,7 @@ export async function createMainOldIndicatorGoal(
       goal_id: goalId,
       global_target_value: indicator.global_target_value,
       global_baseline_value: indicator.global_baseline_value,
+      baseline_year: indicator.baseline_year,
     },
   });
 

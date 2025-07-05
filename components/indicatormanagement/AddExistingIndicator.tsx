@@ -47,9 +47,11 @@ const AddExistingIndicator = ({
       description: goalIndicator.md_indicator.description || "",
       global_target_value: 0, // ✅ Set default - user will input goal-specific values
       global_baseline_value: 0, // ✅ Set default - user will input goal-specific values
-      required_data: goalIndicator.td_goal_indicator_required_data?.map(
-        (gird) => gird.ref_required_data
-      ) || [], // ✅ Extract required data from the correct structure
+      baseline_year: new Date().getFullYear(),
+      required_data:
+        goalIndicator.td_goal_indicator_required_data?.map(
+          (gird) => gird.ref_required_data,
+        ) || [], // ✅ Extract required data from the correct structure
       sub_indicators: [], // ✅ Start with empty - let user choose what to add
       newIndicator: false, // ✅ Mark as existing indicator
     };
@@ -63,6 +65,7 @@ const AddExistingIndicator = ({
       description: subIndicator.description || "",
       global_target_value: 0, // ✅ Reset for goal-specific values
       global_baseline_value: 0, // ✅ Reset for goal-specific values
+      baseline_year: new Date().getFullYear(), // ✅ Set default - user will input goal-specific values
       required_data: [], // ✅ Start with empty for goal-specific
       sub_indicators: [], // ✅ Start with empty - let user choose what to add
       newIndicator: false, // ✅ Mark as existing indicator
@@ -140,8 +143,8 @@ const AddExistingIndicator = ({
 
           const updatedRequiredData = isSelected
             ? current.required_data.filter(
-              (rd) => rd.required_data_id !== data.required_data_id,
-            )
+                (rd) => rd.required_data_id !== data.required_data_id,
+              )
             : [...current.required_data, data];
 
           return { ...current, required_data: updatedRequiredData };
@@ -409,7 +412,11 @@ const AddExistingIndicator = ({
     if (type === "main") {
       if (!subIndicator.newIndicator) {
         // add existing sub relationship here!
-        newSubIndicator = await CreateOldMainSubIndicatorRelationship(subIndicator, parentIndicatorId, goalIndicatorId)
+        newSubIndicator = await CreateOldMainSubIndicatorRelationship(
+          subIndicator,
+          parentIndicatorId,
+          goalIndicatorId,
+        );
       } else {
         newSubIndicator = await createNewMainSubIndicator(
           subIndicator,
@@ -420,7 +427,11 @@ const AddExistingIndicator = ({
     } else if (type === "sub") {
       if (!subIndicator.newIndicator) {
         //gonna add old sub here!
-        newSubIndicator = await createOldSubIndicatorRelationship(subIndicator, parentIndicatorId, goalIndicatorId)
+        newSubIndicator = await createOldSubIndicatorRelationship(
+          subIndicator,
+          parentIndicatorId,
+          goalIndicatorId,
+        );
       } else {
         newSubIndicator = await createNewSubSubIndicator(
           subIndicator,
@@ -466,6 +477,7 @@ const AddExistingIndicator = ({
       }
 
       console.log("Indicator added to goal:", goalSpecificIndicator);
+      alert("Indicators and sub-indicators added successfully");
 
       // Reset form
       setSelectedIndicatorId(null);
@@ -507,10 +519,11 @@ const AddExistingIndicator = ({
           </h2>
           {/* ✅ Show indicator type tag */}
           <span
-            className={`px-2 py-1 text-xs font-semibold rounded ${indicator.newIndicator
-              ? "bg-green-100 text-green-800 border border-green-300"
-              : "bg-blue-100 text-blue-800 border border-blue-300"
-              }`}
+            className={`px-2 py-1 text-xs font-semibold rounded ${
+              indicator.newIndicator
+                ? "bg-green-100 text-green-800 border border-green-300"
+                : "bg-blue-100 text-blue-800 border border-blue-300"
+            }`}
           >
             {indicator.newIndicator ? "NEW" : "EXISTING"}
           </span>
@@ -530,8 +543,9 @@ const AddExistingIndicator = ({
                 handleInputChange(indicator, "name", e.target.value)
               }
               readOnly={isExistingIndicator}
-              className={`w-full p-2 border border-gray-300 ${isExistingIndicator ? "bg-gray-100 cursor-not-allowed" : ""
-                }`}
+              className={`w-full p-2 border border-gray-300 ${
+                isExistingIndicator ? "bg-gray-100 cursor-not-allowed" : ""
+              }`}
             />
           </div>
 
@@ -548,8 +562,9 @@ const AddExistingIndicator = ({
                 handleInputChange(indicator, "description", e.target.value)
               }
               readOnly={isExistingIndicator}
-              className={`w-full p-2 border border-gray-300 ${isExistingIndicator ? "bg-gray-100 cursor-not-allowed" : ""
-                }`}
+              className={`w-full p-2 border border-gray-300 ${
+                isExistingIndicator ? "bg-gray-100 cursor-not-allowed" : ""
+              }`}
             />
           </div>
 
@@ -574,21 +589,36 @@ const AddExistingIndicator = ({
             </div>
             <div className="w-1/2 flex flex-col gap-4">
               <p className="text-sm text-green-800 font-semibold uppercase">
-                Baseline (Goal-Specific)
+                Baseline
               </p>
-              <input
-                type="number"
-                placeholder="Baseline"
-                value={indicator.global_baseline_value}
-                onChange={(e) =>
-                  handleInputChange(
-                    indicator,
-                    "global_baseline_value",
-                    Number(e.target.value),
-                  )
-                }
-                className="w-full p-2 border border-gray-300"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  placeholder="Baseline"
+                  value={indicator.global_baseline_value}
+                  onChange={(e) =>
+                    handleInputChange(
+                      indicator,
+                      "global_baseline_value",
+                      Number(e.target.value),
+                    )
+                  }
+                  className="w-full p-2 border border-gray-300"
+                />
+                <input
+                  type="number"
+                  placeholder="Baseline Year"
+                  value={indicator.baseline_year}
+                  className="w-full p-2 border border-gray-300"
+                  onChange={(e) =>
+                    handleInputChange(
+                      indicator,
+                      "baseline_year",
+                      Number(e.target.value),
+                    )
+                  }
+                />
+              </div>
             </div>
           </div>
 
@@ -727,10 +757,11 @@ const AddExistingIndicator = ({
                           </span>
                           {/* ✅ Show sub-indicator type tag */}
                           <span
-                            className={`px-1.5 py-0.5 text-xs font-semibold rounded ${sub.newIndicator
-                              ? "bg-green-100 text-green-800 border border-green-300"
-                              : "bg-blue-100 text-blue-800 border border-blue-300"
-                              }`}
+                            className={`px-1.5 py-0.5 text-xs font-semibold rounded ${
+                              sub.newIndicator
+                                ? "bg-green-100 text-green-800 border border-green-300"
+                                : "bg-blue-100 text-blue-800 border border-blue-300"
+                            }`}
                           >
                             {sub.newIndicator ? "NEW" : "EXISTING"}
                           </span>
@@ -815,7 +846,7 @@ const AddExistingIndicator = ({
             {availableSubIndicators.length > 0 && (
               <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded">
                 <p className="text-xs text-blue-800 mb-2">
-                Available Sub-Indicators for &quot;{indicator.name}&quot;:
+                  Available Sub-Indicators for &quot;{indicator.name}&quot;:
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {availableSubIndicators.map((sub) => (
@@ -862,10 +893,11 @@ const AddExistingIndicator = ({
           {availableIndicators.map((indicator, index) => (
             <div
               key={index}
-              className={`w-full p-3 border text-left rounded-md transition-all duration-200 ${selectedIndicatorId === indicator.md_indicator.indicator_id
-                ? "border-orange-400 bg-orange-50"
-                : "border-gray-300 hover:border-gray-400"
-                }`}
+              className={`w-full p-3 border text-left rounded-md transition-all duration-200 ${
+                selectedIndicatorId === indicator.md_indicator.indicator_id
+                  ? "border-orange-400 bg-orange-50"
+                  : "border-gray-300 hover:border-gray-400"
+              }`}
             >
               <button
                 onClick={() => handleIndicatorSelect(indicator)}
@@ -895,10 +927,11 @@ const AddExistingIndicator = ({
             <div className="w-full flex flex-col gap-6">
               <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> You&apos;re adding an existing indicator to this goal.
-                  this goal. The indicator name and description cannot be
-                  changed, but you can set goal-specific targets, baselines,
-                  required data, and add/modify sub-indicators.
+                  <strong>Note:</strong> You&apos;re adding an existing
+                  indicator to this goal. this goal. The indicator name and
+                  description cannot be changed, but you can set goal-specific
+                  targets, baselines, required data, and add/modify
+                  sub-indicators.
                 </p>
               </div>
 
