@@ -22,6 +22,7 @@ const useCreateFormula = () => {
         includeSubIndicators,
       );
       setSuccess(true);
+      alert("Formula created!");
       return formulaTable;
     } else if (indicatorType === "indicator") {
       const formulaTable = await updateIndicatorComputationRule(
@@ -30,6 +31,7 @@ const useCreateFormula = () => {
         includeSubIndicators,
       );
       setSuccess(true);
+      alert("Formula created!");
       return formulaTable;
     }
   };

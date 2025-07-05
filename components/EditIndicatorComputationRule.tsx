@@ -43,6 +43,7 @@ const EditIndicatorComputationRule = ({
         includeSubIndicators,
       );
     }
+    alert("Formula updated successfully!");
   };
 
   // Handle edit mode
