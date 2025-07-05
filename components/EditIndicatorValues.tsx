@@ -522,7 +522,7 @@ const EditIndicatorValues = ({
       </div>
       <div className="w-full p-8 bg-gray-100 flex flex-col gap-4">
         <h1 className="uppercase text-green-800 font-bold text-sm">
-          Indicator Summary:
+          Indicator Progress Summary:
         </h1>
         <div className="w-full flex flex-col items-end gap-4">
           <textarea
