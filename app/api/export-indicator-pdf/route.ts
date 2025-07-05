@@ -1,5 +1,6 @@
 // app/api/export-indicator-pdf/route.ts
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import { NextRequest } from 'next/server';
 
 interface FlattenedIndicatorItem {
@@ -44,14 +45,21 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
+    // Launch browser with Vercel-compatible configuration
     const browser = await puppeteer.launch({
-      headless: true,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu'
-      ]
+        ...chromium.args,
+        '--hide-scrollbars',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+      ],
+      defaultViewport: {
+        width: 1280,
+        height: 720,
+      },
+      executablePath: await chromium.executablePath(),
+      headless: true,
+      ignoreDefaultArgs: ['--disable-extensions'],
     });
 
     const page = await browser.newPage();
@@ -242,12 +250,6 @@ export async function POST(request: NextRequest): Promise<Response> {
           color: white;
         }
         
-        .sub-indicators {
-          margin-left: 20px;
-          border-left: 2px solid ${goalColor}33;
-          padding-left: 20px;
-        }
-        
         .notes-badge {
           background: #fbbf24;
           color: #92400e;
@@ -277,6 +279,8 @@ export async function POST(request: NextRequest): Promise<Response> {
           padding-top: 8px;
           border-top: 1px solid #fde68a;
         }
+        
+        .footer {
           margin-top: 40px;
           text-align: center;
           border-top: 1px solid #e5e7eb;
@@ -484,15 +488,15 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     await page.setContent(htmlContent, {
       waitUntil: 'networkidle0',
-      timeout: 30000
+      timeout: 25000
     });
 
     await page.waitForFunction(
       () => document.querySelectorAll('[id^="chart-"]').length > 0,
-      { timeout: 10000 }
+      { timeout: 8000 }
     );
 
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     const pdf = await page.pdf({
       format: 'A4',

@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "app/api/export-pdf/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/export-indicator-pdf/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/export-project-pdf/route.ts": {
+      "maxDuration": 30
+    }
+  },
+  "regions": ["sin1"]
+}

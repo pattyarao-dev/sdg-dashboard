@@ -1,4 +1,6 @@
-import puppeteer from 'puppeteer';
+// app/api/export-project-pdf/route.ts
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import { NextRequest } from 'next/server';
 
 interface IndicatorProgress {
@@ -62,23 +64,27 @@ export async function POST(request: NextRequest): Promise<Response> {
     const body: RequestBody = await request.json();
     const {
       projectId,
-      indicatorProgress,
       locationData,
       timeSeriesData,
       funnelData,
       filters,
       projectName = `Project ${projectId}`
     } = body;
-    console.log(indicatorProgress)
 
     const browser = await puppeteer.launch({
-      headless: true,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu'
-      ]
+        ...chromium.args,
+        '--hide-scrollbars',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+      ],
+      defaultViewport: {
+        width: 1280,
+        height: 720,
+      },
+      executablePath: await chromium.executablePath(),
+      headless: true,
+      ignoreDefaultArgs: ['--disable-extensions'],
     });
 
     const page = await browser.newPage();
@@ -828,15 +834,15 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     await page.setContent(htmlContent, {
       waitUntil: 'networkidle0',
-      timeout: 30000
+      timeout: 25000
     });
 
     await page.waitForFunction(
       () => document.querySelectorAll('[id$="-chart"]').length > 0,
-      { timeout: 10000 }
+      { timeout: 8000 }
     );
 
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     const pdf = await page.pdf({
       format: 'A4',

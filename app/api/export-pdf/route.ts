@@ -1,8 +1,8 @@
 // app/api/export-pdf/route.ts
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import { NextRequest } from 'next/server';
 import { DashboardProcessedGoal } from '@/types/dashboard.types';
-
 
 interface GoalProgress {
   [key: number]: number;
@@ -44,21 +44,27 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     const browser = await puppeteer.launch({
-      headless: true,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu'
-      ]
+        ...chromium.args,
+        '--hide-scrollbars',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+      ],
+      defaultViewport: {
+        width: 1280,
+        height: 720,
+      },
+      executablePath: await chromium.executablePath(),
+      headless: true,
+      ignoreDefaultArgs: ['--disable-extensions'],
     });
-
     const page = await browser.newPage();
 
     await page.setViewport({ width: 1200, height: 800 });
 
-    // Calculate summary statistics
-    const progressValues = Object.values(goalProgress);
+    // Calculate summary statistics using backend logic
+    // Include all progress values (including zeros), cap at 100%
+    const progressValues = Object.values(goalProgress).map(p => Math.min(100, p));
     const averageProgress = progressValues.length > 0
       ? Math.round(progressValues.reduce((a, b) => a + b, 0) / progressValues.length)
       : 0;
@@ -357,7 +363,6 @@ export async function POST(request: NextRequest): Promise<Response> {
           });
         };
         
-        // Wait for ApexCharts to load and DOM to be ready
         const waitForApexCharts = () => {
           if (typeof ApexCharts !== 'undefined' && document.readyState === 'complete') {
             renderCharts();
@@ -374,17 +379,15 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     await page.setContent(htmlContent, {
       waitUntil: 'networkidle0',
-      timeout: 30000
+      timeout: 25000
     });
 
-    // Wait for charts to render using the new delay method
     await page.waitForFunction(
       () => document.querySelectorAll('[id^="chart-"]').length > 0,
-      { timeout: 10000 }
+      { timeout: 8000 }
     );
 
-    // Additional wait to ensure charts are fully rendered
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     const pdf = await page.pdf({
       format: 'A4',
