@@ -38,6 +38,7 @@ const EditSubIndicatorComputationRule = ({ sub }: { sub: SubIndicator }) => {
         includeSubIndicators,
       );
     }
+    alert("Formula updated successfully!");
   };
 
   // Handle edit mode
