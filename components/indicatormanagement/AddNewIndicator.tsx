@@ -23,6 +23,7 @@ const AddNewIndicator = ({
     description: "",
     global_target_value: 0,
     global_baseline_value: 0,
+    baseline_year: new Date().getFullYear(), // Add default current year
     required_data: [] as RequiredData[],
     sub_indicators: [] as Indicator[],
   });
@@ -168,7 +169,7 @@ const AddNewIndicator = ({
       description: "",
       global_target_value: 0,
       global_baseline_value: 0,
-      baseline_year: 2024,
+      baseline_year: 0,
       required_data: [] as RequiredData[],
       sub_indicators: [] as Indicator[],
     };
@@ -386,6 +387,13 @@ const AddNewIndicator = ({
                   placeholder="Baseline Year"
                   value={indicator.baseline_year}
                   className="w-full p-2 border border-gray-300"
+                  onChange={(e) =>
+                    handleInputChange(
+                      indicator,
+                      "baseline_year",
+                      Number(e.target.value),
+                    )
+                  }
                 />
               </div>
             </div>

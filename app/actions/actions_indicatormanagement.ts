@@ -460,6 +460,7 @@ export async function createNewIndicator(indicator: Indicator, goalId: number) {
       goal_id: goalId,
       global_target_value: indicator.global_target_value,
       global_baseline_value: indicator.global_baseline_value,
+      baseline_year: indicator.baseline_year,
     },
   });
 
