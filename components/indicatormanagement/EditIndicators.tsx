@@ -10,9 +10,27 @@ interface EditIndicatorsProps {
   goal: Goal;
 }
 
+// Simple types for flat indicator list
+interface FlatIndicatorItem {
+  id: string; // Unique identifier for this item
+  type: 'main' | 'sub';
+  indicator_id: number;
+  goal_indicator_id?: number;
+  goal_sub_indicator_id?: number;
+  name: string;
+  description: string;
+  global_target_value: number | null;
+  global_baseline_value: number | null;
+  baseline_year: number;
+  level: number; // For sub-indicators, shows nesting level
+  parent_name?: string; // For sub-indicators, shows parent name
+  required_data_count: number;
+}
+
 const EditIndicators = ({ goal }: EditIndicatorsProps) => {
   const [goalIndicators, setGoalIndicators] = useState<DashboardAvailableIndicatorWithHierarchy[]>([]);
-  const [selectedIndicator, setSelectedIndicator] = useState<DashboardAvailableIndicatorWithHierarchy | null>(null);
+  const [flatIndicatorsList, setFlatIndicatorsList] = useState<FlatIndicatorItem[]>([]);
+  const [selectedIndicatorForEdit, setSelectedIndicatorForEdit] = useState<FlatIndicatorItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,6 +41,10 @@ const EditIndicators = ({ goal }: EditIndicatorsProps) => {
         setLoading(true);
         const indicators = await getGoalIndicators(goal.goal_id);
         setGoalIndicators(indicators);
+
+        // Convert to flat list
+        const flatList = convertToFlatList(indicators);
+        setFlatIndicatorsList(flatList);
       } catch (err) {
         console.error("Error fetching goal indicators:", err);
         setError("Failed to load indicators for this goal");
@@ -32,36 +54,94 @@ const EditIndicators = ({ goal }: EditIndicatorsProps) => {
     };
 
     if (goal.goal_id) {
+      console.log(goalIndicators)
       fetchGoalIndicators();
     }
   }, [goal.goal_id]);
 
-  const handleIndicatorSelect = (indicator: DashboardAvailableIndicatorWithHierarchy) => {
-    setSelectedIndicator(indicator);
+  // Convert hierarchical data to flat list for easy selection
+  const convertToFlatList = (indicators: DashboardAvailableIndicatorWithHierarchy[]): FlatIndicatorItem[] => {
+    const flatList: FlatIndicatorItem[] = [];
+
+    indicators.forEach(indicator => {
+      // Add main indicator
+      flatList.push({
+        id: `main-${indicator.indicator_id}`,
+        type: 'main',
+        indicator_id: indicator.indicator_id,
+        goal_indicator_id: indicator.goal_indicator_id,
+        name: indicator.md_indicator.name,
+        description: indicator.md_indicator.description || "",
+        global_target_value: indicator.global_target_value,
+        global_baseline_value: indicator.global_baseline_value,
+        baseline_year: indicator.baseline_year,
+        level: 0,
+        required_data_count: indicator.td_goal_indicator_required_data?.length || 0
+      });
+
+      // Add sub-indicators recursively
+      const flattenSubIndicators = (
+        subIndicators: any[],
+        level: number,
+        parentName: string,
+        goalIndicatorId: number
+      ) => {
+        subIndicators.forEach(sub => {
+          // Find the goal-specific data for this sub-indicator
+          const goalSubIndicator = indicator.td_goal_sub_indicator?.find(
+            gsi => gsi.md_sub_indicator.sub_indicator_id === sub.indicator_id
+          );
+
+          flatList.push({
+            id: `sub-${sub.indicator_id}`,
+            type: 'sub',
+            indicator_id: sub.indicator_id,
+            goal_indicator_id: goalIndicatorId,
+            goal_sub_indicator_id: goalSubIndicator?.goal_sub_indicator_id,
+            name: sub.name,
+            description: sub.description || "",
+            global_target_value: goalSubIndicator?.global_target_value || null,
+            global_baseline_value: goalSubIndicator?.global_baseline_value || null,
+            baseline_year: goalSubIndicator?.baseline_year || new Date().getFullYear(),
+            level: level,
+            parent_name: parentName,
+            required_data_count: goalSubIndicator?.td_goal_sub_indicator_required_data?.length || 0
+          });
+
+          // Recursively add nested sub-indicators
+          if (sub.sub_indicators && sub.sub_indicators.length > 0) {
+            flattenSubIndicators(sub.sub_indicators, level + 1, sub.name, goalIndicatorId);
+          }
+        });
+      };
+
+      // Process sub-indicators
+      if (indicator.md_indicator.sub_indicators && indicator.md_indicator.sub_indicators.length > 0) {
+        flattenSubIndicators(
+          indicator.md_indicator.sub_indicators,
+          1,
+          indicator.md_indicator.name,
+          indicator.goal_indicator_id
+        );
+      }
+    });
+
+    return flatList;
+  };
+
+  const handleEditIndicator = (item: FlatIndicatorItem) => {
+    setSelectedIndicatorForEdit(item);
   };
 
   const handleBackToSelection = () => {
-    setSelectedIndicator(null);
+    setSelectedIndicatorForEdit(null);
   };
 
   const handleSaveComplete = () => {
-    // Refresh the indicators list after save
-    setSelectedIndicator(null);
-    // Optionally refetch indicators to show updated values
+    // Refresh the list after successful save
+    setSelectedIndicatorForEdit(null);
+    // Optionally refetch to show updated values
     // fetchGoalIndicators();
-  };
-
-  // Count total sub-indicators recursively
-  const countSubIndicators = (subIndicators: any[]): number => {
-    if (!subIndicators || subIndicators.length === 0) return 0;
-
-    let count = subIndicators.length;
-    subIndicators.forEach(sub => {
-      if (sub.sub_indicators) {
-        count += countSubIndicators(sub.sub_indicators);
-      }
-    });
-    return count;
   };
 
   // Render the indicator selection interface
@@ -91,7 +171,7 @@ const EditIndicators = ({ goal }: EditIndicatorsProps) => {
       );
     }
 
-    if (goalIndicators.length === 0) {
+    if (flatIndicatorsList.length === 0) {
       return (
         <div className="w-full p-8 bg-gray-50 border border-gray-200 rounded-lg text-center">
           <p className="text-gray-600 text-lg mb-4">
@@ -105,91 +185,93 @@ const EditIndicators = ({ goal }: EditIndicatorsProps) => {
     }
 
     return (
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {goalIndicators.map((indicator) => {
-          const subIndicatorCount = countSubIndicators(
-            indicator.md_indicator.sub_indicators || []
-          );
-          const requiredDataCount = indicator.td_goal_indicator_required_data?.length || 0;
+      <div className="w-full space-y-2">
+        <div className="grid grid-cols-12 gap-4 p-3 bg-gray-100 font-semibold text-sm text-gray-700 rounded-t-lg">
+          <div className="col-span-5">Indicator Name</div>
+          <div className="col-span-2">Type/Level</div>
+          <div className="col-span-2">Target</div>
+          <div className="col-span-2">Baseline</div>
+          <div className="col-span-1">Actions</div>
+        </div>
 
-          return (
-            <div
-              key={indicator.goal_indicator_id}
-              className="p-6 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-orange-300"
-              onClick={() => handleIndicatorSelect(indicator)}
-            >
-              {/* Indicator Header */}
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {indicator.md_indicator.name}
-                </h3>
-                {indicator.md_indicator.description && (
-                  <p className="text-sm text-gray-600 mb-3">
-                    {indicator.md_indicator.description}
-                  </p>
+        {flatIndicatorsList.map((item) => (
+          <div
+            key={item.id}
+            className="grid grid-cols-12 gap-4 p-3 bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
+          >
+            {/* Indicator Name with indentation for sub-indicators */}
+            <div className="col-span-5 flex items-center">
+              <div style={{ marginLeft: `${item.level * 20}px` }} className="flex items-center gap-2">
+                {item.level > 0 && (
+                  <span className="text-gray-400">└─</span>
                 )}
-
-                {/* Status Badge */}
-                <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${indicator.md_indicator.status === 'active'
-                  ? 'bg-green-100 text-green-800'
-                  : indicator.md_indicator.status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
-                  }`}>
-                  {indicator.md_indicator.status?.toUpperCase()}
-                </span>
-              </div>
-
-              {/* Goal-Specific Values */}
-              <div className="mb-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Target Value:</span>
-                  <span className="font-medium">
-                    {indicator.global_target_value || "Not set"}
-                  </span>
+                <div>
+                  <div className="font-medium">{item.name}</div>
+                  {item.parent_name && (
+                    <div className="text-xs text-gray-500">
+                      Parent: {item.parent_name}
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Baseline:</span>
-                  <span className="font-medium">
-                    {indicator.global_baseline_value || "Not set"}
-                    {indicator.baseline_year && ` (${indicator.baseline_year})`}
-                  </span>
-                </div>
-              </div>
-
-              {/* Statistics */}
-              <div className="space-y-2 text-sm text-gray-600">
-                <div className="flex justify-between">
-                  <span>Sub-indicators:</span>
-                  <span className="font-medium">{subIndicatorCount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Required Data:</span>
-                  <span className="font-medium">{requiredDataCount}</span>
-                </div>
-              </div>
-
-              {/* Action Hint */}
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs text-orange-600 font-medium">
-                  Click to edit this indicator →
-                </p>
               </div>
             </div>
-          );
-        })}
+
+            {/* Type/Level */}
+            <div className="col-span-2 flex items-center">
+              <div>
+                <span className={`px-2 py-1 text-xs font-semibold rounded ${item.type === 'main'
+                  ? 'bg-orange-100 text-orange-800'
+                  : 'bg-blue-100 text-blue-800'
+                  }`}>
+                  {item.type === 'main' ? 'MAIN' : `SUB-L${item.level}`}
+                </span>
+              </div>
+            </div>
+
+            {/* Target Value */}
+            <div className="col-span-2 flex items-center">
+              <span className="text-sm">
+                {item.global_target_value || <span className="text-gray-400 italic">Not set</span>}
+              </span>
+            </div>
+
+            {/* Baseline */}
+            <div className="col-span-2 flex items-center">
+              <span className="text-sm">
+                {item.global_baseline_value ? (
+                  `${item.global_baseline_value} (${item.baseline_year})`
+                ) : (
+                  <span className="text-gray-400 italic">Not set</span>
+                )}
+              </span>
+            </div>
+
+            {/* Actions */}
+            <div className="col-span-1 flex items-center">
+              <button
+                onClick={() => handleEditIndicator(item)}
+                className="px-3 py-1 bg-orange-500 text-white text-xs font-semibold rounded hover:bg-orange-600 transition-colors"
+              >
+                Edit
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     );
   };
 
   // Render the edit interface for selected indicator
   const renderEditInterface = () => {
-    if (!selectedIndicator) return null;
+    if (!selectedIndicatorForEdit) return null;
 
-    // For now, just show the selected indicator data
-    // We'll replace this with the EditIndicatorForm component
     return (
-      <EditIndicatorForm selectedIndicator={selectedIndicator} goal={goal} onBack={handleBackToSelection} onSaveComplete={handleSaveComplete} />
+      <EditIndicatorForm
+        selectedItem={selectedIndicatorForEdit}
+        goal={goal}
+        onBack={handleBackToSelection}
+        onSaveComplete={handleSaveComplete}
+      />
     );
   };
 
@@ -199,18 +281,19 @@ const EditIndicators = ({ goal }: EditIndicatorsProps) => {
         {/* Header */}
         <div className="w-full flex flex-col gap-2">
           <h2 className="text-lg font-semibold text-orange-400">
-            {selectedIndicator ? 'Edit Indicator' : 'Select an Indicator to Edit'}
+            {selectedIndicatorForEdit ? 'Edit Indicator' : 'Select an Indicator to Edit'}
           </h2>
           <hr className="w-full border border-orange-400" />
-          {!selectedIndicator && (
+          {!selectedIndicatorForEdit && (
             <p className="text-sm text-gray-600">
-              Choose an indicator assigned to &quot;<strong>{goal.name}</strong>&quot; to edit its goal-specific settings.
+              Choose any indicator assigned to &quot;<strong>{goal.name}</strong>&quot; to edit.
+              You can edit both global properties (affects all goals) and goal-specific settings.
             </p>
           )}
         </div>
 
         {/* Content */}
-        {selectedIndicator ? renderEditInterface() : renderIndicatorSelection()}
+        {selectedIndicatorForEdit ? renderEditInterface() : renderIndicatorSelection()}
       </div>
     </div>
   );
