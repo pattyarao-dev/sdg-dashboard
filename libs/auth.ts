@@ -56,7 +56,7 @@ export const authOptions: NextAuthOptions = {
         if (!match) {
           return null;
         }
-
+        console.log(userRole.user_type_id);
         return {
           id: String(user.user_id), // Ensure `id` is a string
           email: user.email,
@@ -72,12 +72,14 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id; // Store user id in the JWT token
+        token.userTypeId = (user as any).userTypeId;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id as string; // Attach user id to session
+        (session.user as any).userTypeId = (token as any).userTypeId;
       }
       return session;
     },

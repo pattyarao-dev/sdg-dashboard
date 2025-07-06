@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { getGoalsInformation } from "../actions/actions";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/libs/auth";
 
 export default async function IndicatorManagement() {
   //const goals = await getGoals();
   const goals = await getGoalsInformation();
+  const user = await getServerSession(authOptions);
+  console.log(user);
   return (
     <div className="w-full min-h-screen p-10 flex items-center justify-center bg-green-50">
       {/* <div className="w-full h-full p-10 flex flex-col gap-10">
