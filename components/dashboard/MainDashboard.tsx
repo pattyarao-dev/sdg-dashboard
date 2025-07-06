@@ -72,7 +72,7 @@ export default function MainDashboard({ goals }: { goals: DashboardProcessedGoal
     setIsExporting(true);
 
     try {
-      const response = await fetch('/api/export-pdf', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/export_main_dashboard_pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

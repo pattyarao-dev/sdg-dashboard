@@ -86,7 +86,7 @@ export default function IndicatorDashboard({
     setIsExporting(true);
 
     try {
-      const response = await fetch('/api/export-indicator-pdf', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/export_indicator_pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

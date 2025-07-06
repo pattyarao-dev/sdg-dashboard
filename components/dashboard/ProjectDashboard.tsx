@@ -145,7 +145,7 @@ export default function ProjectDashboard({ id }: { id: number }) {
       const filteredLocationData = getFilteredLocationData();
       const filteredTimeSeriesData = getFilteredTimeSeriesData();
 
-      const response = await fetch('/api/export-project-pdf', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/export_project_pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
