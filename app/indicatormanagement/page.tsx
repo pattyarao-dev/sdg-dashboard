@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getGoalsInformation } from "../actions/actions";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/libs/auth";
-import Login from "@/components/Login";
 
 export default async function IndicatorManagement() {
   //const goals = await getGoals();
