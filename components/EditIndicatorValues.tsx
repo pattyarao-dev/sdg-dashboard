@@ -283,7 +283,7 @@ const EditIndicatorValues = ({
   >([]);
   const [notes, setNotes] = useState<string>("");
 
-  const userId = 1; // Replace with actual user ID from your auth system
+  const userId = (session.user as any).id as number; // Replace with actual user ID from your auth system
 
   const [finalCalculatedValue, setFinalCalculatedValue] = useState<
     number | null

@@ -40,13 +40,22 @@ interface Goal {
 export default async function ProgressForm() {
   const processedGoals = await getGoalsInformation();
   const session = await getServerSession(authOptions);
+  const userRole = (session?.user as any)?.userTypeId;
 
   return (
-    <main className="w-full min-h-screen p-10 flex flex-col items-center ">
-      <ProgressFormComponent
-        session={session}
-        goals={processedGoals as Goal[]}
-      />
-    </main>
+    <>
+      {userRole === 1 || userRole === 3 ? (
+        <main className="w-full min-h-screen p-10 flex flex-col items-center ">
+          <ProgressFormComponent
+            session={session}
+            goals={processedGoals as Goal[]}
+          />
+        </main>
+      ) : (
+        <div className="w-full min-h-screen flex items-center justify-center">
+          <h1>You are not authorized to access this page.</h1>
+        </div>
+      )}
+    </>
   );
 }

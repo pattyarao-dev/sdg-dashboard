@@ -22,25 +22,25 @@ const Login = () => {
       return;
     }
 
-    router.push("/indicatormanagement");
+    router.push("/dashboard");
     router.refresh();
   };
 
   return (
-    <div className="w-[25%] h-fit p-10 bg-white/20 backdrop-blur rounded-lg flex flex-col items-center justify-center gap-10">
+    <div className="w-[25%] h-fit p-10 bg-white drop-shadow-lg rounded-lg flex flex-col items-center justify-center gap-10">
       <h1 className="w-full text-center text-2xl uppercase font-black text-yellow-500">
         SDG Dashboard
       </h1>
       <div className="w-full flex flex-col gap-6 items-center justify-center">
         <input
-          className="w-full p-2 rounded-md text-xs"
+          className="w-full p-2 rounded-md text-xs border border-gray-300"
           type="text"
           placeholder="Email"
           onChange={(e) => setEmail(e.target.value)}
           value={email}
         />
         <input
-          className="w-full p-2 rounded-md text-xs"
+          className="w-full p-2 rounded-md text-xs border border-gray-300"
           type="password"
           placeholder="password"
           onChange={(e) => setPassword(e.target.value)}
