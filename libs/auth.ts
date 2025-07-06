@@ -41,6 +41,15 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        const userRole = await prisma.md_user_role.findFirst({
+          where: {
+            user_id: user.user_id,
+          },
+          select: {
+            user_type_id: true,
+          },
+        });
+
         // Corrected: Await bcrypt.compare
         const match = await bcrypt.compare(credentials.password, user.password);
 
@@ -51,6 +60,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: String(user.user_id), // Ensure `id` is a string
           email: user.email,
+          userTypeId: userRole?.user_type_id || null,
         };
       },
     }),
