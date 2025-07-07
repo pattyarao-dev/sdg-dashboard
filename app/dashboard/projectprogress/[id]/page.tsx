@@ -6,7 +6,5 @@ export default async function ProjectSpecificProgress({
   params: Promise<{ id: number }>;
 }) {
   const id = Number((await params).id);
-  return (
-    <ProjectDashboard id={id} />
-  )
+  return <ProjectDashboard id={id} name={"Project Name"} />;
 }
