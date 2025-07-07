@@ -48,6 +48,7 @@ export default function IndicatorDashboard({
     "#FCC30B", "#A21942", "#FD6925", "#DD1367", "#FD9D24", "#BF8B2E",
     "#3F7E44", "#0A97D9", "#56C02B", "#00689D", "#19486A",
   ];
+  console.log(indicators)
 
   const goalColor = sdgColors[parseInt(goaldId) - 1] || sdgColors[0];
 
@@ -277,7 +278,7 @@ export default function IndicatorDashboard({
           type: 'sub-indicator',
           level: 1,
           goalIndicatorId: indicator.goal_indicator_id,
-          goalSubIndicatorId: goalSubIndicator.md_sub_indicator.sub_indicator_id,
+          goalSubIndicatorId: goalSubIndicator.goal_sub_indicator_id,
           parentId: goalSubIndicator.md_sub_indicator.parent_indicator_id,
           hasGoalTarget: true,
           source: 'goal_sub_indicator'
@@ -459,6 +460,8 @@ export default function IndicatorDashboard({
         const subIndicatorProgressPromises = itemsWithGoalTargets
           .filter(item => item.type === 'sub-indicator' && item.goalSubIndicatorId)
           .map(async (item) => {
+            console.log("logging items:")
+            console.log(item)
             try {
               const response = await fetch(
                 `${process.env.NEXT_PUBLIC_API_BASE_URL}/goal_sub_indicator_progress/${item.goalSubIndicatorId}`,
