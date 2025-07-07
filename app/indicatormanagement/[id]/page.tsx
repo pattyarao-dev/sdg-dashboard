@@ -31,7 +31,7 @@ export default async function AddGoalIndicator({
 
   return (
     <>
-      {userRole === 1 && userRole === 2 ? (
+      {userRole === 1 || userRole === 2 ? (
         <div className="w-full min-h-screen p-10 flex flex-col items-start justify-start gap-10">
           <GoBackButton />
           {/* <AddIndicator
