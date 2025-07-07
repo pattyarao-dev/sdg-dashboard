@@ -448,11 +448,16 @@ const AddNewIndicator = ({
                 Select existing required data:
               </p>
               <div className="w-full h-[265px] overflow-y-scroll flex flex-col gap-2">
-                {requiredData.length > 0 ? (
-                  requiredData.map((data, index) => (
+                {/* CHANGE: Use allRequiredData instead of requiredData */}
+                {allRequiredData.length > 0 ? (
+                  allRequiredData.map((data, index) => (
                     <div
                       key={index}
-                      className={`w-full p-2 flex items-center gap-2 ${isRequiredDataSelected(data) ? "bg-green-50 border border-green-800" : "border border-gray-200"}`}
+                      className={`w-full p-2 flex items-center gap-2 ${
+                        isRequiredDataSelected(data)
+                          ? "bg-green-50 border border-green-800"
+                          : "border border-gray-200"
+                      }`}
                     >
                       <button
                         type="button"
@@ -462,6 +467,12 @@ const AddNewIndicator = ({
                         className="w-full text-left"
                       >
                         {data.name}
+                        {/* Optional: Add indicator for newly created items */}
+                        {data.newRD && (
+                          <span className="ml-2 text-xs text-blue-600 font-semibold">
+                            (New)
+                          </span>
+                        )}
                       </button>
                     </div>
                   ))
@@ -474,7 +485,6 @@ const AddNewIndicator = ({
                 )}
               </div>
             </div>
-
             <div className="w-full flex flex-col gap-2">
               <p className="text-sm text-green-800 font-semibold uppercase">
                 Selected Required Data:
