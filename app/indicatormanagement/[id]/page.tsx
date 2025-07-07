@@ -40,11 +40,14 @@ export default async function AddGoalIndicator({
             indicators={availableIndicators}
             requiredData={requiredData}
           /> */}
-          <div>
+          <div className="w-full">
             {goal ? (
-              <p className="text-3xl font-bold uppercase underline text-green-800">
-                {goal.name}
-              </p>
+              <div className="w-full flex flex-col gap-2">
+                <p className="text-3xl font-bold uppercase text-green-800">
+                  {goal.goal_id}. {goal.name}
+                </p>
+                <hr className="w-full border-2 border-green-800" />
+              </div>
             ) : (
               <p>Loading...</p>
             )}

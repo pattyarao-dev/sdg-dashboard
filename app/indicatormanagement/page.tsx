@@ -31,9 +31,9 @@ export default async function IndicatorManagement() {
                         {goal.goalName}
                       </h1>
                     </div>
-                    <button className="w-fit px-6 py-2 bg-gradient-to-r from-green-100 to-orange-200 font-bold uppercase">
+                    <button className="w-fit px-6 py-2 border-2 border-green-800 text-green-800 font-bold uppercase">
                       <Link href={`/indicatormanagement/${goal.goalId}`}>
-                        Add Goal Indicators
+                        Manage Indicators
                       </Link>
                     </button>
                   </div>
