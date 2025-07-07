@@ -13,7 +13,7 @@ export default async function IndicatorManagement() {
   console.log("this is the user type id: " + userRole);
   return (
     <>
-      {userRole === 2 ? (
+      {userRole === 1 || userRole === 2 ? (
         <div className="w-full min-h-screen p-10 flex items-center justify-center bg-green-50">
           <div className="w-full flex flex-col gap-24">
             {goals.map((goal, index) => (
