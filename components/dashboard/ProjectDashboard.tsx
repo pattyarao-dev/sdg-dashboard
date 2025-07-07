@@ -847,7 +847,7 @@ export default function ProjectDashboard({
       {/* Header with Export Button */}
       <div className="w-full flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
         <h1 className="text-4xl font-bold uppercase text-gray-800">
-          Project {id} Dashboard
+          Project {id} {name} Dashboard
         </h1>
         <button
           onClick={exportToPDF}
