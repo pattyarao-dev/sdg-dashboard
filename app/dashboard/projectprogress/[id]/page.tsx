@@ -1,3 +1,4 @@
+import { getProject } from "@/app/actions/actions";
 import ProjectDashboard from "../../../../components/dashboard/ProjectDashboard";
 
 export default async function ProjectSpecificProgress({
@@ -6,5 +7,6 @@ export default async function ProjectSpecificProgress({
   params: Promise<{ id: number }>;
 }) {
   const id = Number((await params).id);
-  return <ProjectDashboard id={id} name={"Project Name"} />;
+  const proj = await getProject(id);
+  return <ProjectDashboard id={id} name={proj.name} />;
 }
