@@ -388,13 +388,14 @@ const EditIndicatorValues = ({
             }
           }
         });
-
+        console.log("I'M THE RULE!:");
+        console.log(rule);
         const computedResult = await calculateValue(
           rule.ruleId,
           valuesToCalculate,
           userId,
           "indicator",
-          rule.includeSubIndicator, // Add this - use the flag from the computation rule
+          (rule as any).includeSubIndicators, // Add this - use the flag from the computation rule
         );
 
         console.log("Raw computed result:", computedResult);

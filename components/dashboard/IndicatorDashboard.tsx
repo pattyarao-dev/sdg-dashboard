@@ -67,7 +67,7 @@ export default function IndicatorDashboard({
     "#00689D",
     "#19486A",
   ];
-  console.log(indicators)
+  console.log(indicators);
 
   const goalColor = sdgColors[parseInt(goaldId) - 1] || sdgColors[0];
 
@@ -296,7 +296,8 @@ export default function IndicatorDashboard({
         hasGoalTarget: true,
         source: "goal_sub_indicator",
       };
-
+      console.log("flattened indicator:");
+      console.log(mainIndicator);
       // Goal-specific sub-indicators (these have targets)
       const goalSubIndicators: FlattenedIndicatorItem[] =
         indicator.td_goal_sub_indicator.map((goalSubIndicator) => ({
@@ -531,8 +532,8 @@ export default function IndicatorDashboard({
             (item) => item.type === "sub-indicator" && item.goalSubIndicatorId,
           )
           .map(async (item) => {
-            console.log("logging items:")
-            console.log(item)
+            console.log("logging items:");
+            console.log(item);
             try {
               const response = await fetch(
                 `${process.env.NEXT_PUBLIC_API_BASE_URL}/goal_sub_indicator_progress/${item.goalSubIndicatorId}`,
