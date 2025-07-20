@@ -316,7 +316,7 @@ const AddNewIndicator = ({
           {parentIndicator ? "Sub-Indicator" : "Indicator"}
         </h2>
         <div className="w-full flex flex-col gap-2">
-          <div className="w-full flex flex-col gap-2">
+          {/* <div className="w-full flex flex-col gap-2">
             <p className="text-sm text-green-800 font-semibold uppercase">
               Indicator Name:
             </p>
@@ -330,9 +330,9 @@ const AddNewIndicator = ({
               }
               className="w-full p-2 border border-gray-300"
             />
-          </div>
+          </div> */}
 
-          <div className="w-full flex flex-col gap-2">
+          {/* <div className="w-full flex flex-col gap-2">
             <p className="text-sm text-green-800 font-semibold uppercase">
               Indicator Description:
             </p>
@@ -345,8 +345,8 @@ const AddNewIndicator = ({
               }
               className="w-full p-2 border border-gray-300"
             />
-          </div>
-          <div className="w-full flex gap-4">
+          </div> */}
+          {/* <div className="w-full flex gap-4">
             <div className="w-1/2 flex flex-col gap-2">
               <p className="text-sm text-green-800 font-semibold uppercase">
                 2030 Target
@@ -398,19 +398,236 @@ const AddNewIndicator = ({
                 />
               </div>
             </div>
-          </div>
-          <div className="w-full flex flex-col flex-grow gap-4">
-            <p className="text-sm text-green-800 font-semibold uppercase">
-              Input the required data to be collected for this indicator:
-            </p>
-            <div className="w-full flex flex-col ">
-              {/* New Required Data */}
-              <div className="w-full flex flex-col gap-4">
-                <div className="w-full flex flex-col items-start gap-2">
+          </div> */}
+          {false && (
+            <div className="w-full flex flex-col flex-grow gap-4">
+              <p className="text-sm text-green-800 font-semibold uppercase">
+                Input the required data to be collected for this indicator:
+              </p>
+              <div className="w-full flex flex-col ">
+                {/* New Required Data */}
+                <div className="w-full flex flex-col gap-4">
+                  <div className="w-full flex flex-col items-start gap-2">
+                    <p className="w-1/3 text-sm text-green-800 font-bold uppercase">
+                      Create new required data:
+                    </p>
+                    <div className="w-full flex items-center justify-between gap-6">
+                      <input
+                        type="text"
+                        placeholder="Enter required data"
+                        className="flex-1 p-2 border border-gray-300"
+                        value={
+                          newRequiredDataInputs[indicator.indicator_id] || ""
+                        }
+                        onChange={(e) =>
+                          handleNewRequiredDataInputChange(
+                            indicator.indicator_id,
+                            e.target.value,
+                          )
+                        }
+                        onKeyUp={(e) => {
+                          if (e.key === "Enter") {
+                            handleCreateNewRequiredData(indicator);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          handleCreateNewRequiredData(indicator);
+                        }}
+                        className="w-fit bg-green-700 text-white px-6 py-2 rounded-md uppercase font-semibold text-sm hover:bg-green-500 transition-all duration-100"
+                      >
+                        Add Required Data
+                      </button>
+                    </div>
+                  </div>
+                  <div className="w-full flex justify-end"></div>
+                </div>
+              </div>
+              <div className="w-full flex flex-col gap-2">
+                <p className="uppercase text-sm text-green-800 font-bold">
+                  Select existing required data:
+                </p>
+                <div className="w-full h-[265px] overflow-y-scroll flex flex-col gap-2">
+                  {/* CHANGE: Use allRequiredData instead of requiredData */}
+                  {allRequiredData.length > 0 ? (
+                    allRequiredData.map((data, index) => (
+                      <div
+                        key={index}
+                        className={`w-full p-2 flex items-center gap-2 ${
+                          isRequiredDataSelected(data)
+                            ? "bg-green-50 border border-green-800"
+                            : "border border-gray-200"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleSelectRequiredData(indicator, data)
+                          }
+                          className="w-full text-left"
+                        >
+                          {data.name}
+                          {/* Optional: Add indicator for newly created items */}
+                          {data.newRD && (
+                            <span className="ml-2 text-xs text-blue-600 font-semibold">
+                              (New)
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="w-full p-2 flex items-center gap-2">
+                      <p className="italic text-gray-600">
+                        No required data available
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="w-full flex flex-col gap-2">
+                <p className="text-sm text-green-800 font-semibold uppercase">
+                  Selected Required Data:
+                </p>
+                {indicator.required_data.length > 0 ? (
+                  <div className="w-full flex flex-col gap-2">
+                    {indicator.required_data.map((data, index) => (
+                      <div
+                        key={index}
+                        className="w-full p-2 bg-gray-100 border border-gray-300 flex items-center justify-between"
+                      >
+                        <span className=" font-medium">{data.name}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRemoveRequiredData(indicator, data)
+                          }
+                          className="text-red-600 hover:text-red-800 font-semibold text-sm"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="w-full p-2 text-gray-500 italic">
+                    No required data selected
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="w-full">
+            <table className="w-full border-collapse mb-5 bg-white">
+              <thead>
+                <tr>
+                  <th className="border border-black p-2 text-left bg-gray-100 font-bold w-1/5">
+                    Name
+                  </th>
+                  <th className="border border-black p-2 text-left bg-gray-100 font-bold w-1/5">
+                    Description
+                  </th>
+                  <th className="border border-black p-2 text-left bg-gray-100 font-bold w-1/5">
+                    Baseline
+                  </th>
+                  <th className="border border-black p-2 text-left bg-gray-100 font-bold w-1/5">
+                    Baseline Year
+                  </th>
+                  <th className="border border-black p-2 text-left bg-gray-100 font-bold w-1/5">
+                    2030 Target
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border border-black align-top">
+                    <input
+                      id={`indicator-${indicator.indicator_id}-name`}
+                      type="text"
+                      placeholder="Indicator Name"
+                      value={indicator.name}
+                      onChange={(e) =>
+                        handleInputChange(indicator, "name", e.target.value)
+                      }
+                      className="w-full p-2 focus:outline-none"
+                    />
+                  </td>
+                  <td className="border border-black align-top">
+                    <input
+                      type="text"
+                      placeholder="Indicator Description"
+                      value={indicator.description}
+                      onChange={(e) =>
+                        handleInputChange(
+                          indicator,
+                          "description",
+                          e.target.value,
+                        )
+                      }
+                      className="w-full p-2 focus:outline-none"
+                    />
+                  </td>
+                  <td className="border border-black align-top">
+                    <input
+                      type="number"
+                      placeholder="Baseline"
+                      value={indicator.global_baseline_value}
+                      onChange={(e) =>
+                        handleInputChange(
+                          indicator,
+                          "global_baseline_value",
+                          Number(e.target.value),
+                        )
+                      }
+                      className="w-full p-2 focus:outline-none"
+                    />
+                  </td>
+                  <td className="border border-black align-top">
+                    <input
+                      type="number"
+                      placeholder="Baseline Year"
+                      value={indicator.baseline_year}
+                      className="w-full p-2 focus:outline-none"
+                      onChange={(e) =>
+                        handleInputChange(
+                          indicator,
+                          "baseline_year",
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </td>
+                  <td className="border border-black align-top">
+                    <input
+                      type="number"
+                      placeholder="2030 Target"
+                      value={indicator.global_target_value}
+                      onChange={(e) =>
+                        handleInputChange(
+                          indicator,
+                          "global_target_value",
+                          Number(e.target.value),
+                        )
+                      }
+                      className="w-full p-2 focus:outline-none"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h1 className="w-full mt-10 p-2 bg-gray-100 border border-black font-bold">
+              Required Data
+            </h1>
+            <div className="w-full flex gap-4 mt-4">
+              <div className="w-1/2 flex flex-col gap-6 border border-black p-4">
+                <div className="w-full flex flex-col gap-2">
                   <p className="w-1/3 text-sm text-green-800 font-bold uppercase">
                     Create new required data:
                   </p>
-                  <div className="w-full flex items-center justify-between gap-6">
+                  <div className="flex items-center justify-between gap-6">
                     <input
                       type="text"
                       placeholder="Enter required data"
@@ -440,80 +657,80 @@ const AddNewIndicator = ({
                     </button>
                   </div>
                 </div>
-                <div className="w-full flex justify-end"></div>
+                <hr className="border border-black" />
+                <div className="w-full flex flex-col gap-2">
+                  <p className="uppercase text-sm text-green-800 font-bold">
+                    Select existing required data:
+                  </p>
+                  <div className="w-full h-[265px] overflow-y-scroll flex flex-col gap-2">
+                    {/* CHANGE: Use allRequiredData instead of requiredData */}
+                    {allRequiredData.length > 0 ? (
+                      allRequiredData.map((data, index) => (
+                        <div
+                          key={index}
+                          className={`w-full p-2 flex items-center gap-2 ${
+                            isRequiredDataSelected(data)
+                              ? "bg-green-50 border border-green-800"
+                              : "border border-gray-200"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleSelectRequiredData(indicator, data)
+                            }
+                            className="w-full text-left"
+                          >
+                            {data.name}
+                            {/* Optional: Add indicator for newly created items */}
+                            {data.newRD && (
+                              <span className="ml-2 text-xs text-blue-600 font-semibold">
+                                (New)
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="w-full p-2 flex items-center gap-2">
+                        <p className="italic text-gray-600">
+                          No required data available
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="w-full flex flex-col gap-2">
-              <p className="uppercase text-sm text-green-800 font-bold">
-                Select existing required data:
-              </p>
-              <div className="w-full h-[265px] overflow-y-scroll flex flex-col gap-2">
-                {/* CHANGE: Use allRequiredData instead of requiredData */}
-                {allRequiredData.length > 0 ? (
-                  allRequiredData.map((data, index) => (
-                    <div
-                      key={index}
-                      className={`w-full p-2 flex items-center gap-2 ${
-                        isRequiredDataSelected(data)
-                          ? "bg-green-50 border border-green-800"
-                          : "border border-gray-200"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleSelectRequiredData(indicator, data)
-                        }
-                        className="w-full text-left"
+              <div className="w-1/2 flex flex-col gap-4 border border-black p-4">
+                <p className="text-sm text-green-800 font-semibold uppercase">
+                  Selected Required Data:
+                </p>
+                {indicator.required_data.length > 0 ? (
+                  <div className="w-full flex flex-col gap-2">
+                    {indicator.required_data.map((data, index) => (
+                      <div
+                        key={index}
+                        className="w-full p-2 bg-gray-100 border border-gray-300 flex items-center justify-between"
                       >
-                        {data.name}
-                        {/* Optional: Add indicator for newly created items */}
-                        {data.newRD && (
-                          <span className="ml-2 text-xs text-blue-600 font-semibold">
-                            (New)
-                          </span>
-                        )}
-                      </button>
-                    </div>
-                  ))
+                        <span className=" font-medium">{data.name}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRemoveRequiredData(indicator, data)
+                          }
+                          className="text-red-600 hover:text-red-800 font-semibold text-sm"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <div className="w-full p-2 flex items-center gap-2">
-                    <p className="italic text-gray-600">
-                      No required data available
-                    </p>
+                  <div className="w-full p-2 text-gray-500 italic">
+                    No required data selected
                   </div>
                 )}
               </div>
-            </div>
-            <div className="w-full flex flex-col gap-2">
-              <p className="text-sm text-green-800 font-semibold uppercase">
-                Selected Required Data:
-              </p>
-              {indicator.required_data.length > 0 ? (
-                <div className="w-full flex flex-col gap-2">
-                  {indicator.required_data.map((data, index) => (
-                    <div
-                      key={index}
-                      className="w-full p-2 bg-gray-100 border border-gray-300 flex items-center justify-between"
-                    >
-                      <span className=" font-medium">{data.name}</span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleRemoveRequiredData(indicator, data)
-                        }
-                        className="text-red-600 hover:text-red-800 font-semibold text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="w-full p-2 text-gray-500 italic">
-                  No required data selected
-                </div>
-              )}
             </div>
           </div>
 
