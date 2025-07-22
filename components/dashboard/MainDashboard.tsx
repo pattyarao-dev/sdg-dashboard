@@ -38,6 +38,16 @@ export default function MainDashboard({
     "#19486A", // Goal 17: Partnerships for the Goals
   ];
 
+  const getProgressColor = (progressPercentage: number) => {
+    if (progressPercentage >= 75) {
+      return "#008018"; // Green for good progress (75%+)
+    } else if (progressPercentage >= 50) {
+      return "#FFA52C"; // Yellow for moderate progress (50-74%)
+    } else {
+      return "#FF0018"; // Red for poor progress (0-49%)
+    }
+  };
+
   const baseOptions = {
     chart: {
       height: 360,
@@ -248,12 +258,12 @@ export default function MainDashboard({
                 style: {
                   fontSize: "16px",
                   fontWeight: "bold",
-                  color: goalColor,
+                  color: goalColor, // Keep goal color for title
                 },
               },
-              colors: [goalColor],
+              colors: [getProgressColor(progressPercentage)], // Use progress-based color for chart
               fill: {
-                colors: [goalColor],
+                colors: [getProgressColor(progressPercentage)], // Use progress-based color for fill
               },
               plotOptions: {
                 ...baseOptions.plotOptions,

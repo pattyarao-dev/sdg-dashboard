@@ -67,6 +67,16 @@ export default function IndicatorDashboard({
     "#00689D",
     "#19486A",
   ];
+
+  const getProgressColor = (progressPercentage: number) => {
+    if (progressPercentage >= 75) {
+      return "#22C55E"; // Green for good progress (75%+)
+    } else if (progressPercentage >= 50) {
+      return "#EAB308"; // Yellow for moderate progress (50-74%)
+    } else {
+      return "#EF4444"; // Red for poor progress (0-49%)
+    }
+  };
   console.log(indicators);
 
   const goalColor = sdgColors[parseInt(goaldId) - 1] || sdgColors[0];
@@ -191,7 +201,7 @@ export default function IndicatorDashboard({
         min: 0,
         max: 100,
       },
-      colors: [goalColor],
+      colors: [progressColor],
       tooltip: {
         y: {
           formatter: function (val: number) {
@@ -676,6 +686,10 @@ export default function IndicatorDashboard({
 
           const series = [progressPercentage];
 
+          const progressColor = hasProgressData
+            ? getProgressColor(progressPercentage)
+            : goalColor;
+
           // Calculate indentation based on level
           const indentationPx = item.level * 40;
 
@@ -685,9 +699,9 @@ export default function IndicatorDashboard({
 
           const options = {
             ...baseOptions,
-            colors: [goalColor],
+            colors: [progressColor], // Use progress-based color instead of goalColor
             fill: {
-              colors: [goalColor],
+              colors: [progressColor], // Use progress-based color instead of goalColor
               opacity: opacity,
             },
             plotOptions: {
