@@ -70,11 +70,11 @@ export default function IndicatorDashboard({
 
   const getProgressColor = (progressPercentage: number) => {
     if (progressPercentage >= 75) {
-      return "#22C55E"; // Green for good progress (75%+)
+      return "#008018"; // Green for good progress (75%+)
     } else if (progressPercentage >= 50) {
-      return "#EAB308"; // Yellow for moderate progress (50-74%)
+      return "#FFA52C"; // Yellow for moderate progress (50-74%)
     } else {
-      return "#EF4444"; // Red for poor progress (0-49%)
+      return "#FF0018"; // Red for poor progress (0-49%)
     }
   };
   console.log(indicators);
@@ -201,7 +201,7 @@ export default function IndicatorDashboard({
         min: 0,
         max: 100,
       },
-      colors: [progressColor],
+      colors: [goalColor],
       tooltip: {
         y: {
           formatter: function (val: number) {
