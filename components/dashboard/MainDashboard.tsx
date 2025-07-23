@@ -20,7 +20,6 @@ export default function MainDashboard({
   );
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
-  // const {data, status} = useSession()
 
   useEffect(() => {
     console.log(session);
@@ -157,20 +156,26 @@ export default function MainDashboard({
             return {
               goalId: goal.goalId,
               progress: Math.round(data.averageProgress || 0),
+              hasData:
+                data.averageProgress !== null &&
+                data.averageProgress !== undefined,
             };
           } catch (error) {
             console.error(
               `Error fetching progress for goal ${goal.goalId}:`,
               error,
             );
-            return { goalId: goal.goalId, progress: 0 };
+            return { goalId: goal.goalId, progress: 0, hasData: false };
           }
         });
 
         const results = await Promise.all(progressPromises);
         const progressMap = results.reduce(
           (acc, result) => {
-            acc[result.goalId] = result.progress;
+            // Only include goals that have data and progress > 0
+            if (result.hasData && result.progress > 0) {
+              acc[result.goalId] = result.progress;
+            }
             return acc;
           },
           {} as { [key: number]: number },
@@ -191,12 +196,34 @@ export default function MainDashboard({
     }
   }, [goals]);
 
+  // Filter goals to only show those with progress data
+  const goalsWithProgress = goals.filter(
+    (goal) =>
+      goalProgress.hasOwnProperty(goal.goalId) && goalProgress[goal.goalId] > 0,
+  );
+
   console.log(goals);
 
   if (loading) {
     return (
       <div className="w-full flex justify-center items-center h-64">
         <div className="text-lg text-gray-600">Loading goal progress...</div>
+      </div>
+    );
+  }
+
+  // Show message if no goals have progress data
+  if (goalsWithProgress.length === 0) {
+    return (
+      <div className="w-full flex justify-center items-center h-64">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">
+            No Progress Data Available
+          </h2>
+          <p className="text-gray-600">
+            There are currently no goals with progress data to display.
+          </p>
+        </div>
       </div>
     );
   }
@@ -210,7 +237,8 @@ export default function MainDashboard({
               SDG Goals Dashboard
             </h1>
             <p className="text-gray-600 text-sm mt-1">
-              Track progress across {goals.length} Sustainable Development Goals
+              Track progress across {goalsWithProgress.length} Sustainable
+              Development Goals
             </p>
           </div>
           {session ? (
@@ -249,11 +277,10 @@ export default function MainDashboard({
             ""
           )}
         </div>
-        {/* Add Export Button */}
 
         {/* Goals Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {goals.map((goal, index) => {
+          {goalsWithProgress.map((goal, index) => {
             const goalColor = sdgColors[goal.goalId - 1] || sdgColors[0];
 
             // Get dynamic progress for this goal
