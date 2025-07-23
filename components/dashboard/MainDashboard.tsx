@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { DashboardProcessedGoal } from "@/types/dashboard.types";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useSession } from "next-auth/react";
 import { Session } from "next-auth";
 
 // Dynamic import to avoid SSR issues
@@ -11,10 +10,10 @@ const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 export default function MainDashboard({
   goals,
-  session
+  session,
 }: {
   goals: DashboardProcessedGoal[];
-  session: Session
+  session: Session;
 }) {
   const [goalProgress, setGoalProgress] = useState<{ [key: number]: number }>(
     {},
@@ -24,8 +23,8 @@ export default function MainDashboard({
   // const {data, status} = useSession()
 
   useEffect(() => {
-      console.log(session)
-  }, [session])
+    console.log(session);
+  }, [session]);
 
   const sdgColors = [
     "#E5243B", // Goal 1: No Poverty
@@ -107,9 +106,9 @@ export default function MainDashboard({
           body: JSON.stringify({
             goals,
             goalProgress,
-            generatedBy:{
-              userEmail: session.user.email
-            }
+            generatedBy: {
+              userEmail: session.user.email,
+            },
           }),
         },
       );
@@ -214,42 +213,41 @@ export default function MainDashboard({
               Track progress across {goals.length} Sustainable Development Goals
             </p>
           </div>
-          {
-            session ? 
+          {session ? (
             <button
-            onClick={exportToPDF}
-            disabled={
-              isExporting || loading || Object.keys(goalProgress).length === 0
-            }
-            className="bg-blue-500 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors duration-200 shadow-sm"
-          >
-            {isExporting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Generating PDF...
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Export PDF Report
-              </>
-            )}
-          </button>
-          :
-          ""
-          }
+              onClick={exportToPDF}
+              disabled={
+                isExporting || loading || Object.keys(goalProgress).length === 0
+              }
+              className="bg-blue-500 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors duration-200 shadow-sm"
+            >
+              {isExporting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Generating PDF...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Export PDF Report
+                </>
+              )}
+            </button>
+          ) : (
+            ""
+          )}
         </div>
         {/* Add Export Button */}
 
