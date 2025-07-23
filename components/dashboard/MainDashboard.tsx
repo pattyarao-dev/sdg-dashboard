@@ -3,20 +3,29 @@ import { useEffect, useState } from "react";
 import { DashboardProcessedGoal } from "@/types/dashboard.types";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useSession } from "next-auth/react";
+import { Session } from "next-auth";
 
 // Dynamic import to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 export default function MainDashboard({
   goals,
+  session
 }: {
   goals: DashboardProcessedGoal[];
+  session: Session
 }) {
   const [goalProgress, setGoalProgress] = useState<{ [key: number]: number }>(
     {},
   );
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  // const {data, status} = useSession()
+
+  useEffect(() => {
+      console.log(session)
+  }, [session])
 
   const sdgColors = [
     "#E5243B", // Goal 1: No Poverty
@@ -98,6 +107,9 @@ export default function MainDashboard({
           body: JSON.stringify({
             goals,
             goalProgress,
+            generatedBy:{
+              userEmail: session.user.email
+            }
           }),
         },
       );
@@ -202,7 +214,9 @@ export default function MainDashboard({
               Track progress across {goals.length} Sustainable Development Goals
             </p>
           </div>
-          <button
+          {
+            session ? 
+            <button
             onClick={exportToPDF}
             disabled={
               isExporting || loading || Object.keys(goalProgress).length === 0
@@ -233,6 +247,9 @@ export default function MainDashboard({
               </>
             )}
           </button>
+          :
+          ""
+          }
         </div>
         {/* Add Export Button */}
 

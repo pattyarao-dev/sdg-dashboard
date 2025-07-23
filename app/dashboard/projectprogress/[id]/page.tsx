@@ -1,5 +1,7 @@
 import { getProject } from "@/app/actions/actions";
 import ProjectDashboard from "../../../../components/dashboard/ProjectDashboard";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/libs/auth";
 
 export default async function ProjectSpecificProgress({
   params,
@@ -8,5 +10,6 @@ export default async function ProjectSpecificProgress({
 }) {
   const id = Number((await params).id);
   const proj = await getProject(id);
-  return <ProjectDashboard id={id} name={proj.name} />;
+  const session = await getServerSession(authOptions)
+  return <ProjectDashboard id={id} name={proj.name} session={session} />;
 }

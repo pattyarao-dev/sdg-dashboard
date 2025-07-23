@@ -6,6 +6,7 @@ import {
   DashboardAvailableIndicatorWithHierarchy,
   DashboardSubIndicatorHierarchy,
 } from "@/types/dashboard.types";
+import { Session } from "next-auth";
 
 // Dynamic import to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -28,9 +29,11 @@ type ModalType = "description" | "chart";
 export default function IndicatorDashboard({
   goaldId,
   indicators,
+  session
 }: {
   goaldId: string;
   indicators: DashboardAvailableIndicatorWithHierarchy[];
+  session: Session
 }) {
   const [progressData, setProgressData] = useState<{ [key: string]: number }>(
     {},
@@ -229,6 +232,9 @@ export default function IndicatorDashboard({
             indicators: allIndicatorsAndSubIndicators,
             progressData,
             indicatorDescriptions,
+            generatedBy: {
+              userEmail: session.user.email
+            }
           }),
         },
       );
@@ -629,7 +635,9 @@ export default function IndicatorDashboard({
             sub-indicators
           </p>
         </div>
-        <button
+        {
+          session ?
+          <button
           onClick={exportToPDF}
           disabled={
             isExporting || loading || Object.keys(progressData).length === 0
@@ -660,6 +668,9 @@ export default function IndicatorDashboard({
             </>
           )}
         </button>
+        :
+        ""
+        }
       </div>
 
       {/* Hierarchical display */}

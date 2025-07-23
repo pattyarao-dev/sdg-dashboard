@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { Session } from "next-auth";
 
 // Dynamic import to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -55,9 +56,11 @@ interface Filters {
 export default function ProjectDashboard({
   id,
   name,
+  session
 }: {
   id: number;
   name: string;
+  session: Session
 }) {
   const [indicatorProgress, setIndicatorProgress] = useState<
     IndicatorProgress[]
@@ -189,6 +192,9 @@ export default function ProjectDashboard({
             funnelData,
             filters,
             projectName: `Project ${id}`,
+            generatedBy: {
+              userEmail: session.user.email
+            }
           }),
         },
       );
@@ -849,7 +855,9 @@ export default function ProjectDashboard({
         <h1 className="text-4xl font-bold uppercase text-gray-800">
           {name} Dashboard
         </h1>
-        <button
+        {
+          session ? 
+          <button
           onClick={exportToPDF}
           disabled={isExporting || loading}
           className="bg-green-500 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-colors duration-200 shadow-lg"
@@ -877,7 +885,10 @@ export default function ProjectDashboard({
               Export Dashboard Report
             </>
           )}
-        </button>
+        </button> 
+        : 
+        ""
+        }
       </div>
 
       {/* Filter Controls */}
